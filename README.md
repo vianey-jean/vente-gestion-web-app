@@ -1,73 +1,311 @@
-# Welcome to your Lovable project
 
-## Project info
+# Gestion de Vente - Application Frontend
 
-**URL**: https://lovable.dev/projects/b4bea8fe-de4c-46cf-bc64-943e6e52345e
+Cette application React est conçue pour communiquer avec un serveur backend Node.js séparé.
 
-## How can I edit this code?
+## Configuration du Frontend
 
-There are several ways of editing your application.
+1. Installer les dépendances du frontend:
+   ```
+   npm install
+   ```
 
-**Use Lovable**
+2. Lancer l'application frontend:
+   ```
+   npm run dev
+   ```
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/b4bea8fe-de4c-46cf-bc64-943e6e52345e) and start prompting.
+## Configuration du Backend (à créer séparément)
 
-Changes made via Lovable will be committed automatically to this repo.
+Pour créer le serveur backend Node.js qui fonctionnera avec cette application:
 
-**Use your preferred IDE**
+1. Créer un nouveau dossier pour le backend:
+   ```
+   mkdir gestion-vente-backend
+   cd gestion-vente-backend
+   ```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+2. Initialiser un projet Node.js:
+   ```
+   npm init -y
+   ```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+3. Installer les dépendances nécessaires:
+   ```
+   npm install express mongoose cors dotenv multer bcryptjs jsonwebtoken morgan nodemon
+   ```
 
-Follow these steps:
+4. Créer un fichier package.json avec le contenu suivant:
+   ```json
+   {
+     "name": "gestion-vente-backend",
+     "version": "1.0.0",
+     "description": "Backend pour l'application de gestion de vente",
+     "main": "server.js",
+     "scripts": {
+       "start": "node server.js",
+       "dev": "nodemon server.js"
+     },
+     "dependencies": {
+       "express": "^4.18.2",
+       "mongoose": "^7.0.0",
+       "cors": "^2.8.5",
+       "dotenv": "^16.0.3",
+       "multer": "^1.4.5-lts.1",
+       "bcryptjs": "^2.4.3",
+       "jsonwebtoken": "^9.0.0",
+       "morgan": "^1.10.0"
+     },
+     "devDependencies": {
+       "nodemon": "^2.0.22"
+     }
+   }
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+5. Créer un fichier .env:
+   ```
+   PORT=5000
+   MONGO_URI=mongodb://localhost:27017/gestion_vente
+   JWT_SECRET=votre_secret_jwt
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+6. Créer la structure du projet:
+   ```
+   mkdir models routes middleware controllers config uploads
+   ```
 
-# Step 3: Install the necessary dependencies.
-npm i
+7. Créer le fichier server.js:
+   ```javascript
+   const express = require('express');
+   const cors = require('cors');
+   const mongoose = require('mongoose');
+   const morgan = require('morgan');
+   const path = require('path');
+   require('dotenv').config();
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+   // Initialisation de l'application
+   const app = express();
+
+   // Middlewares
+   app.use(cors());
+   app.use(express.json());
+   app.use(morgan('dev'));
+   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+   // Connexion à la base de données
+   mongoose.connect(process.env.MONGO_URI)
+     .then(() => console.log('Connexion à MongoDB établie'))
+     .catch(err => console.error('Erreur de connexion à MongoDB:', err));
+
+   // Routes
+   app.use('/api/auth', require('./routes/auth'));
+   app.use('/api/products', require('./routes/products'));
+   app.use('/api/sales', require('./routes/sales'));
+
+   // Route par défaut
+   app.get('/', (req, res) => {
+     res.send('API de Gestion de Vente');
+   });
+
+   // Démarrage du serveur
+   const PORT = process.env.PORT || 5000;
+   app.listen(PORT, () => {
+     console.log(`Serveur démarré sur le port ${PORT}`);
+   });
+   ```
+
+8. Implémenter les modèles, routes, contrôleurs et middlewares nécessaires.
+
+## Modèles à implémenter
+
+### User Model (models/User.js)
+```javascript
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+
+const UserSchema = new mongoose.Schema({
+  email: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  firstName: {
+    type: String,
+    required: true
+  },
+  lastName: {
+    type: String,
+    required: true
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
+  }
+}, {
+  timestamps: true
+});
+
+// Hachage du mot de passe avant sauvegarde
+UserSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Méthode pour comparer les mots de passe
+UserSchema.methods.comparePassword = async function(password) {
+  return await bcrypt.compare(password, this.password);
+};
+
+module.exports = mongoose.model('User', UserSchema);
 ```
 
-**Edit a file directly in GitHub**
+### Product Model (models/Product.js)
+```javascript
+const mongoose = require('mongoose');
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+const ProductSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    required: true
+  },
+  price: {
+    type: Number,
+    required: true
+  },
+  stock: {
+    type: Number,
+    required: true
+  },
+  category: {
+    type: String,
+    required: true
+  },
+  imageUrl: {
+    type: String
+  }
+}, {
+  timestamps: true
+});
 
-**Use GitHub Codespaces**
+module.exports = mongoose.model('Product', ProductSchema);
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Sale Model (models/Sale.js)
+```javascript
+const mongoose = require('mongoose');
 
-## What technologies are used for this project?
+const SaleItemSchema = new mongoose.Schema({
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product',
+    required: true
+  },
+  quantity: {
+    type: Number,
+    required: true
+  },
+  unitPrice: {
+    type: Number,
+    required: true
+  }
+});
 
-This project is built with:
+const SaleSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  items: [SaleItemSchema],
+  totalAmount: {
+    type: Number,
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'completed', 'cancelled'],
+    default: 'pending'
+  }
+}, {
+  timestamps: true
+});
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+module.exports = mongoose.model('Sale', SaleSchema);
+```
 
-## How can I deploy this project?
+## API Endpoints à implémenter
 
-Simply open [Lovable](https://lovable.dev/projects/b4bea8fe-de4c-46cf-bc64-943e6e52345e) and click on Share -> Publish.
+1. Authentication:
+   - POST /api/auth/register - Inscription
+   - POST /api/auth/login - Connexion
+   - POST /api/auth/verify-email - Vérifier si un email existe
+   - POST /api/auth/reset-password - Réinitialiser le mot de passe
 
-## Can I connect a custom domain to my Lovable project?
+2. Produits:
+   - GET /api/products - Liste tous les produits
+   - GET /api/products/:id - Obtient un produit par ID
+   - POST /api/products - Ajoute un nouveau produit
+   - PUT /api/products/:id - Met à jour un produit
+   - DELETE /api/products/:id - Supprime un produit
+   - POST /api/products/:id/upload - Upload une image pour un produit
 
-Yes, you can!
+3. Ventes:
+   - GET /api/sales - Liste toutes les ventes
+   - GET /api/sales/:id - Obtient une vente par ID
+   - GET /api/sales/user/:userId - Liste les ventes d'un utilisateur
+   - POST /api/sales - Crée une nouvelle vente
+   - PUT /api/sales/:id/status - Met à jour le statut d'une vente
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Middleware d'authentification
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Créez un middleware pour protéger les routes qui nécessitent une authentification:
+
+```javascript
+// middleware/auth.js
+const jwt = require('jsonwebtoken');
+
+module.exports = function(req, res, next) {
+  // Récupérer le token du header
+  const token = req.header('x-auth-token') || req.header('Authorization')?.replace('Bearer ', '');
+
+  // Vérifier si le token existe
+  if (!token) {
+    return res.status(401).json({ message: 'Accès refusé. Token manquant.' });
+  }
+
+  try {
+    // Vérifier le token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    res.status(401).json({ message: 'Token invalide' });
+  }
+};
+```
+
+## Modification du Frontend pour l'intégration
+
+Dans le frontend (cette application), vous devrez modifier le fichier `src/services/api.ts` pour utiliser les vrais appels API au lieu des mocks. Les commentaires dans le fichier vous guideront sur les modifications à apporter.
+
+## Notes importantes
+
+- Assurez-vous que le serveur backend est configuré avec CORS pour accepter les requêtes du frontend.
+- Configurez correctement les variables d'environnement dans le fichier .env du backend.
+- Pensez à sécuriser votre API avec des JWT et à implémenter une gestion appropriée des erreurs.
