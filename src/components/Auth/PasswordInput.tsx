@@ -14,6 +14,7 @@ interface PasswordInputProps {
   required?: boolean;
   isValid?: boolean;
   showValidation?: boolean;
+  onFocus?: () => void;
 }
 
 const PasswordInput = ({
@@ -24,7 +25,8 @@ const PasswordInput = ({
   className,
   required = false,
   isValid = true,
-  showValidation = false
+  showValidation = false,
+  onFocus
 }: PasswordInputProps) => {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -47,6 +49,7 @@ const PasswordInput = ({
           className
         )}
         required={required}
+        onFocus={onFocus}
       />
       <Button
         type="button"

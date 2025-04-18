@@ -1,83 +1,117 @@
+import { User } from "../models/user";
+import { Product } from "../models/product";
+import { Sale } from "../models/sale";
+import Products from "../db/products.json";
+import Users from "../db/users.json";
+import Sales from "../db/sales.json";
 
-import usersData from '../db/users.json';
-import productsData from '../db/products.json';
-import salesData from '../db/sales.json';
-import { User } from '../models/user';
-import { Product } from '../models/product';
-import { Sale } from '../models/sale';
-
-// Simule un délai de réseau
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Service d'authentification
+// Simulate API services
 export const authService = {
-  // Vérifier si un email existe
-  checkEmailExists: async (email: string): Promise<boolean> => {
-    await delay(500); // Simule un délai réseau
-    return usersData.some(user => user.email.toLowerCase() === email.toLowerCase());
-  },
-  
-  // Authentification par email
-  authenticateByEmail: async (email: string): Promise<User | null> => {
-    await delay(700);
-    const user = usersData.find(user => user.email.toLowerCase() === email.toLowerCase());
-    return user || null;
-  },
-  
-  // Authentification complète
   login: async (email: string, password: string): Promise<User | null> => {
-    await delay(1000);
-    const user = usersData.find(
-      user => 
-        user.email.toLowerCase() === email.toLowerCase() && 
-        user.password === password
-    );
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    const users: User[] = Users;
+    const user = users.find(u => u.email === email && u.password === password);
+    
     return user || null;
   },
   
-  // Inscription d'un nouvel utilisateur
-  register: async (userData: Omit<User, 'id' | 'role' | 'createdAt'>): Promise<User> => {
-    await delay(1200);
-    // Dans une véritable application, nous enregistrerions l'utilisateur dans la base de données
+  register: async (userData: Omit<User, 'id' | 'role' | 'createdAt'>): Promise<User | null> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     const newUser: User = {
-      id: `${usersData.length + 1}`,
-      ...userData,
-      role: 'user',
+      id: `user-${Date.now()}`,
+      email: userData.email,
+      password: userData.password,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      role: 'user' as const,
       createdAt: new Date().toISOString()
     };
+    
+    // In a real app, this would be saved to a database
+    // For this mock, we just return the newly created user
     return newUser;
-  }
-};
-
-// Service des produits
-export const productService = {
-  getAll: async (): Promise<Product[]> => {
-    await delay(800);
-    return productsData;
   },
   
-  getById: async (id: string): Promise<Product | null> => {
-    await delay(500);
-    const product = productsData.find(product => product.id === id);
+  authenticateByEmail: async (email: string): Promise<User | null> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 600));
+    
+    const users: User[] = Users;
+    const user = users.find(u => u.email === email);
+    
+    return user || null;
+  },
+  
+  checkEmailExists: async (email: string): Promise<boolean> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const users: User[] = Users;
+    const exists = users.some(u => u.email === email);
+    
+    return exists;
+  },
+};
+
+export const productsService = {
+  getProducts: async (): Promise<Product[]> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    return Products;
+  },
+  
+  getProductById: async (id: string): Promise<Product | null> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 400));
+    
+    const product = Products.find(p => p.id === id);
     return product || null;
   }
 };
 
-// Service des ventes
-export const saleService = {
-  getAll: async (): Promise<Sale[]> => {
-    await delay(800);
-    return salesData;
+export const salesService = {
+  getSales: async (): Promise<Sale[]> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    const sales = Sales.map(sale => ({
+      ...sale,
+      status: sale.status as 'pending' | 'completed' | 'cancelled'
+    }));
+    
+    return sales;
   },
   
-  getById: async (id: string): Promise<Sale | null> => {
-    await delay(500);
-    const sale = salesData.find(sale => sale.id === id);
-    return sale || null;
+  createSale: async (saleData: Omit<Sale, 'id' | 'createdAt'>): Promise<Sale> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const newSale: Sale = {
+      id: `sale-${Date.now()}`,
+      userId: saleData.userId,
+      items: saleData.items,
+      totalAmount: saleData.totalAmount,
+      status: saleData.status,
+      createdAt: new Date().toISOString()
+    };
+    
+    return newSale;
   },
   
-  getUserSales: async (userId: string): Promise<Sale[]> => {
-    await delay(700);
-    return salesData.filter(sale => sale.userId === userId);
+  getSalesByUserId: async (userId: string): Promise<Sale[]> => {
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 600));
+    
+    const userSales = Sales.filter(sale => sale.userId === userId).map(sale => ({
+      ...sale,
+      status: sale.status as 'pending' | 'completed' | 'cancelled'
+    }));
+    
+    return userSales;
   }
 };
