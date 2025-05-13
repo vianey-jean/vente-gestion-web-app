@@ -8,7 +8,7 @@ import {
 import { Toaster } from 'sonner';
 import { useAuth } from './hooks/useAuth';
 import LoginPage from './pages/LoginPage';
-import RegistrationPage from './pages/RegistrationPage';
+import RegistrationPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import NotFound from './pages/NotFound';

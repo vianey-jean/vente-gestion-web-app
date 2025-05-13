@@ -1,95 +1,88 @@
 
-import { toast } from "sonner";
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { Appointment } from './AppointmentService';
+import { format, parseISO, isAfter, addMinutes } from 'date-fns';
 
-// Types d'alertes supportés
-type ToastType = "success" | "error" | "info" | "warning";
+// Function to check if a notification should be sent for an appointment
+const shouldNotify = (appointment: Appointment): boolean => {
+  const appointmentDateTime = parseISO(`${appointment.date}T${appointment.heure}`);
+  const now = new Date();
+  const notificationTime = addMinutes(now, 30);
+  
+  return isAfter(appointmentDateTime, now) && 
+         !isAfter(appointmentDateTime, notificationTime);
+};
 
-// Interface pour les options de notification
-interface NotificationOptions {
-  title?: string;
-  description?: string;
-  duration?: number;
-  action?: React.ReactNode;
-  position?: "top-right" | "top-center" | "top-left" | "bottom-right" | "bottom-center" | "bottom-left";
-}
+// Custom hook for notification service
+export const useNotificationService = (appointments: Appointment[]) => {
+  const [notifiedAppointments, setNotifiedAppointments] = useState<Set<string>>(new Set());
 
-// Service pour gérer les notifications
-class NotificationService {
-  // Notification de succès
-  success(message: string, options?: NotificationOptions) {
-    return this._showToast("success", message, options);
-  }
+  // Check for appointments that need notifications
+  useEffect(() => {
+    if (!appointments || appointments.length === 0) return;
 
-  // Notification d'erreur
-  error(message: string, options?: NotificationOptions) {
-    return this._showToast("error", message, options);
-  }
+    // Filter for appointments that should be notified and haven't been yet
+    const appointmentsToNotify = appointments.filter(
+      (appointment) => 
+        shouldNotify(appointment) && 
+        !notifiedAppointments.has(appointment.id.toString())
+    );
 
-  // Notification d'information
-  info(message: string, options?: NotificationOptions) {
-    return this._showToast("info", message, options);
-  }
-
-  // Notification d'avertissement
-  warning(message: string, options?: NotificationOptions) {
-    return this._showToast("warning", message, options);
-  }
-
-  // Méthode privée pour afficher une toast avec le type spécifié
-  private _showToast(type: ToastType, message: string, options?: NotificationOptions) {
-    const { title, description, duration = 5000, action, position = "top-right" } = options || {};
-
-    const toastConfig = {
-      description: description || message,
-      duration,
-      position,
-      action
-    };
-
-    switch (type) {
-      case "success":
-        return toast.success(title || "Succès", toastConfig);
-      case "error":
-        return toast.error(title || "Erreur", toastConfig);
-      case "info":
-        return toast.info(title || "Information", toastConfig);
-      case "warning":
-        return toast.warning(title || "Attention", toastConfig);
+    // Send notifications for filtered appointments
+    if (appointmentsToNotify.length > 0) {
+      appointmentsToNotify.forEach((appointment) => {
+        const formattedTime = appointment.heure;
+        const formattedDate = format(parseISO(appointment.date), 'dd/MM/yyyy');
+        
+        toast.warning(
+          `Rappel: "${appointment.titre}" à ${formattedTime} le ${formattedDate}`,
+          {
+            duration: 8000,
+            description: `Lieu: ${appointment.location || 'Non spécifié'}`,
+          }
+        );
+        
+        // Add to notified set
+        setNotifiedAppointments((prev) => {
+          const newSet = new Set(prev);
+          newSet.add(appointment.id.toString());
+          return newSet;
+        });
+      });
     }
-  }
+  }, [appointments, notifiedAppointments]);
 
-  // Notification personnalisée avec promise
-  async promise<T>(
-    promiseFn: () => Promise<T>,
-    options: {
-      loading: string;
-      success: string | ((data: T) => string);
-      error: string | ((error: any) => string);
-    },
-    toastOptions?: NotificationOptions
-  ) {
-    const { loading, success, error } = options;
-    const { duration = 5000, position = "top-right" } = toastOptions || {};
+  // Reset notifications function
+  const resetNotifications = () => {
+    setNotifiedAppointments(new Set());
+  };
 
-    return toast.promise(promiseFn, {
-      loading,
-      success: (data) => typeof success === "function" ? success(data) : success,
-      error: (err) => typeof error === "function" ? error(err) : error,
-      duration,
-      position
+  return {
+    resetNotifications
+  };
+};
+
+// Export a singleton instance of the notification service for direct usage
+export const notificationService = {
+  notify: (title: string, message: string) => {
+    toast(title, {
+      description: message,
+    });
+  },
+  warning: (title: string, message: string) => {
+    toast.warning(title, {
+      description: message,
+    });
+  },
+  success: (title: string, message: string) => {
+    toast.success(title, {
+      description: message,
+    });
+  },
+  error: (title: string, message: string) => {
+    toast.error(title, {
+      description: message,
     });
   }
-
-  // Méthode pour fermer une notification spécifique
-  dismiss(toastId: string | number) {
-    toast.dismiss(toastId);
-  }
-
-  // Méthode pour fermer toutes les notifications
-  dismissAll() {
-    toast.dismiss();
-  }
-}
-
-// Exportation d'une instance unique du service
-export const notificationService = new NotificationService();
+};

@@ -2,6 +2,13 @@
 // Importation d'Axios pour les requêtes HTTP
 import axios from 'axios';
 
+// Add this to address the ImportMeta type error
+declare global {
+  interface ImportMeta {
+    env: Record<string, string>;
+  }
+}
+
 // Création d'une instance Axios avec une configuration de base
 // L'URL de base est récupérée depuis les variables d'environnement
 const api = axios.create({
