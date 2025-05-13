@@ -1,76 +1,57 @@
-
-// Importation d'Axios pour les requêtes HTTP
+// Importation de la bibliothèque Axios pour effectuer des requêtes HTTP
 import axios from 'axios';
 
-// Add this to address the ImportMeta type error
-declare global {
-  interface ImportMeta {
-    env: Record<string, string>;
-  }
-}
+// Définition de l'URL de base de l'API
+const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Création d'une instance Axios avec une configuration de base
-// L'URL de base est récupérée depuis les variables d'environnement
+// Création d'une instance Axios avec une configuration par défaut
 const api = axios.create({
-  // Utilisation de l'URL de base de l'API depuis Vite
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://riziky-agendas.onrender.com',
-  // Timeout après 10 secondes si pas de réponse du serveur
-  timeout: 10000,
-  // En-têtes HTTP par défaut pour toutes les requêtes
+  baseURL: `${AUTH_BASE_URL}/api`,                        // Toutes les requêtes utiliseront cette URL de base
   headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  }
+    'Content-Type': 'application/json',   // Format des données envoyées : JSON
+  },
 });
 
-// Ajout d'un intercepteur pour gérer les requêtes
+// Intercepteur de requête : il est exécuté **avant chaque requête**
 api.interceptors.request.use(
   (config) => {
-    // On pourrait ajouter un token d'authentification ici si nécessaire
-    // Exemple: config.headers.Authorization = `Bearer ${token}`;
+    // Récupération des données utilisateur stockées localement (si l'utilisateur est connecté)
+    const user = localStorage.getItem('user');
+    if (user) {
+      // Conversion des données JSON en objet JavaScript
+      const userData = JSON.parse(user);
+
+      // Ajout de l'identifiant utilisateur dans les en-têtes de la requête (ex: pour l’authentification)
+      config.headers['user-id'] = userData.id;
+    }
+
+    // Retour de la configuration mise à jour
     return config;
   },
   (error) => {
-    // En cas d'erreur lors de la requête
+    // En cas d’erreur lors de la configuration de la requête, elle est rejetée
     return Promise.reject(error);
   }
 );
 
-// Ajout d'un intercepteur pour gérer les réponses
+// Intercepteur de réponse : il est exécuté **après réception de la réponse**
 api.interceptors.response.use(
-  (response) => {
-    // Retourne directement la réponse si tout va bien
-    return response;
-  },
+  (response) => response, // Si tout va bien, la réponse est renvoyée telle quelle
+
   (error) => {
-    // Gestion personnalisée des erreurs selon le code HTTP
-    if (error.response) {
-      // Si le serveur a répondu avec un code d'erreur
-      switch (error.response.status) {
-        case 401:
-          // Non autorisé - déconnecter l'utilisateur
-          // Exemple: AuthService.logout();
-          break;
-        case 404:
-          // Ressource non trouvée
-          console.error('Ressource non trouvée');
-          break;
-        default:
-          // Autre type d'erreur
-          console.error('Erreur de serveur', error.response.data);
-      }
-    } else if (error.request) {
-      // La requête a été envoyée mais pas de réponse reçue
-      console.error('Pas de réponse du serveur');
-    } else {
-      // Une erreur s'est produite lors de la configuration de la requête
-      console.error('Erreur de configuration de la requête', error.message);
+    // Vérifie si l'erreur est due à une authentification invalide (code HTTP 401)
+    if (error.response && error.response.status === 401) {
+      // Suppression des données utilisateur du localStorage
+      localStorage.removeItem('user');
+
+      // Redirection automatique vers la page de connexion
+      window.location.href = '/connexion';
     }
-    
-    // Rejette la promesse avec l'erreur pour traitement ultérieur
+
+    // Rejet de l'erreur pour la gérer ailleurs dans l'application
     return Promise.reject(error);
   }
 );
 
-// Exportation de l'instance configurée
+// Exportation de l'instance Axios configurée pour être utilisée dans toute l'application
 export default api;

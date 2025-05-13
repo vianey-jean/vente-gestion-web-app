@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AuthService } from '@/services/AuthService';
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 // Schéma de validation pour l'étape email
@@ -48,8 +48,7 @@ const LoginPage = () => {
   const [emailNotFound, setEmailNotFound] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isPasswordValid, setIsPasswordValid] = useState(false);
-  const { toast } = useToast();
-  
+
   const navigate = useNavigate();
 
   // Formulaire de saisie de l'email
@@ -216,13 +215,6 @@ const LoginPage = () => {
                           password={password} 
                           onValidityChange={handlePasswordValidityChange}
                         />
-                        {loginError && (
-                          <div className="mt-2">
-                            <Link to="/mot-de-passe-oublie" className="text-sm text-blue-600 hover:underline">
-                              Mot de passe oublié?
-                            </Link>
-                          </div>
-                        )}
                       </FormItem>
                     )}
                   />
