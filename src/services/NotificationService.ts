@@ -1,123 +1,95 @@
-import { useEffect, useRef } from 'react';
-import { Appointment } from './AppointmentService';
-import { toast } from 'sonner';
-import { parseISO, differenceInHours, format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 
-// Clé pour stockage local
-const STORAGE_KEY = 'confirmed_notifications';
-const TEMPORARY_KEY = 'temporarily_seen_notifications';
+import { toast } from "sonner";
 
-// Récupère les IDs confirmés (définitifs)
-const getConfirmedNotifications = (): Set<number> => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return new Set(stored ? JSON.parse(stored) : []);
-  } catch {
-    return new Set();
-  }
-};
+// Types d'alertes supportés
+type ToastType = "success" | "error" | "info" | "warning";
 
-// Récupère les IDs déjà vus (temporairement) pendant 5s
-const getTemporaryNotifications = (): Set<number> => {
-  try {
-    const stored = localStorage.getItem(TEMPORARY_KEY);
-    return new Set(stored ? JSON.parse(stored) : []);
-  } catch {
-    return new Set();
-  }
-};
-
-// Enregistre un ID comme confirmé (ne plus jamais notifier)
-const saveConfirmedNotification = (appointmentId: number) => {
-  const confirmed = getConfirmedNotifications();
-  confirmed.add(appointmentId);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(confirmed)));
-};
-
-// Enregistre un ID comme vu temporairement (évite la répétition après F5)
-const saveTemporaryNotification = (appointmentId: number) => {
-  const temp = getTemporaryNotifications();
-  temp.add(appointmentId);
-  localStorage.setItem(TEMPORARY_KEY, JSON.stringify(Array.from(temp)));
-};
-
-// Son de notification
-const playNotificationSound = () => {
-  const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-
-  // Activer le son seulement si l'utilisateur a déjà interagi avec la page
-  if (document.hasFocus()) {
-    audio.play().catch(() => {
-      // Erreur de lecture ignorée (navigateur peut bloquer)
-    });
-  }
-};
-
-export function useNotificationService(appointments: Appointment[]) {
-  const confirmedNotifications = useRef<Set<number>>(getConfirmedNotifications());
-  const temporaryNotifications = useRef<Set<number>>(getTemporaryNotifications());
- 
-  useEffect(() => {
-    appointments.forEach(appointment => {
-      const appointmentId = appointment.id;
-      if (
-        confirmedNotifications.current.has(appointmentId) ||
-        temporaryNotifications.current.has(appointmentId)
-      ) {
-        return;
-      }
-
- 
-      const now = new Date();
-      const appointmentDate = parseISO(`${appointment.date}T${appointment.heure}`);
-      const hoursDifference = differenceInHours(appointmentDate, now);
-
-
-        // Si dans moins de 24h
-      if (hoursDifference > 0 && hoursDifference <= 24) {
-        // Marquer comme temporairement vu
-        temporaryNotifications.current.add(appointmentId);
-        saveTemporaryNotification(appointmentId);
-            // Jouer le son et afficher la notification
-        playNotificationSound();
-
-        toast(
-          `Vous avez un rendez-vous le ${format(appointmentDate, 'dd/MM/yyyy', { locale: fr })} à ${appointment.heure} au ${appointment.location}`,
-          {
-            description: appointment.description, // Utiliser `description` ici pour accessibilité
-            duration: 5000,
-            style: {
-              backgroundColor: '#ffebee',
-              border: '1px solid #ef5350',
-              color: '#c62828'
-            },
-            action: {
-              label: "Ok",
-              onClick: () => {
-                saveConfirmedNotification(appointment.id);
-                confirmedNotifications.current.add(appointment.id);
-              },
-              style: {
-                backgroundColor: '#000000',
-                color: '#ffffff'
-              }
-            }
-          }
-        );
-      }
-    });
-  }, [appointments]);
-
-  // Réinitialiser les notifications (utile en admin/debug)
-  const resetNotifications = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(TEMPORARY_KEY);
-    confirmedNotifications.current.clear();
-    temporaryNotifications.current.clear();
-  };
-
-  return {
-    resetNotifications,
-  };
+// Interface pour les options de notification
+interface NotificationOptions {
+  title?: string;
+  description?: string;
+  duration?: number;
+  action?: React.ReactNode;
+  position?: "top-right" | "top-center" | "top-left" | "bottom-right" | "bottom-center" | "bottom-left";
 }
+
+// Service pour gérer les notifications
+class NotificationService {
+  // Notification de succès
+  success(message: string, options?: NotificationOptions) {
+    return this._showToast("success", message, options);
+  }
+
+  // Notification d'erreur
+  error(message: string, options?: NotificationOptions) {
+    return this._showToast("error", message, options);
+  }
+
+  // Notification d'information
+  info(message: string, options?: NotificationOptions) {
+    return this._showToast("info", message, options);
+  }
+
+  // Notification d'avertissement
+  warning(message: string, options?: NotificationOptions) {
+    return this._showToast("warning", message, options);
+  }
+
+  // Méthode privée pour afficher une toast avec le type spécifié
+  private _showToast(type: ToastType, message: string, options?: NotificationOptions) {
+    const { title, description, duration = 5000, action, position = "top-right" } = options || {};
+
+    const toastConfig = {
+      description: description || message,
+      duration,
+      position,
+      action
+    };
+
+    switch (type) {
+      case "success":
+        return toast.success(title || "Succès", toastConfig);
+      case "error":
+        return toast.error(title || "Erreur", toastConfig);
+      case "info":
+        return toast.info(title || "Information", toastConfig);
+      case "warning":
+        return toast.warning(title || "Attention", toastConfig);
+    }
+  }
+
+  // Notification personnalisée avec promise
+  async promise<T>(
+    promiseFn: () => Promise<T>,
+    options: {
+      loading: string;
+      success: string | ((data: T) => string);
+      error: string | ((error: any) => string);
+    },
+    toastOptions?: NotificationOptions
+  ) {
+    const { loading, success, error } = options;
+    const { duration = 5000, position = "top-right" } = toastOptions || {};
+
+    return toast.promise(promiseFn, {
+      loading,
+      success: (data) => typeof success === "function" ? success(data) : success,
+      error: (err) => typeof error === "function" ? error(err) : error,
+      duration,
+      position
+    });
+  }
+
+  // Méthode pour fermer une notification spécifique
+  dismiss(toastId: string | number) {
+    toast.dismiss(toastId);
+  }
+
+  // Méthode pour fermer toutes les notifications
+  dismissAll() {
+    toast.dismiss();
+  }
+}
+
+// Exportation d'une instance unique du service
+export const notificationService = new NotificationService();
