@@ -1,12 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Index from './pages/Index';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Profile from './pages/Profile';
-import Products from './pages/Products';
-import ProductDetails from './pages/ProductDetails';
-import Cart from './pages/Cart';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import Profile from './pages/ProfilePage';
+import Products from './pages/ProductDetail';
+import ProductDetails from './pages/ProductDetail';
+import Cart from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import OrdersPage from './pages/OrdersPage';
 import ContactPage from './pages/ContactPage';
@@ -27,81 +28,69 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/sonner';
 import SecureRoute from './components/SecureRoute';
 import AdminPromoCodes from "./pages/admin/AdminPromoCodes";
+import ProtectedRoute from './components/ProtectedRoute';
 
 const queryClient = new QueryClient();
 
 function App() {
   const [loading, setLoading] = useState(true);
-  const { checkAuth } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     const verifyAuth = async () => {
-      await checkAuth();
-      setLoading(false);
+      // No need to call checkAuth here as it doesn't exist
+      // Just set loading to false after a short delay
+      setTimeout(() => {
+        setLoading(false);
+      }, 500);
     };
     verifyAuth();
-  }, [checkAuth]);
+  }, []);
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
   return (
-    <BrowserRouter>
+    <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <StoreProvider>
-          <QueryClientProvider client={queryClient}>
-            <Toaster richColors position="top-center" />
-            <Routes>
-              {/* Routes publiques */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/products/:categoryName" element={<Products />} />
-              <Route path="/product/:id" element={<ProductDetails />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/politique-cookies" element={<CookiesPage />} />
-              
-              {/* Routes privées */}
-              <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
-              <Route path="/commandes" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
-              
-              {/* Routes Admin */}
-              <Route path="/admin" element={<SecureRoute allowedRoles={['admin']}><AdminLayout /></SecureRoute>} />
-              <Route path="/admin/products" element={<SecureRoute allowedRoles={['admin']}><AdminProductsPage /></SecureRoute>} />
-              <Route path="/admin/orders" element={<SecureRoute allowedRoles={['admin']}><AdminOrdersPage /></SecureRoute>} />
-              <Route path="/admin/users" element={<SecureRoute allowedRoles={['admin']}><AdminUsersPage /></SecureRoute>} />
-              <Route path="/admin/settings" element={<SecureRoute allowedRoles={['admin']}><AdminSettingsPage /></SecureRoute>} />
-              <Route path="/admin/messages" element={<SecureRoute allowedRoles={['admin']}><AdminMessagesPage /></SecureRoute>} />
-              <Route path="/admin/chat" element={<SecureRoute allowedRoles={['admin']}><AdminChatPage /></SecureRoute>} />
-              <Route path="/admin/client-chat/:userId" element={<SecureRoute allowedRoles={['admin']}><AdminClientChatPage /></SecureRoute>} />
-              <Route path="/admin/promo-codes" element={<SecureRoute allowedRoles={['admin']}><AdminPromoCodes /></SecureRoute>} />
-              
-              {/* Fallback pour les routes non trouvées */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </QueryClientProvider>
+          <Toaster richColors position="top-center" />
+          <Routes>
+            {/* Routes publiques */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/products/:categoryName" element={<Products />} />
+            <Route path="/product/:id" element={<ProductDetails />} />
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/politique-cookies" element={<CookiesPage />} />
+            
+            {/* Routes privées */}
+            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
+            <Route path="/commandes" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
+            
+            {/* Routes Admin */}
+            <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminLayout /></ProtectedRoute>} />
+            <Route path="/admin/products" element={<ProtectedRoute requireAdmin={true}><AdminProductsPage /></ProtectedRoute>} />
+            <Route path="/admin/orders" element={<ProtectedRoute requireAdmin={true}><AdminOrdersPage /></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute requireAdmin={true}><AdminUsersPage /></ProtectedRoute>} />
+            <Route path="/admin/settings" element={<ProtectedRoute requireAdmin={true}><AdminSettingsPage /></ProtectedRoute>} />
+            <Route path="/admin/messages" element={<ProtectedRoute requireAdmin={true}><AdminMessagesPage /></ProtectedRoute>} />
+            <Route path="/admin/chat" element={<ProtectedRoute requireAdmin={true}><AdminChatPage /></ProtectedRoute>} />
+            <Route path="/admin/client-chat/:userId" element={<ProtectedRoute requireAdmin={true}><AdminClientChatPage /></ProtectedRoute>} />
+            <Route path="/admin/promo-codes" element={<ProtectedRoute requireAdmin={true}><AdminPromoCodes /></ProtectedRoute>} />
+            
+            {/* Fallback pour les routes non trouvées */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </StoreProvider>
       </AuthProvider>
-    </BrowserRouter>
+    </QueryClientProvider>
   );
 }
-
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, loading } = useAuth();
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
-};
 
 export default App;
