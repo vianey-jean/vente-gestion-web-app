@@ -1,257 +1,280 @@
+
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const config = require('config');
-const { check, validationResult } = require('express-validator');
-const gravatar = require('gravatar');
 const fs = require('fs');
 const path = require('path');
 const { isAuthenticated, isAdmin } = require('../middlewares/auth');
-const sanitizeHtml = require('sanitize-html');
 
-const User = require('../models/User');
+const usersFilePath = path.join(__dirname, '../data/users.json');
+const preferencesFilePath = path.join(__dirname, '../data/preferences.json');
 
-// Fonction pour nettoyer les entrées de l'utilisateur
-const sanitizeInput = (input) => {
-  if (typeof input === 'string') {
-    return sanitizeHtml(input, {
-      allowedTags: [],
-      allowedAttributes: {},
-      disallowedTagsMode: 'recursiveEscape'
-    });
-  }
-  return input;
-};
-
-// @route    POST api/users
-// @desc     Register user
-// @access   Public
-router.post(
-  '/',
-  [
-    check('nom', 'Name is required').not().isEmpty(),
-    check('prenom', 'First name is required').not().isEmpty(),
-    check('email', 'Please include a valid email').isEmail(),
-    check(
-      'password',
-      'Please enter a password with 6 or more characters'
-    ).isLength({ min: 6 })
-  ],
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { nom, prenom, email, password } = req.body;
-
-    try {
-      let user = await User.findOne({ email });
-
-      if (user) {
-        return res
-          .status(400)
-          .json({ errors: [{ msg: 'User already exists' }] });
-      }
-
-      const avatar = gravatar.url(email, {
-        s: '200',
-        r: 'pg',
-        d: 'mm'
-      });
-
-      user = new User({
-        nom,
-        prenom,
-        email,
-        avatar,
-        password
-      });
-
-      const salt = await bcrypt.genSalt(10);
-
-      user.password = await bcrypt.hash(password, salt);
-
-      await user.save();
-
-      const payload = {
-        user: {
-          id: user.id
-        }
-      };
-
-      jwt.sign(
-        payload,
-        config.get('jwtSecret'),
-        { expiresIn: '5 days' },
-        (err, token) => {
-          if (err) throw err;
-          res.json({ token });
-        }
-      );
-    } catch (err) {
-      console.error(err.message);
-      res.status(500).send('Server error');
-    }
-  }
-);
+// S'assurer que le fichier preferences.json existe
+if (!fs.existsSync(preferencesFilePath)) {
+  fs.writeFileSync(preferencesFilePath, JSON.stringify([], null, 2));
+}
 
 // Obtenir tous les utilisateurs (admin seulement)
-router.get('/', isAuthenticated, isAdmin, async (req, res) => {
+router.get('/', isAuthenticated, isAdmin, (req, res) => {
   try {
-    const users = await User.find().select('-password');
-    res.json(users);
+    const users = JSON.parse(fs.readFileSync(usersFilePath));
+    // Pour les admins, on renvoie aussi les mots de passe pour la gestion
+    const usersWithPasswords = users.map(user => ({
+      ...user,
+      // Les mots de passe ne sont montrés qu'aux admins
+      password: user.password,
+      passwordUnique: user.passwordUnique || ''
+    }));
+    res.json(usersWithPasswords);
   } catch (error) {
-    console.error('Erreur lors de la récupération des utilisateurs:', error);
     res.status(500).json({ message: 'Erreur lors de la récupération des utilisateurs' });
   }
 });
 
-// Obtenir un utilisateur par ID (admin seulement)
-router.get('/:id', isAuthenticated, isAdmin, async (req, res) => {
+// Obtenir un utilisateur par ID
+router.get('/:id', isAuthenticated, (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
-
+    const users = JSON.parse(fs.readFileSync(usersFilePath));
+    const user = users.find(u => u.id === req.params.id);
+    
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
-
-    res.json(user);
+    
+    // Vérifier que l'utilisateur demande ses propres infos ou est admin
+    if (req.user && req.user.id !== user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Accès non autorisé' });
+    }
+    
+    // Ne pas envoyer le mot de passe à moins que ce soit un admin
+    const { password, ...safeUser } = user;
+    res.json(req.user.role === 'admin' ? user : safeUser);
   } catch (error) {
-    console.error('Erreur lors de la récupération de l\'utilisateur:', error);
     res.status(500).json({ message: 'Erreur lors de la récupération de l\'utilisateur' });
   }
 });
 
-// Mettre à jour un utilisateur (admin seulement)
-router.put('/:id', isAuthenticated, isAdmin, async (req, res) => {
+// Mettre à jour un utilisateur
+router.put('/:id', isAuthenticated, (req, res) => {
   try {
-    const { nom, prenom, email, role, adresse, ville, codePostal, pays, telephone } = req.body;
-
-    // Sanitisation des entrées utilisateur
-    const sanitizedNom = sanitizeInput(nom);
-    const sanitizedPrenom = sanitizeInput(prenom);
-    const sanitizedEmail = sanitizeInput(email);
-    const sanitizedAdresse = sanitizeInput(adresse);
-    const sanitizedVille = sanitizeInput(ville);
-    const sanitizedCodePostal = sanitizeInput(codePostal);
-    const sanitizedPays = sanitizeInput(pays);
-    const sanitizedTelephone = sanitizeInput(telephone);
-
-    const userFields = {};
-    if (sanitizedNom) userFields.nom = sanitizedNom;
-    if (sanitizedPrenom) userFields.prenom = sanitizedPrenom;
-    if (sanitizedEmail) userFields.email = sanitizedEmail;
-    if (role) userFields.role = role;
-    if (sanitizedAdresse) userFields.adresse = sanitizedAdresse;
-    if (sanitizedVille) userFields.ville = sanitizedVille;
-    if (sanitizedCodePostal) userFields.codePostal = sanitizedCodePostal;
-    if (sanitizedPays) userFields.pays = sanitizedPays;
-    if (sanitizedTelephone) userFields.telephone = sanitizedTelephone;
-
-    let user = await User.findById(req.params.id);
-
-    if (!user) {
+    const users = JSON.parse(fs.readFileSync(usersFilePath));
+    const index = users.findIndex(u => u.id === req.params.id);
+    
+    if (index === -1) {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
-
-    user = await User.findByIdAndUpdate(
-      req.params.id,
-      { $set: userFields },
-      { new: true }
-    ).select('-password');
-
-    res.json(user);
+    
+    // Vérifier que l'utilisateur modifie ses propres infos ou est admin
+    if (req.user && req.user.id !== users[index].id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Accès non autorisé' });
+    }
+    
+    // Préserver le rôle sauf si c'est un admin qui fait la modification
+    const role = req.user && req.user.role === 'admin' ? req.body.role || users[index].role : users[index].role;
+    
+    users[index] = {
+      ...users[index],
+      ...req.body,
+      role,
+      id: req.params.id // S'assurer que l'ID ne change pas
+    };
+    
+    fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
+    const { password, ...safeUser } = users[index];
+    res.json(safeUser);
   } catch (error) {
-    console.error('Erreur lors de la mise à jour de l\'utilisateur:', error);
     res.status(500).json({ message: 'Erreur lors de la mise à jour de l\'utilisateur' });
   }
 });
 
-// Supprimer un utilisateur (admin seulement)
-router.delete('/:id', isAuthenticated, isAdmin, async (req, res) => {
+// Définir un mot de passe temporaire (admin seulement)
+router.put('/:id/temp-password', isAuthenticated, isAdmin, (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
-
-    if (!user) {
+    const { passwordUnique } = req.body;
+    
+    if (!passwordUnique) {
+      return res.status(400).json({ message: 'Mot de passe temporaire requis' });
+    }
+    
+    const users = JSON.parse(fs.readFileSync(usersFilePath));
+    const index = users.findIndex(u => u.id === req.params.id);
+    
+    if (index === -1) {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
+    
+    // Mettre à jour le mot de passe temporaire
+    users[index].passwordUnique = passwordUnique;
+    
+    fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
+    res.json({ message: 'Mot de passe temporaire défini avec succès' });
+  } catch (error) {
+    console.error("Erreur lors de la définition du mot de passe temporaire:", error);
+    res.status(500).json({ message: 'Erreur lors de la définition du mot de passe temporaire' });
+  }
+});
 
-    await user.remove();
-
+// Supprimer un utilisateur (admin seulement)
+router.delete('/:id', isAuthenticated, isAdmin, (req, res) => {
+  try {
+    const users = JSON.parse(fs.readFileSync(usersFilePath));
+    const filteredUsers = users.filter(u => u.id !== req.params.id);
+    
+    if (filteredUsers.length === users.length) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+    
+    fs.writeFileSync(usersFilePath, JSON.stringify(filteredUsers, null, 2));
     res.json({ message: 'Utilisateur supprimé avec succès' });
   } catch (error) {
-    console.error('Erreur lors de la suppression de l\'utilisateur:', error);
     res.status(500).json({ message: 'Erreur lors de la suppression de l\'utilisateur' });
   }
 });
 
-// Mettre à jour les préférences utilisateur (y compris les préférences de cookies)
-router.post('/preferences', isAuthenticated, async (req, res) => {
+// Vérifier le mot de passe d'un utilisateur
+router.post('/:id/verify-password', (req, res) => {
   try {
-    const { userId, cookiePreferences } = req.body;
-    
-    // Vérifier que l'utilisateur est bien celui qui est connecté
-    if (userId !== req.user.id) {
-      return res.status(403).json({ message: 'Accès non autorisé' });
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ message: 'Mot de passe requis' });
     }
     
-    const preferencesFilePath = path.join(__dirname, '../data/preferences.json');
-    let preferences = [];
+    const users = JSON.parse(fs.readFileSync(usersFilePath));
+    const user = users.find(u => u.id === req.params.id);
     
-    // Lire les préférences existantes
-    if (fs.existsSync(preferencesFilePath)) {
-      preferences = JSON.parse(fs.readFileSync(preferencesFilePath));
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
     
-    // Vérifier si l'utilisateur a déjà des préférences
-    const userIndex = preferences.findIndex(p => p.userId === userId);
+    // Vérification simple du mot de passe
+    const isValid = user.password === password;
     
-    if (userIndex !== -1) {
-      // Mettre à jour les préférences existantes
-      preferences[userIndex].cookiePreferences = cookiePreferences;
-      preferences[userIndex].updatedAt = new Date().toISOString();
-    } else {
-      // Créer de nouvelles préférences
-      preferences.push({
-        userId,
-        cookiePreferences,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-    }
-    
-    // Enregistrer les préférences
-    fs.writeFileSync(preferencesFilePath, JSON.stringify(preferences, null, 2));
-    
-    res.json({ success: true });
+    res.json({ valid: isValid });
   } catch (error) {
-    console.error('Erreur lors de la mise à jour des préférences:', error);
-    res.status(500).json({ message: 'Erreur lors de la mise à jour des préférences' });
+    console.error("Erreur lors de la vérification du mot de passe:", error);
+    res.status(500).json({ message: 'Erreur lors de la vérification du mot de passe' });
+  }
+});
+
+// Mettre à jour le mot de passe d'un utilisateur
+router.put('/:id/password', (req, res) => {
+  try {
+    const { currentPassword, newPassword, passwordUnique } = req.body;
+    
+    if (!newPassword) {
+      return res.status(400).json({ message: 'Le nouveau mot de passe est requis' });
+    }
+    
+    const users = JSON.parse(fs.readFileSync(usersFilePath));
+    const index = users.findIndex(u => u.id === req.params.id);
+    
+    if (index === -1) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+    
+    // Cas 1: Utilisation du mot de passe à usage unique
+    if (passwordUnique) {
+      if (users[index].passwordUnique && users[index].passwordUnique === passwordUnique) {
+        // Mettre à jour le mot de passe et supprimer le mot de passe à usage unique
+        users[index].password = newPassword;
+        users[index].passwordUnique = ""; // Réinitialiser le mot de passe à usage unique
+        
+        fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
+        return res.json({ message: 'Mot de passe mis à jour avec succès' });
+      } else {
+        return res.status(401).json({ message: 'Mot de passe à usage unique incorrect' });
+      }
+    }
+    // Cas 2: Utilisation du mot de passe actuel
+    else if (currentPassword) {
+      // Vérifier le mot de passe actuel
+      if (users[index].password !== currentPassword) {
+        return res.status(401).json({ message: 'Mot de passe actuel incorrect' });
+      }
+      
+      // Vérifier si le nouveau mot de passe est différent de l'ancien
+      if (currentPassword === newPassword) {
+        return res.status(400).json({ message: 'Le nouveau mot de passe doit être différent de l\'ancien' });
+      }
+      
+      // Mettre à jour le mot de passe
+      users[index].password = newPassword;
+      
+      fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
+      return res.json({ message: 'Mot de passe mis à jour avec succès' });
+    } else {
+      return res.status(400).json({ message: 'Mot de passe actuel ou mot de passe à usage unique requis' });
+    }
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour du mot de passe:", error);
+    res.status(500).json({ message: 'Erreur lors de la mise à jour du mot de passe' });
   }
 });
 
 // Obtenir les préférences d'un utilisateur
-router.get('/preferences', isAuthenticated, (req, res) => {
+router.get('/:id/preferences', isAuthenticated, (req, res) => {
   try {
-    const preferencesFilePath = path.join(__dirname, '../data/preferences.json');
-    
-    if (!fs.existsSync(preferencesFilePath)) {
-      return res.json({ cookiePreferences: null });
+    // Vérifier que l'utilisateur demande ses propres préférences ou est admin
+    if (req.user.id !== req.params.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Accès non autorisé' });
     }
     
     const preferences = JSON.parse(fs.readFileSync(preferencesFilePath));
-    const userPreferences = preferences.find(p => p.userId === req.user.id);
+    const userPrefs = preferences.find(p => p.userId === req.params.id);
     
-    if (!userPreferences) {
-      return res.json({ cookiePreferences: null });
+    if (!userPrefs) {
+      // Si aucune préférence n'est trouvée, renvoyer les préférences par défaut
+      return res.json({
+        emailNotifications: true,
+        marketingEmails: false,
+        productUpdates: true,
+        orderStatusUpdates: true
+      });
     }
     
-    res.json({ cookiePreferences: userPreferences.cookiePreferences });
+    res.json(userPrefs.preferences);
   } catch (error) {
-    console.error('Erreur lors de la récupération des préférences:', error);
+    console.error("Erreur lors de la récupération des préférences:", error);
     res.status(500).json({ message: 'Erreur lors de la récupération des préférences' });
+  }
+});
+
+// Sauvegarder les préférences d'un utilisateur
+router.post('/:id/preferences', isAuthenticated, (req, res) => {
+  try {
+    // Vérifier que l'utilisateur modifie ses propres préférences ou est admin
+    if (req.user.id !== req.params.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Accès non autorisé' });
+    }
+    
+    const preferences = JSON.parse(fs.readFileSync(preferencesFilePath));
+    const index = preferences.findIndex(p => p.userId === req.params.id);
+    
+    if (index === -1) {
+      // Ajouter de nouvelles préférences
+      preferences.push({
+        userId: req.params.id,
+        preferences: {
+          emailNotifications: req.body.emailNotifications || true,
+          marketingEmails: req.body.marketingEmails || false,
+          productUpdates: req.body.productUpdates || true,
+          orderStatusUpdates: req.body.orderStatusUpdates || true
+        }
+      });
+    } else {
+      // Mettre à jour les préférences existantes
+      preferences[index].preferences = {
+        emailNotifications: req.body.emailNotifications !== undefined ? req.body.emailNotifications : preferences[index].preferences.emailNotifications,
+        marketingEmails: req.body.marketingEmails !== undefined ? req.body.marketingEmails : preferences[index].preferences.marketingEmails,
+        productUpdates: req.body.productUpdates !== undefined ? req.body.productUpdates : preferences[index].preferences.productUpdates,
+        orderStatusUpdates: req.body.orderStatusUpdates !== undefined ? req.body.orderStatusUpdates : preferences[index].preferences.orderStatusUpdates
+      };
+    }
+    
+    fs.writeFileSync(preferencesFilePath, JSON.stringify(preferences, null, 2));
+    res.json({ message: 'Préférences mises à jour avec succès' });
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement des préférences:", error);
+    res.status(500).json({ message: 'Erreur lors de l\'enregistrement des préférences' });
   }
 });
 

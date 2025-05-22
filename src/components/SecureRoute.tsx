@@ -4,30 +4,18 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { getRealRoute, isValidSecureId, getEntityType } from '@/services/secureIds';
 import NotFound from '@/pages/NotFound';
 import { toast } from '@/components/ui/sonner';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface SecureRouteProps {
   children: React.ReactNode;
-  allowedRoles?: string[];
 }
 
-const SecureRoute: React.FC<SecureRouteProps> = ({ children, allowedRoles }) => {
+const SecureRoute: React.FC<SecureRouteProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname.substring(1); // Enlever le / initial
   const [isValidPath, setIsValidPath] = useState<boolean | null>(null);
-  const { user, isAuthenticated } = useAuth();
   
   useEffect(() => {
-    // Check if user has required role if allowedRoles is provided
-    if (allowedRoles && allowedRoles.length > 0) {
-      if (!isAuthenticated || !user || !allowedRoles.includes(user.role)) {
-        toast.error("Vous n'avez pas les permissions nécessaires");
-        navigate('/', { replace: true });
-        return;
-      }
-    }
-    
     // Vérifier si c'est une route sécurisée connue
     const realPath = getRealRoute(path);
     const isValidId = isValidSecureId(path);
@@ -42,7 +30,7 @@ const SecureRoute: React.FC<SecureRouteProps> = ({ children, allowedRoles }) => 
     } else {
       setIsValidPath(true);
     }
-  }, [path, navigate, allowedRoles, isAuthenticated, user]);
+  }, [path, navigate]);
 
   // Afficher un chargement pendant la vérification
   if (isValidPath === null) {
