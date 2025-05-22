@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Routes, Route } from 'react-router-dom';
 import { Toaster } from "@/components/ui/sonner";
@@ -126,47 +126,65 @@ function App() {
               {/* Admin Routes */}
               <Route path="/admin" element={
                 <ProtectedRoute requireAdmin={true}>
-                  <AdminLayout />
+                  <AdminLayout>
+                    <AdminProductsPage />
+                  </AdminLayout>
                 </ProtectedRoute>
               } />
               <Route path="/admin/products" element={
                 <ProtectedRoute requireAdmin={true}>
-                  <AdminProductsPage />
+                  <AdminLayout>
+                    <AdminProductsPage />
+                  </AdminLayout>
                 </ProtectedRoute>
               } />
               <Route path="/admin/orders" element={
                 <ProtectedRoute requireAdmin={true}>
-                  <AdminOrdersPage />
+                  <AdminLayout>
+                    <AdminOrdersPage />
+                  </AdminLayout>
                 </ProtectedRoute>
               } />
               <Route path="/admin/users" element={
                 <ProtectedRoute requireAdmin={true}>
-                  <AdminUsersPage />
+                  <AdminLayout>
+                    <AdminUsersPage />
+                  </AdminLayout>
                 </ProtectedRoute>
               } />
               <Route path="/admin/messages" element={
                 <ProtectedRoute requireAdmin={true}>
-                  <AdminMessagesPage />
+                  <AdminLayout>
+                    <AdminMessagesPage />
+                  </AdminLayout>
                 </ProtectedRoute>
               } />
               <Route path="/admin/settings" element={
                 <ProtectedRoute requireAdmin={true}>
-                  <AdminSettingsPage />
+                  <AdminLayout>
+                    <AdminSettingsPage />
+                  </AdminLayout>
                 </ProtectedRoute>
               } />
               <Route path="/admin/chat" element={
                 <ProtectedRoute requireAdmin={true}>
-                  <AdminChatPage />
+                  <AdminLayout>
+                    <AdminChatPage />
+                  </AdminLayout>
                 </ProtectedRoute>
               } />
               <Route path="/admin/client-chat" element={
                 <ProtectedRoute requireAdmin={true}>
-                  <AdminClientChatPage />
+                  <AdminLayout>
+                    <AdminClientChatPage />
+                  </AdminLayout>
                 </ProtectedRoute>
               } />
               <Route path="/admin/promo-codes" element={
                 <ProtectedRoute requireAdmin={true}>
-                  <AdminPromoCodesPage />
+                  <AdminLayout>
+                    <AdminPromoCodesPage />
+                  </AdminLayout>
                 </ProtectedRoute>
               } />
 

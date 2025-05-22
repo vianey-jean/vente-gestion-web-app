@@ -1,108 +1,126 @@
 
-// Define type for cookie preferences
-export interface CookiePreferences {
-  essential: boolean; // Always true, cannot be disabled
+// Cookie manager functions
+
+// Type for cookie preferences
+export interface CookiePreference {
+  essential: boolean;
+  performance: boolean;
   functional: boolean;
-  analytics: boolean;
   marketing: boolean;
-  timestamp: number;
 }
 
-// Define type for cookie preference updates that can be exported
-export type CookiePreferencesUpdate = Omit<CookiePreferences, 'essential' | 'timestamp'>;
-
 // Cookie names
-const CONSENT_COOKIE_NAME = 'cookieConsent';
-const FUNCTIONAL_COOKIE_NAME = 'functionalEnabled';
-const ANALYTICS_COOKIE_NAME = 'analyticsEnabled';
-const MARKETING_COOKIE_NAME = 'marketingEnabled';
+const COOKIE_PREFERENCES_KEY = 'cookie_preferences';
+const ESSENTIAL_KEY = 'essential';
 
-// Set default expiration to 365 days
-const COOKIE_EXPIRATION_DAYS = 365;
-
-// Helper to set a cookie with a specific expiration
-const setCookie = (name: string, value: string, days: number): void => {
-  const date = new Date();
-  date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
-  const expires = `expires=${date.toUTCString()}`;
-  document.cookie = `${name}=${value};${expires};path=/;SameSite=Lax`;
+// Default cookie settings
+const DEFAULT_PREFERENCES: CookiePreference = {
+  essential: true, // Essential is always true
+  performance: false,
+  functional: false,
+  marketing: false,
 };
 
-// Helper to get a cookie value by name
-const getCookie = (name: string): string | null => {
-  const nameEQ = `${name}=`;
-  const ca = document.cookie.split(';');
-  for (let i = 0; i < ca.length; i++) {
-    let c = ca[i];
-    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-  }
-  return null;
-};
-
-// Helper to delete a cookie
-const deleteCookie = (name: string): void => {
-  setCookie(name, '', -1);
-};
-
-// Check if consent has been given
-export const hasConsentBeenGiven = (): boolean => {
-  return getCookie(CONSENT_COOKIE_NAME) === 'true';
-};
-
-// Get current cookie preferences
-export const getCookiePreferences = (): CookiePreferences => {
-  return {
-    essential: true, // Always true, cannot be disabled
-    functional: getCookie(FUNCTIONAL_COOKIE_NAME) === 'true',
-    analytics: getCookie(ANALYTICS_COOKIE_NAME) === 'true',
-    marketing: getCookie(MARKETING_COOKIE_NAME) === 'true',
-    timestamp: Number(getCookie('consentTimestamp') || Date.now())
-  };
-};
-
-// Save cookie preferences
-export const saveCookiePreferences = (preferences: CookiePreferencesUpdate): void => {
-  // Essential cookies are always enabled
-  const fullPreferences: CookiePreferences = {
+// Function to save cookie preferences
+export const saveCookiePreferences = (preferences: CookiePreference): void => {
+  // Ensure essential is always true
+  const finalPreferences: CookiePreference = {
     ...preferences,
-    essential: true,
-    timestamp: Date.now()
+    essential: true, // Essential cookies can't be disabled
+  };
+
+  // Save preferences to localStorage
+  try {
+    localStorage.setItem(
+      COOKIE_PREFERENCES_KEY,
+      JSON.stringify(finalPreferences)
+    );
+  } catch (err) {
+    console.error('Failed to save cookie preferences:', err);
+  }
+};
+
+// Function to get cookie preferences
+export const getCookiePreferences = (): CookiePreference => {
+  try {
+    // Try to get from localStorage
+    const savedPreferences = localStorage.getItem(COOKIE_PREFERENCES_KEY);
+
+    if (savedPreferences) {
+      return { ...DEFAULT_PREFERENCES, ...JSON.parse(savedPreferences) };
+    }
+  } catch (err) {
+    console.error('Failed to retrieve cookie preferences:', err);
+  }
+
+  // Return default if not found or error
+  return DEFAULT_PREFERENCES;
+};
+
+// Function to check if a specific cookie type is allowed
+export const isCookieAllowed = (type: keyof CookiePreference): boolean => {
+  if (type === 'essential') return true; // Essential cookies are always allowed
+
+  const preferences = getCookiePreferences();
+  return preferences[type];
+};
+
+// Function to check if cookie consent has been given
+export const hasCookieConsent = (): boolean => {
+  try {
+    return localStorage.getItem(COOKIE_PREFERENCES_KEY) !== null;
+  } catch {
+    return false;
+  }
+};
+
+// Update cookie preferences
+export const updateCookiePreference = (
+  type: 'performance' | 'functional' | 'marketing',
+  value: boolean
+): void => {
+  const current = getCookiePreferences();
+  
+  // Essential cookies cannot be disabled
+  if (type === 'essential' && value === false) {
+    return;
+  }
+  
+  // Update the specific preference type
+  const updated = {
+    ...current,
+    [type]: value,
   };
   
-  // Set the main consent cookie
-  setCookie(CONSENT_COOKIE_NAME, 'true', COOKIE_EXPIRATION_DAYS);
-  setCookie('consentTimestamp', String(fullPreferences.timestamp), COOKIE_EXPIRATION_DAYS);
-  
-  // Set individual feature cookies
-  setCookie(FUNCTIONAL_COOKIE_NAME, String(fullPreferences.functional), COOKIE_EXPIRATION_DAYS);
-  setCookie(ANALYTICS_COOKIE_NAME, String(fullPreferences.analytics), COOKIE_EXPIRATION_DAYS);
-  setCookie(MARKETING_COOKIE_NAME, String(fullPreferences.marketing), COOKIE_EXPIRATION_DAYS);
-  
-  // If a specific type is disabled, delete related cookies
-  if (!fullPreferences.functional) {
-    // Delete functional cookies if functional is disabled
-    // Example: deleteCookie('functionalCookie1');
-  }
-  
-  if (!fullPreferences.analytics) {
-    // Delete analytics cookies if analytics is disabled
-    // Example: deleteCookie('_ga');
-  }
-  
-  if (!fullPreferences.marketing) {
-    // Delete marketing cookies if marketing is disabled
-    // Example: deleteCookie('marketingCookie1');
-  }
+  saveCookiePreferences(updated);
 };
 
-// Fix for the type comparison issue
-export const isCookieTypeEnabled = (type: keyof Omit<CookiePreferences, 'timestamp'>): boolean => {
-  if (type === "essential") return true;
+// Type for cookie preferences update
+export type CookiePreferenceUpdate = Partial<{
+  performance: boolean;
+  functional: boolean;
+  marketing: boolean;
+}>;
+
+// Function to update multiple preferences at once
+export const updateMultipleCookiePreferences = (updates: CookiePreferenceUpdate): void => {
+  const current = getCookiePreferences();
   
-  const cookieValue = getCookie(`${type}Enabled`);
-  return cookieValue === 'true';
+  // Apply all updates except essential (which must remain true)
+  const updated = {
+    ...current,
+    ...updates,
+    essential: true, // Always keep essential as true
+  };
+  
+  saveCookiePreferences(updated);
 };
 
-// Export types for module augmentation
-export type { CookiePreferences, CookiePreferencesUpdate };
+// Reset all cookie preferences to default
+export const resetCookiePreferences = (): void => {
+  saveCookiePreferences(DEFAULT_PREFERENCES);
+};
+
+// Export CookiePreference type for use in other files
+export type { CookiePreference as CookiePreferences };
+export type { CookiePreferenceUpdate as CookiePreferencesUpdate };

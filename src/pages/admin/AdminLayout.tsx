@@ -9,13 +9,14 @@ import {
   Truck,
   Settings,
   LogOut,
-  MessageSquare
+  MessageSquare,
+  Tag
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSecureRoute } from '@/services/secureIds';
 
 interface AdminLayoutProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
@@ -32,29 +33,31 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   
   // Obtenir les routes sécurisées
   const secureRoutes = {
-    produits: getSecureRoute('/admin/produits'),
-    utilisateurs: getSecureRoute('/admin/utilisateurs'),
+    produits: getSecureRoute('/admin/products'),
+    utilisateurs: getSecureRoute('/admin/users'),
     messages: getSecureRoute('/admin/messages'),
-    commandes: getSecureRoute('/admin/commandes'),
-    chat: getSecureRoute('/admin'),
-    serviceClient: getSecureRoute('/admin/service-client'),
-    parametres: getSecureRoute('/admin/parametres'),
+    commandes: getSecureRoute('/admin/orders'),
+    chat: getSecureRoute('/admin/chat'),
+    serviceClient: getSecureRoute('/admin/client-chat'),
+    parametres: getSecureRoute('/admin/settings'),
+    promoCodes: getSecureRoute('/admin/promo-codes'),
   };
   
   const navItems = [
-    { name: 'Produits', path: secureRoutes.produits, realPath: '/admin/produits', icon: Package },
-    { name: 'Utilisateurs', path: secureRoutes.utilisateurs, realPath: '/admin/utilisateurs', icon: Users },
+    { name: 'Produits', path: secureRoutes.produits, realPath: '/admin/products', icon: Package },
+    { name: 'Utilisateurs', path: secureRoutes.utilisateurs, realPath: '/admin/users', icon: Users },
     { name: 'Messages', path: secureRoutes.messages, realPath: '/admin/messages', icon: MessageCircle },
-    { name: 'Commandes', path: secureRoutes.commandes, realPath: '/admin/commandes', icon: Truck },
-    { name: 'Chat Admin', path: secureRoutes.chat, realPath: '/admin', icon: ShoppingBag },
+    { name: 'Commandes', path: secureRoutes.commandes, realPath: '/admin/orders', icon: Truck },
+    { name: 'Chat Admin', path: secureRoutes.chat, realPath: '/admin/chat', icon: ShoppingBag },
+    { name: 'Codes Promo', path: secureRoutes.promoCodes, realPath: '/admin/promo-codes', icon: Tag },
     // Conditional item for service client admin
     ...(isServiceAdmin ? [{ 
       name: 'Service Client', 
       path: secureRoutes.serviceClient, 
-      realPath: '/admin/service-client',
+      realPath: '/admin/client-chat',
       icon: MessageSquare 
     }] : []),
-    { name: 'Paramètres', path: secureRoutes.parametres, realPath: '/admin/parametres', icon: Settings },
+    { name: 'Paramètres', path: secureRoutes.parametres, realPath: '/admin/settings', icon: Settings },
   ];
 
   // Verifier si le chemin actuel correspond à un chemin réel (pour la mise en surbrillance du menu)
