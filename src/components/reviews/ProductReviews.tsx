@@ -1,196 +1,178 @@
 
 import React, { useState, useEffect } from 'react';
-import { Review, reviewsAPI } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { reviewsAPI, Review, ReviewFormData } from '@/services/api';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { toast } from '@/components/ui/sonner';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
 import ReviewsList from './ReviewsList';
 import ReviewForm from './ReviewForm';
-import ReviewDetail from './ReviewDetail';
+import StarRating from './StarRating';
+import { AlertTriangle } from 'lucide-react';
 
 interface ProductReviewsProps {
   productId: string;
 }
 
 const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [selectedTab, setSelectedTab] = useState('all');
-  const [reviewDetailOpen, setReviewDetailOpen] = useState(false);
-  const [selectedReview, setSelectedReview] = useState<Review | null>(null);
-
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const { isAuthenticated } = useAuth();
+  
   const fetchReviews = async () => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      setLoading(true);
+      console.log('Fetching reviews for product:', productId);
       const response = await reviewsAPI.getProductReviews(productId);
+      console.log('Reviews response:', response.data);
       setReviews(response.data);
     } catch (error) {
-      console.error("Error fetching reviews:", error);
-      toast.error("Impossible de charger les avis");
+      console.error('Erreur lors du chargement des commentaires:', error);
+      setError('Impossible de charger les commentaires');
     } finally {
       setLoading(false);
     }
   };
-
+  
   useEffect(() => {
     fetchReviews();
   }, [productId]);
-
-  const handleAddReview = async (formData: FormData) => {
+  
+  const handleAddReview = async (reviewData: ReviewFormData) => {
     try {
-      await reviewsAPI.addReview({
-        productId,
-        productRating: Number(formData.get('productRating')),
-        deliveryRating: Number(formData.get('deliveryRating')),
-        comment: formData.get('comment') as string,
-        photos: formData.getAll('photos') as File[]
-      });
-      
-      toast.success("Avis ajouté avec succès");
-      await fetchReviews();
+      await reviewsAPI.addReview(reviewData);
+      fetchReviews(); // Recharger les commentaires
+      setShowForm(false); // Masquer le formulaire
     } catch (error) {
-      console.error("Error adding review:", error);
-      toast.error("Impossible d'ajouter l'avis");
+      console.error('Erreur lors de l\'ajout du commentaire:', error);
+      throw error; // Remonter l'erreur pour l'afficher dans le formulaire
     }
   };
-
-  const handleViewReview = async (reviewId: string) => {
-    try {
-      const reviewToView = reviews.find(review => review.id === reviewId);
-      if (reviewToView) {
-        setSelectedReview(reviewToView);
-        setReviewDetailOpen(true);
-      }
-    } catch (error) {
-      console.error("Error viewing review details:", error);
-      toast.error("Impossible de voir les détails de l'avis");
-    }
+  
+  // Calcul des moyennes des notes
+  const calculateAverages = () => {
+    if (!reviews || reviews.length === 0) return { productAvg: 0, deliveryAvg: 0, totalAvg: 0 };
+    
+    const productTotal = reviews.reduce((sum, review) => sum + review.productRating, 0);
+    const deliveryTotal = reviews.reduce((sum, review) => sum + review.deliveryRating, 0);
+    
+    const productAvg = productTotal / reviews.length;
+    const deliveryAvg = deliveryTotal / reviews.length;
+    const totalAvg = (productAvg + deliveryAvg) / 2;
+    
+    return {
+      productAvg,
+      deliveryAvg,
+      totalAvg
+    };
   };
-
-  const handleDeleteReview = async (reviewId: string) => {
-    try {
-      await reviewsAPI.deleteReview(reviewId);
-      toast.success("Avis supprimé avec succès");
-      setReviewDetailOpen(false);
-      await fetchReviews();
-    } catch (error) {
-      console.error("Error deleting review:", error);
-      toast.error("Impossible de supprimer l'avis");
-    }
+  
+  // Compter le nombre total de photos dans tous les commentaires
+  const countTotalPhotos = () => {
+    return reviews.reduce((count, review) => {
+      return count + (review.photos?.length || 0);
+    }, 0);
   };
-
-  // Filter reviews by rating
-  const filterReviewsByRating = (rating: number) => {
-    return reviews.filter(review => 
-      Math.round((review.productRating + review.deliveryRating) / 2) === rating
+  
+  const { productAvg, deliveryAvg, totalAvg } = calculateAverages();
+  const totalPhotoCount = countTotalPhotos();
+  
+  if (loading) {
+    return <div className="py-4 text-center">Chargement des commentaires...</div>;
+  }
+  
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Erreur</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
     );
-  };
-
-  const excellentReviews = filterReviewsByRating(5);
-  const goodReviews = filterReviewsByRating(4);
-  const averageReviews = filterReviewsByRating(3);
-  const poorReviews = filterReviewsByRating(2).concat(filterReviewsByRating(1));
-
-  // Check if user has already reviewed this product
-  const hasUserReviewed = user && reviews.some(review => review.userId === user.id);
-
+  }
+  
   return (
-    <div className="mt-8">
-      <h2 className="text-2xl font-bold mb-4">Avis clients</h2>
+    <div className="my-8">
+      <h2 className="text-2xl font-semibold mb-6">Avis clients</h2>
       
-      {user && !hasUserReviewed && (
-        <div className="mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-muted/30 p-4 rounded-lg text-center">
+          <div className="text-4xl font-bold mb-2">{totalAvg.toFixed(1)}</div>
+          <div className="flex justify-center mb-1">
+            <StarRating rating={totalAvg} />
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {reviews.length} avis {totalPhotoCount > 0 ? `· ${totalPhotoCount} photos` : ''}
+          </div>
+        </div>
+        
+        <div className="bg-muted/30 p-4 rounded-lg">
+          <h3 className="font-medium mb-2">Produit</h3>
+          <div className="flex justify-center">
+            <div className="flex items-center">
+              <StarRating rating={productAvg} />
+              <span className="ml-2 font-semibold">{productAvg.toFixed(1)}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-muted/30 p-4 rounded-lg">
+          <h3 className="font-medium mb-2">Livraison</h3>
+          <div className="flex justify-center">
+            <div className="flex items-center">
+              <StarRating rating={deliveryAvg} />
+              <span className="ml-2 font-semibold">{deliveryAvg.toFixed(1)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {isAuthenticated && !showForm && (
+        <div className="mb-8">
           <Button 
-            onClick={() => document.getElementById('review-form')?.scrollIntoView({ behavior: 'smooth' })}
-            variant="outline"
+            variant="outline" 
+            onClick={() => setShowForm(true)}
+            className="w-full md:w-auto text-red-800"
           >
-            Ajouter un avis
+            Donnez votre avis
           </Button>
         </div>
       )}
-
-      <Tabs defaultValue="all" value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="grid grid-cols-5 mb-6">
-          <TabsTrigger value="all">
-            Tous ({reviews.length})
-          </TabsTrigger>
-          <TabsTrigger value="excellent">
-            Excellents ({excellentReviews.length})
-          </TabsTrigger>
-          <TabsTrigger value="good">
-            Bons ({goodReviews.length})
-          </TabsTrigger>
-          <TabsTrigger value="average">
-            Moyens ({averageReviews.length})
-          </TabsTrigger>
-          <TabsTrigger value="poor">
-            Médiocres ({poorReviews.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all">
-          <ReviewsList 
-            reviews={reviews} 
-            loading={loading}
-            onViewReview={handleViewReview}
+      
+      {isAuthenticated && showForm && (
+        <div className="mb-8">
+          <ReviewForm 
+            productId={productId} 
+            onSubmit={handleAddReview} 
           />
-        </TabsContent>
-        
-        <TabsContent value="excellent">
-          <ReviewsList 
-            reviews={excellentReviews} 
-            loading={loading}
-            onViewReview={handleViewReview}
-          />
-        </TabsContent>
-        
-        <TabsContent value="good">
-          <ReviewsList 
-            reviews={goodReviews} 
-            loading={loading}
-            onViewReview={handleViewReview}
-          />
-        </TabsContent>
-        
-        <TabsContent value="average">
-          <ReviewsList 
-            reviews={averageReviews} 
-            loading={loading}
-            onViewReview={handleViewReview}
-          />
-        </TabsContent>
-        
-        <TabsContent value="poor">
-          <ReviewsList 
-            reviews={poorReviews} 
-            loading={loading}
-            onViewReview={handleViewReview}
-          />
-        </TabsContent>
-      </Tabs>
-
-      {user && !hasUserReviewed && (
-        <div id="review-form" className="mt-12 border-t pt-8">
-          <h3 className="text-xl font-semibold mb-4">Partagez votre expérience</h3>
-          <ReviewForm onSubmit={handleAddReview} />
+          <div className="mt-2 text-right">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowForm(false)}
+            >
+              Annuler
+            </Button>
+          </div>
         </div>
       )}
-
-      <Dialog open={reviewDetailOpen} onOpenChange={setReviewDetailOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          {selectedReview && (
-            <ReviewDetail 
-              reviewId={selectedReview.id}
-              onClose={() => setReviewDetailOpen(false)}
-              onDelete={handleDeleteReview}
-              canDelete={user?.id === selectedReview.userId || user?.role === 'admin'}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      
+      {!isAuthenticated && (
+        <Alert className="mb-8">
+          <AlertTitle>Connectez-vous pour laisser un avis</AlertTitle>
+          <AlertDescription>
+            Vous devez être connecté pour pouvoir partager votre expérience avec ce produit.
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      <Separator className="mb-6" />
+      
+      <ReviewsList reviews={reviews} />
     </div>
   );
 };

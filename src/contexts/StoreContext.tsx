@@ -1,6 +1,5 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { productsAPI, Product, panierAPI, favoritesAPI, Cart, ordersAPI, Order } from '@/services/api';
+import { productsAPI, Product, panierAPI, favoritesAPI, Cart, ordersAPI, Order, codePromosAPI } from '@/services/api';
 import { toast } from '@/components/ui/sonner';
 import { useAuth } from './AuthContext';
 
@@ -30,7 +29,11 @@ interface StoreContextType {
   fetchProducts: (categoryName?: string) => Promise<void>;
   fetchOrders: () => Promise<void>;
   favoriteCount: number;
-  createOrder: (shippingAddress: any, paymentMethod: string) => Promise<Order | null>;
+  createOrder: (
+    shippingAddress: any, 
+    paymentMethod: string, 
+    codePromo?: {code: string, productId: string, pourcentage: number}
+  ) => Promise<Order | null>;
   setSelectedCartItems: (items: CartItem[]) => void;
 }
 
@@ -345,7 +348,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return products.find(p => p.id === id);
   };
 
-  const createOrder = async (shippingAddress: any, paymentMethod: string): Promise<Order | null> => {
+  const createOrder = async (
+    shippingAddress: any, 
+    paymentMethod: string, 
+    codePromo?: {code: string, productId: string, pourcentage: number}
+  ): Promise<Order | null> => {
     if (!isAuthenticated || !user || selectedCartItems.length === 0) {
       return null;
     }
@@ -372,7 +379,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const orderData = {
         items: orderItems,
         shippingAddress,
-        paymentMethod
+        paymentMethod,
+        codePromo // Ajouter le code promo si disponible
       };
       
       const response = await ordersAPI.create(orderData);

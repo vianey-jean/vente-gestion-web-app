@@ -7,7 +7,7 @@ const { isAuthenticated, isAdmin } = require('../middlewares/auth');
 
 const ordersFilePath = path.join(__dirname, '../data/commandes.json');
 const productsFilePath = path.join(__dirname, '../data/products.json');
-const promoCodesFilePath = path.join(__dirname, '../data/codepromo.json');
+const codePromosFilePath = path.join(__dirname, '../data/code-promos.json');
 
 // Vérifier si le fichier commandes.json existe, sinon le créer
 if (!fs.existsSync(ordersFilePath)) {
@@ -59,7 +59,7 @@ router.get('/:orderId', isAuthenticated, (req, res) => {
 // Créer une nouvelle commande
 router.post('/', isAuthenticated, async (req, res) => {
   try {
-    const { items, shippingAddress, paymentMethod, promoCode } = req.body;
+    const { items, shippingAddress, paymentMethod, codePromo } = req.body;
     
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: 'Aucun article dans la commande' });
@@ -69,30 +69,6 @@ router.post('/', isAuthenticated, async (req, res) => {
     const products = JSON.parse(fs.readFileSync(productsFilePath));
     let totalAmount = 0;
     const orderItems = [];
-    
-    // Si un code promo est fourni, le vérifier et l'utiliser
-    let appliedPromoCode = null;
-    if (promoCode) {
-      try {
-        const promoCodes = JSON.parse(fs.readFileSync(promoCodesFilePath));
-        appliedPromoCode = promoCodes.find(p => p.code === promoCode && p.quantity > 0 && p.isActive);
-        
-        if (appliedPromoCode) {
-          // Réduire la quantité du code promo
-          const promoIndex = promoCodes.findIndex(p => p.id === appliedPromoCode.id);
-          promoCodes[promoIndex].quantity -= 1;
-          
-          if (promoCodes[promoIndex].quantity <= 0) {
-            promoCodes[promoIndex].isActive = false;
-          }
-          
-          fs.writeFileSync(promoCodesFilePath, JSON.stringify(promoCodes, null, 2));
-        }
-      } catch (promoError) {
-        console.error('Error processing promo code:', promoError);
-        // Continue with order creation even if promo code processing fails
-      }
-    }
     
     for (const item of items) {
       const productIndex = products.findIndex(p => p.id === item.productId);
@@ -126,24 +102,34 @@ router.post('/', isAuthenticated, async (req, res) => {
         productImage = product.image;
       }
       
-      // Calculer le prix avec promotion si applicable
-      let finalPrice = product.price;
+      // Calculer le prix avec code promo si applicable
+      let productPrice = product.price;
       
-      // Check if promo code applies to this product
-      if (appliedPromoCode && appliedPromoCode.productId === product.id && !product.promotion) {
-        finalPrice = product.price * (1 - appliedPromoCode.percentage / 100);
+      if (codePromo && codePromo.code && codePromo.productId === product.id) {
+        // Vérifier et utiliser le code promo
+        const codePromos = JSON.parse(fs.readFileSync(codePromosFilePath));
+        const promoIndex = codePromos.findIndex(cp => cp.code === codePromo.code && cp.productId === product.id);
+        
+        if (promoIndex !== -1 && codePromos[promoIndex].quantite > 0) {
+          // Appliquer la réduction
+          productPrice = parseFloat((product.price * (1 - codePromos[promoIndex].pourcentage / 100)).toFixed(2));
+          
+          // Réduire la quantité du code promo
+          codePromos[promoIndex].quantite -= 1;
+          fs.writeFileSync(codePromosFilePath, JSON.stringify(codePromos, null, 2));
+        }
       }
       
       // Ajouter le produit à la commande avec l'image correcte
       const orderItem = {
         productId: product.id,
         name: product.name,
-        price: finalPrice,
+        price: productPrice,
         originalPrice: product.price,
         quantity: item.quantity,
         image: productImage, // Utiliser l'image principale
-        subtotal: finalPrice * item.quantity,
-        promoApplied: finalPrice !== product.price
+        subtotal: productPrice * item.quantity,
+        codePromoApplied: productPrice !== product.price
       };
       
       orderItems.push(orderItem);
@@ -167,7 +153,7 @@ router.post('/', isAuthenticated, async (req, res) => {
       totalAmount: parseFloat(totalAmount.toFixed(2)),
       shippingAddress,
       paymentMethod,
-      promoCodeApplied: appliedPromoCode ? appliedPromoCode.code : null,
+      codePromoUsed: codePromo ? codePromo.code : null,
       status: 'confirmée',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()

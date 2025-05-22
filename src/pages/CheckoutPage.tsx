@@ -17,8 +17,9 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from '@/components/ui/sonner';
 import CreditCardForm from '@/components/checkout/CreditCardForm';
-import { ShippingAddress, promoAPI } from '@/services/api';
+import { ShippingAddress, codePromosAPI } from '@/services/api';
 import { Link } from 'react-router-dom';
+import { Percent } from 'lucide-react';
 
 // Définition des prix de livraison par ville
 const DELIVERY_PRICES = {
@@ -54,14 +55,16 @@ const CheckoutPage = () => {
   const [showCardForm, setShowCardForm] = useState(false);
   const [deliveryCity, setDeliveryCity] = useState<string>("");
   const [deliveryPrice, setDeliveryPrice] = useState<number>(0);
-  const [promoCode, setPromoCode] = useState<string>('');
-  const [appliedPromoCode, setAppliedPromoCode] = useState<{
+  
+  // État pour le code promo
+  const [codePromo, setCodePromo] = useState<string>('');
+  const [verifyingCode, setVerifyingCode] = useState<boolean>(false);
+  const [verifiedPromo, setVerifiedPromo] = useState<{
+    valid: boolean;
+    pourcentage: number;
     productId: string;
-    percentage: number;
-    id: string;
     code: string;
   } | null>(null);
-  const [validatingPromo, setValidatingPromo] = useState(false);
   
   const [shippingData, setShippingData] = useState<ShippingAddress>({
     nom: user?.nom || '',
@@ -73,8 +76,15 @@ const CheckoutPage = () => {
     telephone: user?.telephone || '',
   });
   
-  // Check if any product in cart is not on promotion (to enable promo code input)
-  const hasNonPromotedProduct = selectedCartItems.some(item => !item.product.promotion);
+  // Vérifier si tous les produits sont en promotion
+  const allProductsOnPromotion = selectedCartItems.every(item => 
+    item.product.promotion && item.product.promotion > 0
+  );
+  
+  // Vérifier s'il y a au moins un produit sans promotion
+  const hasNonPromotionProduct = selectedCartItems.some(item => 
+    !item.product.promotion || item.product.promotion <= 0
+  );
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -88,6 +98,49 @@ const CheckoutPage = () => {
     
     const price = DELIVERY_PRICES[city as keyof typeof DELIVERY_PRICES] || 0;
     setDeliveryPrice(price);
+  };
+  
+  // Vérifier le code promo
+  const handleVerifyCodePromo = async () => {
+    if (!codePromo.trim()) {
+      toast.error("Veuillez saisir un code promo");
+      return;
+    }
+    
+    // Rechercher le premier produit sans promotion pour appliquer le code promo
+    const nonPromoProduct = selectedCartItems.find(item => 
+      !item.product.promotion || item.product.promotion <= 0
+    );
+    
+    if (!nonPromoProduct) {
+      toast.error("Aucun produit éligible pour un code promo");
+      return;
+    }
+    
+    setVerifyingCode(true);
+    try {
+      const response = await codePromosAPI.verify(codePromo, nonPromoProduct.product.id);
+      const data = response.data;
+      
+      if (data.valid && data.pourcentage) {
+        setVerifiedPromo({
+          valid: true,
+          pourcentage: data.pourcentage,
+          productId: nonPromoProduct.product.id,
+          code: codePromo
+        });
+        toast.success(`Code promo valide ! ${data.pourcentage}% de réduction appliquée`);
+      } else {
+        setVerifiedPromo(null);
+        toast.error(data.message || "Code promo invalide");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la vérification du code promo:", error);
+      setVerifiedPromo(null);
+      toast.error("Erreur lors de la vérification du code promo");
+    } finally {
+      setVerifyingCode(false);
+    }
   };
   
   const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
@@ -119,17 +172,15 @@ const CheckoutPage = () => {
   const processOrder = async (orderId?: string) => {
     setLoading(true);
     try {
-      // If a promo code was applied, use it (decrease quantity)
-      if (appliedPromoCode) {
-        try {
-          await promoAPI.use(appliedPromoCode.code);
-        } catch (error) {
-          console.error("Error using promo code:", error);
-          // Continue with order creation even if promo code usage fails
-        }
-      }
-      
-      const order = await createOrder(shippingData, paymentMethod);
+      const order = await createOrder(
+        shippingData, 
+        paymentMethod, 
+        verifiedPromo ? {
+          code: verifiedPromo.code,
+          productId: verifiedPromo.productId,
+          pourcentage: verifiedPromo.pourcentage
+        } : undefined
+      );
       
       if (order) {
         toast.success("Commande effectuée avec succès !");
@@ -161,64 +212,24 @@ const CheckoutPage = () => {
     );
   };
   
-  const handleApplyPromoCode = async () => {
-    if (!promoCode.trim()) {
-      toast.error("Veuillez saisir un code promo");
-      return;
+  // Calculer le total en tenant compte du code promo
+  const calculateItemPrice = (item: typeof selectedCartItems[0]) => {
+    if (verifiedPromo && verifiedPromo.valid && item.product.id === verifiedPromo.productId) {
+      return item.product.price * (1 - verifiedPromo.pourcentage / 100) * item.quantity;
     }
-    
-    // Find the first non-promoted product to apply the code
-    const nonPromotedProduct = selectedCartItems.find(item => !item.product.promotion);
-    
-    if (!nonPromotedProduct) {
-      toast.error("Aucun produit éligible pour ce code promo");
-      return;
-    }
-    
-    setValidatingPromo(true);
-    try {
-      const response = await promoAPI.verify(promoCode.trim(), nonPromotedProduct.product.id);
-      
-      if (response.data.valid && response.data.promoCode) {
-        setAppliedPromoCode({
-          ...response.data.promoCode,
-          code: promoCode.trim()
-        });
-        toast.success(`Code promo appliqué : ${response.data.promoCode.percentage}% de réduction`);
-      } else {
-        toast.error(response.data.message || "Code promo invalide");
-      }
-    } catch (error) {
-      console.error("Error verifying promo code:", error);
-      toast.error("Erreur lors de la vérification du code promo");
-    } finally {
-      setValidatingPromo(false);
-    }
-  };
-  
-  // Calculate order total with promo code applied
-  const calculateTotal = () => {
-    let subtotal = 0;
-    
-    // Calculate subtotal with promo code applied if any
-    selectedCartItems.forEach(item => {
-      const itemPrice = item.product.price;
-      let discountedPrice = itemPrice;
-      
-      // Apply promo code if valid and applicable to this product
-      if (appliedPromoCode && appliedPromoCode.productId === item.product.id && !item.product.promotion) {
-        discountedPrice = itemPrice * (1 - appliedPromoCode.percentage / 100);
-      }
-      
-      subtotal += discountedPrice * item.quantity;
-    });
-    
-    return subtotal + deliveryPrice;
+    return item.product.price * item.quantity;
   };
   
   const subtotal = getCartTotal();
-  const orderTotal = calculateTotal();
-  const promoSavings = subtotal - (orderTotal - deliveryPrice);
+  
+  // Calculer le total avec remise code promo
+  const discountedSubtotal = selectedCartItems.reduce((total, item) => {
+    return total + calculateItemPrice(item);
+  }, 0);
+  
+  const hasPromoDiscount = subtotal !== discountedSubtotal;
+  const orderTotal = discountedSubtotal + deliveryPrice;
+  
   const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   
   return (
@@ -240,7 +251,8 @@ const CheckoutPage = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white p-6 rounded-lg shadow">
+            <div className="bg-white p-6 rounded-lg shadow pl-[9rem]">
+
               <h2 className="text-xl font-semibold mb-4">Informations de livraison</h2>
               
               <form onSubmit={handleSubmit}>
@@ -383,7 +395,7 @@ const CheckoutPage = () => {
             </div>
             
             <div>
-              <div className="bg-white p-6 rounded-lg shadow mb-4">
+              <div className="bg-white p-6 rounded-lg shadow mb-4 pr-[9rem]">
                 <h2 className="text-xl font-semibold mb-4">Récapitulatif de commande</h2>
                 
                 <div className="space-y-4 mb-6">
@@ -406,58 +418,35 @@ const CheckoutPage = () => {
                         <p className="font-medium">{item.product.name}</p>
                         <p className="text-sm text-muted-foreground">
                           {item.quantity} x {item.product.price.toFixed(2)} €
+                          {verifiedPromo && verifiedPromo.valid && item.product.id === verifiedPromo.productId && (
+                            <span className="ml-2 text-red-600">
+                              (-{verifiedPromo.pourcentage}%)
+                            </span>
+                          )}
+                          {item.product.promotion && item.product.promotion > 0 && (
+                            <span className="ml-2 text-green-600">
+                              (Déjà en promo: -{item.product.promotion}%)
+                            </span>
+                          )}
                         </p>
-                        {item.product.promotion && (
-                          <p className="text-xs text-green-600">En promotion (-{item.product.promotion}%)</p>
-                        )}
-                        {appliedPromoCode && appliedPromoCode.productId === item.product.id && !item.product.promotion && (
-                          <p className="text-xs text-green-600">Code promo appliqué (-{appliedPromoCode.percentage}%)</p>
-                        )}
                       </div>
                       <p className="font-semibold">
-                        {appliedPromoCode && appliedPromoCode.productId === item.product.id && !item.product.promotion 
-                          ? (item.quantity * item.product.price * (1 - appliedPromoCode.percentage / 100)).toFixed(2) 
-                          : (item.quantity * item.product.price).toFixed(2)} €
+                        {calculateItemPrice(item).toFixed(2)} €
                       </p>
                     </div>
                   ))}
                 </div>
                 
-                <div className="border-t pt-4 space-y-2">
+                <div className="border-t pt-4 space-y-3">
                   <div className="flex justify-between">
                     <p>Sous-total</p>
                     <p>{subtotal.toFixed(2)} €</p>
                   </div>
-
-                  {/* Code promo section - only show if at least one product is not on promotion */}
-                  {hasNonPromotedProduct && !appliedPromoCode && (
-                    <div className="py-2">
-                      <Label htmlFor="promoCode" className="text-sm">Code promotion</Label>
-                      <div className="flex gap-2 mt-1">
-                        <Input 
-                          id="promoCode" 
-                          value={promoCode} 
-                          onChange={(e) => setPromoCode(e.target.value)}
-                          placeholder="Entrez votre code" 
-                          className="flex-1"
-                        />
-                        <Button 
-                          type="button" 
-                          variant="secondary" 
-                          onClick={handleApplyPromoCode}
-                          disabled={validatingPromo}
-                        >
-                          {validatingPromo ? 'Vérification...' : 'Appliquer'}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Display applied promo code */}
-                  {appliedPromoCode && (
-                    <div className="flex justify-between text-green-600">
-                      <p>Réduction (-{appliedPromoCode.percentage}%)</p>
-                      <p>-{promoSavings.toFixed(2)} €</p>
+                  
+                  {hasPromoDiscount && (
+                    <div className="flex justify-between text-red-600">
+                      <p>Remise code promo</p>
+                      <p>-{(subtotal - discountedSubtotal).toFixed(2)} €</p>
                     </div>
                   )}
                   
@@ -466,7 +455,35 @@ const CheckoutPage = () => {
                     <p>{deliveryPrice === 0 && !deliveryCity ? 'Non calculé' : deliveryPrice === 0 ? 'Gratuit' : `${deliveryPrice.toFixed(2)} €`}</p>
                   </div>
                   
-                  <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                  {/* Section Code Promo */}
+                  {!allProductsOnPromotion && hasNonPromotionProduct && (
+                    <div className="py-3 border-t border-b">
+                      <p className="font-medium mb-2">Code Promotion</p>
+                      <div className="flex space-x-2">
+                        <Input
+                          placeholder="Saisir votre code promo"
+                          value={codePromo}
+                          onChange={(e) => setCodePromo(e.target.value)}
+                          disabled={verifiedPromo !== null || verifyingCode}
+                        />
+                        <Button 
+                          onClick={handleVerifyCodePromo}
+                          disabled={!codePromo || verifiedPromo !== null || verifyingCode}
+                          variant="outline"
+                        >
+                          {verifyingCode ? 'Vérification...' : 'Appliquer'}
+                        </Button>
+                      </div>
+                      {verifiedPromo && verifiedPromo.valid && (
+                        <div className="mt-2 flex items-center text-sm text-green-600">
+                          <Percent className="h-4 w-4 mr-1" />
+                          Code promo appliqué : {verifiedPromo.pourcentage}% de réduction
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between font-bold text-lg pt-2">
                     <p>Total</p>
                     <p>{orderTotal.toFixed(2)} €</p>
                   </div>

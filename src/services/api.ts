@@ -391,41 +391,29 @@ export const clientChatAPI = {
     API.put(`/client-chat/messages/${messageId}/read`, { conversationId })
 };
 
-// Interface for promo code
-export interface PromoCode {
+// Interface pour les codes promos
+export interface CodePromo {
   id: string;
   code: string;
+  pourcentage: number;
+  quantite: number;
   productId: string;
-  productName: string;
-  percentage: number;
-  quantity: number;
-  createdAt: string;
-  isActive: boolean;
 }
 
-export interface PromoCodeVerification {
-  valid: boolean;
-  promoCode?: {
-    id: string;
-    percentage: number;
-    productId: string;
-  };
-  message?: string;
-}
-
-// Services for promo codes
-export const promoAPI = {
-  getAll: () => API.get<PromoCode[]>('/promos'),
-  create: (data: { productId: string; percentage: number; quantity: number }) => 
-    API.post<PromoCode>('/promos', data),
-  update: (id: string, quantity: number) => 
-    API.put<PromoCode>(`/promos/${id}`, { quantity }),
-  delete: (id: string) => API.delete(`/promos/${id}`),
+// Services pour les codes promos
+export const codePromosAPI = {
+  getAll: () => API.get<CodePromo[]>('/code-promos'),
+  getById: (id: string) => API.get<CodePromo>(`/code-promos/${id}`),
+  create: (data: { pourcentage: number, quantite: number, productId: string }) => 
+    API.post<CodePromo>('/code-promos', data),
+  update: (id: string, quantite: number) => API.put<CodePromo>(`/code-promos/${id}`, { quantite }),
+  delete: (id: string) => API.delete(`/code-promos/${id}`),
   verify: (code: string, productId: string) => 
-    API.post<PromoCodeVerification>('/promos/verify', { code, productId }),
-  use: (code: string) => API.post('/promos/use', { code }),
+    API.post<{ valid: boolean, pourcentage?: number, message?: string }>('/code-promos/verify', { code, productId }),
+  use: (code: string, productId: string) => 
+    API.post<{ success: boolean, message: string }>('/code-promos/use', { code, productId }),
   searchProducts: (query: string) => 
-    API.get<Product[]>(`/promos/search-products?query=${encodeURIComponent(query)}`)
+    API.get<{ id: string, name: string, price: number, image: string }[]>(`/code-promos/products/search?query=${query}`)
 };
 
 export default API;

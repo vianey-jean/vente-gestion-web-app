@@ -1,162 +1,119 @@
 
 import React, { useState, useEffect } from 'react';
 import { Review, reviewsAPI } from '@/services/api';
-import { DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import StarRating from './StarRating';
-import { toast } from '@/components/ui/sonner';
-import { Loader2 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
 
-export interface ReviewDetailProps {
+interface ReviewDetailProps {
   reviewId: string;
   onClose: () => void;
-  onDelete: (reviewId: string) => Promise<void>;
-  canDelete: boolean;
+  isOpen: boolean;
 }
 
-const ReviewDetail: React.FC<ReviewDetailProps> = ({ reviewId, onClose, onDelete, canDelete }) => {
-  const [loading, setLoading] = useState(true);
+const ReviewDetail: React.FC<ReviewDetailProps> = ({ reviewId, onClose, isOpen }) => {
   const [review, setReview] = useState<Review | null>(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // URL de base récupérée depuis le .env
+  const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
-    const fetchReviewDetail = async () => {
-      try {
-        setLoading(true);
-        const response = await reviewsAPI.getReviewDetail(reviewId);
-        setReview(response.data);
-      } catch (error) {
-        console.error("Error fetching review details:", error);
-        toast.error("Impossible de charger les détails de l'avis");
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (isOpen && reviewId) {
+      fetchReviewDetails();
+    }
+  }, [reviewId, isOpen]);
 
-    fetchReviewDetail();
-  }, [reviewId]);
-
-  const handleDelete = async () => {
+  const fetchReviewDetails = async () => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      setDeleteLoading(true);
-      await onDelete(reviewId);
-      setDeleteConfirmOpen(false);
-    } catch (error) {
-      console.error("Error deleting review:", error);
+      const response = await reviewsAPI.getReviewDetail(reviewId);
+      setReview(response.data);
+    } catch (err) {
+      console.error('Erreur lors du chargement des détails du commentaire:', err);
+      setError('Impossible de charger les détails du commentaire');
     } finally {
-      setDeleteLoading(false);
+      setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-10">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!review) {
-    return (
-      <div className="text-center py-6">
-        <p>Avis introuvable</p>
-        <Button onClick={onClose} className="mt-4">Fermer</Button>
-      </div>
-    );
-  }
-
-  const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle>Détails de l'avis</DialogTitle>
-      </DialogHeader>
-
-      <div className="mt-4">
-        <div className="flex justify-between items-start">
-          <div>
-            <p className="font-medium">{review.userName}</p>
-            <p className="text-sm text-muted-foreground">
-              {format(new Date(review.createdAt), 'dd MMMM yyyy à HH:mm', { locale: fr })}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 space-y-2">
-          <div>
-            <p className="text-sm font-medium">Qualité du produit</p>
-            <StarRating rating={review.productRating} />
-          </div>
-          <div>
-            <p className="text-sm font-medium">Service de livraison</p>
-            <StarRating rating={review.deliveryRating} />
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <p className="font-medium">Commentaire</p>
-          <p className="mt-1">{review.comment}</p>
-        </div>
-
-        {review.photos && review.photos.length > 0 && (
-          <div className="mt-4">
-            <p className="font-medium mb-2">Photos</p>
-            <div className="grid grid-cols-2 gap-2">
-              {review.photos.map((photo, index) => (
-                <div key={index} className="relative aspect-square rounded-md overflow-hidden">
-                  <img 
-                    src={`${AUTH_BASE_URL}${photo}`}
-                    alt={`Photo de l'avis ${index + 1}`}
-                    className="object-cover w-full h-full"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = `${AUTH_BASE_URL}/uploads/placeholder.jpg`;
-                    }}
-                  />
-                </div>
-              ))}
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Détails du commentaire</DialogTitle>
+          <DialogDescription>Informations détaillées sur l'avis client</DialogDescription>
+        </DialogHeader>
+        
+        {loading ? (
+          <div className="flex justify-center py-8">Chargement...</div>
+        ) : error ? (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : review ? (
+          <div className="py-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-medium">{review.userName}</h3>
+              <span className="text-sm text-muted-foreground">
+                {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: fr })}
+              </span>
             </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Produit</p>
+                <div className="flex items-center">
+                  <StarRating rating={review.productRating} readOnly />
+                  <span className="ml-2 font-semibold">{review.productRating}</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Livraison</p>
+                <div className="flex items-center">
+                  <StarRating rating={review.deliveryRating} readOnly />
+                  <span className="ml-2 font-semibold">{review.deliveryRating}</span>
+                </div>
+              </div>
+            </div>
+            
+            {review.comment && (
+              <div className="mb-6">
+                <h4 className="font-medium mb-2">Commentaire</h4>
+                <p className="text-sm">{review.comment}</p>
+              </div>
+            )}
+            
+            {review.photos && review.photos.length > 0 && (
+              <div className="mb-6">
+                <Separator className="mb-4" />
+                <h4 className="font-medium mb-3">Photos publiées ({review.photos.length})</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {review.photos.map((photo, index) => (
+                    <img 
+                      key={index}
+                      src={`${AUTH_BASE_URL}${photo}`}
+                      alt={`Photo ${index + 1}`}
+                      className="w-full h-auto rounded-md object-contain"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+        ) : (
+          <div className="text-center py-4">Commentaire non trouvé</div>
         )}
-      </div>
-
-      <DialogFooter className="mt-6 gap-2">
-        {canDelete && (
-          <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive">Supprimer</Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Cette action ne peut pas être annulée. Cet avis sera définitivement supprimé.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Annuler</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} disabled={deleteLoading}>
-                  {deleteLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Suppression...
-                    </>
-                  ) : (
-                    'Confirmer'
-                  )}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
-        <Button onClick={onClose}>Fermer</Button>
-      </DialogFooter>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 };
 
