@@ -15,11 +15,11 @@ interface PersonalInfoFormProps {
 }
 
 const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
-  profileData = {} as UpdateProfileData & { id?: string },
-  loading = false,
-  handleProfileChange = () => {},
-  handleGenreChange = () => {},
-  handleProfileSubmit = async () => {}
+  profileData,
+  loading,
+  handleProfileChange,
+  handleGenreChange,
+  handleProfileSubmit
 }) => {
   return (
     <form onSubmit={handleProfileSubmit} className="space-y-4">

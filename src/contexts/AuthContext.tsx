@@ -1,6 +1,7 @@
+
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { authAPI, User, UpdateProfileData } from '../services/api';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import { useNavigate, NavigateFunction } from 'react-router-dom';
 
 interface AuthContextType {
@@ -14,7 +15,6 @@ interface AuthContextType {
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
   updateProfile: (data: UpdateProfileData) => Promise<void>;
-  updateUserProfile: (data: UpdateProfileData) => Promise<void>; // Added this line to match what ProfilePage expects
   updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
@@ -179,9 +179,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Create alias for updateProfile to match what ProfilePage expects
-  const updateUserProfile = updateProfile;
-
   const updatePassword = async (currentPassword: string, newPassword: string) => {
     try {
       if (!user) throw new Error('Utilisateur non connecté');
@@ -225,7 +222,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     forgotPassword,
     resetPassword,
     updateProfile,
-    updateUserProfile, // Add this line to the context value
     updatePassword,
   };
 

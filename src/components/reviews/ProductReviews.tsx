@@ -1,230 +1,179 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { toast } from 'sonner';
+
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  createReview as createReviewAPI,
-  getReviews as getReviewsAPI,
-  updateReview as updateReviewAPI,
-  deleteReview as deleteReviewAPI,
-  Review as ReviewType,
-  User as UserType
-} from '@/services/api';
-import StarRating from '@/components/reviews/StarRating';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Delete } from 'lucide-react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { reviewsAPI, Review, ReviewFormData } from '@/services/api';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+import ReviewsList from './ReviewsList';
+import ReviewForm from './ReviewForm';
+import StarRating from './StarRating';
+import { AlertTriangle } from 'lucide-react';
 
 interface ProductReviewsProps {
   productId: string;
 }
 
-interface ReviewDetailProps {
-  review: ReviewType;
-  isOpen: boolean;
-  onClose: () => void;
-  onDelete: (id: string) => void;
-  canDelete: boolean;
-}
-
-const ReviewDetail: React.FC<ReviewDetailProps> = ({ review, isOpen, onClose, onDelete, canDelete }) => {
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Détail de l'avis</DialogTitle>
-          <DialogDescription>
-            Avis de {review.user.nom} le {format(new Date(review.createdAt), 'dd MMMM yyyy', { locale: fr })}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="flex items-center gap-2">
-            <Avatar>
-              <AvatarImage src={review.user.image} />
-              <AvatarFallback>{review.user.nom.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="text-sm font-medium">{review.user.nom}</p>
-              <StarRating rating={review.rating} readOnly={true} />
-            </div>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">{review.comment}</p>
-          </div>
-        </div>
-        {canDelete && (
-          <Button variant="destructive" onClick={() => onDelete(review.id)}><Delete className="mr-2 h-4 w-4" />Supprimer</Button>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-};
-
 const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
-  const [reviews, setReviews] = useState<ReviewType[]>([]);
-  const [comment, setComment] = useState('');
-  const [rating, setRating] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [selectedReview, setSelectedReview] = useState<ReviewType | null>(null);
-  const { user } = useAuth();
-
-  const fetchReviews = useCallback(async () => {
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const { isAuthenticated } = useAuth();
+  
+  const fetchReviews = async () => {
     setLoading(true);
+    setError(null);
+    
     try {
-      const reviewsData = await getReviewsAPI(productId);
-      setReviews(reviewsData);
+      console.log('Fetching reviews for product:', productId);
+      const response = await reviewsAPI.getProductReviews(productId);
+      console.log('Reviews response:', response.data);
+      setReviews(response.data);
     } catch (error) {
-      console.error('Error fetching reviews:', error);
-      toast.error('Failed to load reviews');
+      console.error('Erreur lors du chargement des commentaires:', error);
+      setError('Impossible de charger les commentaires');
     } finally {
       setLoading(false);
     }
-  }, [productId]);
-
+  };
+  
   useEffect(() => {
     fetchReviews();
-  }, [fetchReviews]);
-
-  const handleSubmitReview = async () => {
-    if (!user) {
-      toast.error('Vous devez être connecté pour laisser un avis.');
-      return;
-    }
-
-    if (!comment.trim()) {
-      toast.error('Le commentaire ne peut pas être vide.');
-      return;
-    }
-
-    if (!rating) {
-      toast.error('Veuillez donner une note au produit.');
-      return;
-    }
-
+  }, [productId]);
+  
+  const handleAddReview = async (reviewData: ReviewFormData) => {
     try {
-      const newReview = await createReviewAPI({
-        productId,
-        comment,
-        rating,
-      });
-
-      setReviews(prevReviews => [...prevReviews, newReview]);
-      setComment('');
-      setRating(null);
-      toast.success('Avis ajouté avec succès!');
+      await reviewsAPI.addReview(reviewData);
+      fetchReviews(); // Recharger les commentaires
+      setShowForm(false); // Masquer le formulaire
     } catch (error) {
-      console.error('Error creating review:', error);
-      toast.error('Erreur lors de la création de l\'avis.');
+      console.error('Erreur lors de l\'ajout du commentaire:', error);
+      throw error; // Remonter l'erreur pour l'afficher dans le formulaire
     }
   };
-
-  const handleUpdateReview = async (id: string, updatedComment: string, updatedRating: number) => {
-    try {
-      await updateReviewAPI(id, { comment: updatedComment, rating: updatedRating });
-      setReviews(prevReviews =>
-        prevReviews.map(review =>
-          review.id === id ? { ...review, comment: updatedComment, rating: updatedRating } : review
-        )
-      );
-      toast.success('Review updated successfully!');
-    } catch (error) {
-      console.error('Error updating review:', error);
-      toast.error('Failed to update review.');
-    }
+  
+  // Calcul des moyennes des notes
+  const calculateAverages = () => {
+    if (!reviews || reviews.length === 0) return { productAvg: 0, deliveryAvg: 0, totalAvg: 0 };
+    
+    const productTotal = reviews.reduce((sum, review) => sum + review.productRating, 0);
+    const deliveryTotal = reviews.reduce((sum, review) => sum + review.deliveryRating, 0);
+    
+    const productAvg = productTotal / reviews.length;
+    const deliveryAvg = deliveryTotal / reviews.length;
+    const totalAvg = (productAvg + deliveryAvg) / 2;
+    
+    return {
+      productAvg,
+      deliveryAvg,
+      totalAvg
+    };
   };
-
-  const handleDeleteReview = async (id: string) => {
-    try {
-      await deleteReviewAPI(id);
-      setReviews(prevReviews => prevReviews.filter(review => review.id !== id));
-      toast.success('Review deleted successfully!');
-      handleCloseReview();
-    } catch (error) {
-      console.error('Error deleting review:', error);
-      toast.error('Failed to delete review.');
-    }
+  
+  // Compter le nombre total de photos dans tous les commentaires
+  const countTotalPhotos = () => {
+    return reviews.reduce((count, review) => {
+      return count + (review.photos?.length || 0);
+    }, 0);
   };
-
-  const handleOpenReview = (review: ReviewType) => {
-    setSelectedReview(review);
-  };
-
-  const handleCloseReview = () => {
-    setSelectedReview(null);
-  };
-
-  const canUserDeleteReview = selectedReview?.userId === user?.id || user?.role === 'admin';
-
+  
+  const { productAvg, deliveryAvg, totalAvg } = calculateAverages();
+  const totalPhotoCount = countTotalPhotos();
+  
+  if (loading) {
+    return <div className="py-4 text-center">Chargement des commentaires...</div>;
+  }
+  
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Erreur</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  }
+  
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Avis sur le produit</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-4">
-        <div className="flex items-center space-x-2">
-          <StarRating
-            rating={rating}
-            onChange={(newRating) => setRating(newRating)}
-            readOnly={false}
-            id="product-review"
-          />
+    <div className="my-8">
+      <h2 className="text-2xl font-semibold mb-6">Avis clients</h2>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-muted/30 p-4 rounded-lg text-center">
+          <div className="text-4xl font-bold mb-2">{totalAvg.toFixed(1)}</div>
+          <div className="flex justify-center mb-1">
+            <StarRating rating={totalAvg} />
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {reviews.length} avis {totalPhotoCount > 0 ? `· ${totalPhotoCount} photos` : ''}
+          </div>
         </div>
-        <div className="grid gap-2">
-          <Textarea
-            placeholder="Écrivez votre avis ici"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          />
-          <Button onClick={handleSubmitReview} disabled={loading}>
-            {loading ? 'Envoi en cours...' : 'Soumettre l\'avis'}
+        
+        <div className="bg-muted/30 p-4 rounded-lg">
+          <h3 className="font-medium mb-2">Produit</h3>
+          <div className="flex justify-center">
+            <div className="flex items-center">
+              <StarRating rating={productAvg} />
+              <span className="ml-2 font-semibold">{productAvg.toFixed(1)}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-muted/30 p-4 rounded-lg">
+          <h3 className="font-medium mb-2">Livraison</h3>
+          <div className="flex justify-center">
+            <div className="flex items-center">
+              <StarRating rating={deliveryAvg} />
+              <span className="ml-2 font-semibold">{deliveryAvg.toFixed(1)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {isAuthenticated && !showForm && (
+        <div className="mb-8">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowForm(true)}
+            className="w-full md:w-auto text-red-800"
+          >
+            Donnez votre avis
           </Button>
         </div>
-
-        {/* Display Reviews */}
-        {loading ? (
-          <div>Chargement des avis...</div>
-        ) : (
-          <ScrollArea className="h-[300px] w-full rounded-md border">
-            <div className="p-4">
-              {reviews.length === 0 ? (
-                <div>Aucun avis pour le moment.</div>
-              ) : (
-                reviews.map((review) => (
-                  <div key={review.id} className="mb-4 p-4 bg-gray-50 rounded-md cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleOpenReview(review)}>
-                    <div className="flex items-center gap-2">
-                      <Avatar>
-                        <AvatarImage src={review.user.image} />
-                        <AvatarFallback>{review.user.nom.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium">{review.user.nom}</p>
-                        <StarRating rating={review.rating} readOnly={true} />
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-2">{review.comment}</p>
-                  </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        )}
-
-        {selectedReview && (
-          <ReviewDetail 
-            review={selectedReview}
-            isOpen={!!selectedReview}
-            onClose={handleCloseReview}
-            onDelete={handleDeleteReview}
-            canDelete={canUserDeleteReview}
+      )}
+      
+      {isAuthenticated && showForm && (
+        <div className="mb-8">
+          <ReviewForm 
+            productId={productId} 
+            onSubmit={handleAddReview} 
           />
-        )}
-      </CardContent>
-    </Card>
+          <div className="mt-2 text-right">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setShowForm(false)}
+            >
+              Annuler
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {!isAuthenticated && (
+        <Alert className="mb-8">
+          <AlertTitle>Connectez-vous pour laisser un avis</AlertTitle>
+          <AlertDescription>
+            Vous devez être connecté pour pouvoir partager votre expérience avec ce produit.
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      <Separator className="mb-6" />
+      
+      <ReviewsList reviews={reviews} />
+    </div>
   );
 };
 

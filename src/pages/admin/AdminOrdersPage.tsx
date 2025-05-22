@@ -1,184 +1,190 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { toast } from '@/components/ui/sonner';
-import { Search, ArrowDown, ArrowUp } from 'lucide-react';
-import { Order, ordersAPI } from '@/services/api';
+import { ordersAPI, Order } from '@/services/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Check, Package, Truck, ShoppingBag } from 'lucide-react';
+import AdminLayout from './AdminLayout';
 
-const AdminOrdersPage: React.FC = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState<keyof Order>('createdAt');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-
-  useEffect(() => {
-    loadOrders();
-  }, []);
-
-  const loadOrders = async () => {
-    try {
-      setLoading(true);
-      const response = await ordersAPI.getAllOrders();
-      setOrders(response.data);
-    } catch (error) {
-      console.error('Erreur lors du chargement des commandes:', error);
-      toast.error('Impossible de charger les commandes');
-    } finally {
-      setLoading(false);
+const AdminOrdersPage = () => {
+  const queryClient = useQueryClient();
+  const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ['admin-orders'],
+    queryFn: async () => {
+      const response = await ordersAPI.getAll();
+      return response.data;
     }
-  };
+  });
 
-  const handleStatusChange = async (orderId: string, status: string) => {
-    try {
-      await ordersAPI.updateStatus(orderId, status);
+  const updateOrderStatus = useMutation({
+    mutationFn: async ({ orderId, status }: { orderId: string, status: string }) => {
+      await ordersAPI.updateStatus(orderId, status as any);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       toast.success('Statut de la commande mis à jour');
-      loadOrders();
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du statut:', error);
-      toast.error('Impossible de mettre à jour le statut');
+    },
+    onError: () => {
+      toast.error('Erreur lors de la mise à jour du statut');
     }
-  };
-
-  const handleSort = (field: keyof Order) => {
-    if (field === sortField) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmée':
-        return 'bg-blue-100 text-blue-800';
-      case 'en préparation':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'en livraison':
-        return 'bg-purple-100 text-purple-800';
-      case 'livrée':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const filteredOrders = orders.filter(order => {
-    return order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.items.some(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
   });
 
-  const sortedOrders = [...filteredOrders].sort((a, b) => {
-    if (sortField === 'totalAmount') {
-      return sortDirection === 'asc' ? a.totalAmount - b.totalAmount : b.totalAmount - a.totalAmount;
-    }
+  const handleStatusChange = (orderId: string, status: string) => {
+    updateOrderStatus.mutate({ orderId, status });
+  };
+
+  const formatDate = (dateString: string) => {
+    return format(new Date(dateString), 'dd MMMM yyyy', { locale: fr });
+  };
+
+  // Helper function to ensure image URL has correct format
+  const getImageUrl = (imagePath: string) => {
+    if (!imagePath) return '';
     
-    if (sortField === 'createdAt') {
-      return sortDirection === 'asc'
-        ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    }
+    // If the image already has the full URL, return it
+    if (imagePath.startsWith('http')) return imagePath;
     
-    return 0;
-  });
+    // If it's a relative path, add the base URL
+    return `${AUTH_BASE_URL}${imagePath}`;
+  };
+
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-screen">Chargement des commandes...</div>;
+  }
 
   return (
-    <div className="p-4 space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Gestion des commandes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center mb-6">
-            <div className="relative w-full max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-              <Input
-                placeholder="Rechercher par ID ou produit..."
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          {loading ? (
-            <div className="flex justify-center py-10">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-800"></div>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="cursor-pointer" onClick={() => handleSort('id')}>
-                      ID {sortField === 'id' && (sortDirection === 'asc' ? <ArrowUp size={14} className="inline" /> : <ArrowDown size={14} className="inline" />)}
-                    </TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead className="cursor-pointer" onClick={() => handleSort('createdAt')}>
-                      Date {sortField === 'createdAt' && (sortDirection === 'asc' ? <ArrowUp size={14} className="inline" /> : <ArrowDown size={14} className="inline" />)}
-                    </TableHead>
-                    <TableHead className="cursor-pointer" onClick={() => handleSort('totalAmount')}>
-                      Montant {sortField === 'totalAmount' && (sortDirection === 'asc' ? <ArrowUp size={14} className="inline" /> : <ArrowDown size={14} className="inline" />)}
-                    </TableHead>
-                    <TableHead>Produits</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedOrders.map(order => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">{order.id}</TableCell>
-                      <TableCell>{order.userId}</TableCell>
-                      <TableCell>{format(new Date(order.createdAt), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>
-                      <TableCell>{order.totalAmount.toFixed(2)} €</TableCell>
-                      <TableCell>{order.items.length} article(s)</TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(order.status)}>
-                          {order.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          onValueChange={(value) => handleStatusChange(order.id, value)}
-                          defaultValue={order.status}
-                        >
-                          <SelectTrigger className="w-[130px]">
-                            <SelectValue placeholder="Changer le statut" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="confirmée">Confirmée</SelectItem>
-                            <SelectItem value="en préparation">En préparation</SelectItem>
-                            <SelectItem value="en livraison">En livraison</SelectItem>
-                            <SelectItem value="livrée">Livrée</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  
-                  {sortedOrders.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-10 text-gray-500">
-                        Aucune commande trouvée
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+    <AdminLayout>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-6">Gestion des Commandes</h1>
+
+      {orders.length === 0 ? (
+        <div className="text-center py-10 border rounded-md">
+          <p>Aucune commande trouvée.</p>
+        </div>
+      ) : (
+        <div className="grid gap-6">
+          {orders.map((order: Order) => (
+            <Card key={order.id}>
+              <CardHeader className="pb-2">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                  <div>
+                    <CardTitle>Commande #{order.id.split('-')[1]}</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDate(order.createdAt)} par {order.userName} ({order.userEmail})
+                    </p>
+                  </div>
+                  <div className="mt-2 sm:mt-0">
+                    <p className="font-bold">{order.totalAmount.toFixed(2)} €</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4">
+                  <h3 className="text-sm font-medium mb-2">Produits:</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                    {order.items.map((item) => (
+                      <div key={item.productId} className="flex items-center">
+                        <div className="w-10 h-10 bg-gray-100 rounded overflow-hidden mr-2">
+                          {item.image ? (
+                            <img 
+                              src={getImageUrl(item.image)} 
+                              alt={item.name} 
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = `${AUTH_BASE_URL}/uploads/placeholder.jpg`;
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                              <ShoppingBag className="h-4 w-4 text-gray-500" />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{item.name}</p>
+                          <p className="text-xs text-muted-foreground">{item.quantity} x {item.price.toFixed(2)} €</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <h3 className="text-sm font-medium mb-2">Adresse de livraison:</h3>
+                  <p className="text-sm">
+                    {order.shippingAddress.prenom} {order.shippingAddress.nom}, {order.shippingAddress.adresse}, 
+                    {order.shippingAddress.codePostal} {order.shippingAddress.ville}, {order.shippingAddress.pays}
+                  </p>
+                </div>
+
+                <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between">
+                  <div className="flex space-x-2 mb-2 sm:mb-0">
+                    <div className={`w-3 h-3 rounded-full ${
+                      order.status === 'confirmée' ? 'bg-blue-500' : 
+                      order.status === 'en préparation' ? 'bg-yellow-500' :
+                      order.status === 'en livraison' ? 'bg-orange-500' :
+                      'bg-green-500'
+                    }`} />
+                    <span className="text-sm">
+                      Statut actuel: {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                    </span>
+                  </div>
+                  <Select 
+                    defaultValue={order.status} 
+                    onValueChange={(value) => handleStatusChange(order.id, value)}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Changer le statut" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="confirmée">
+                        <div className="flex items-center">
+                          <Check className="mr-2 h-4 w-4" />
+                          <span>Confirmée</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="en préparation">
+                        <div className="flex items-center">
+                          <Package className="mr-2 h-4 w-4" />
+                          <span>En préparation</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="en livraison">
+                        <div className="flex items-center">
+                          <Truck className="mr-2 h-4 w-4" />
+                          <span>En livraison</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="livrée">
+                        <div className="flex items-center">
+                          <ShoppingBag className="mr-2 h-4 w-4" />
+                          <span>Livrée</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
+    </AdminLayout>
   );
 };
 

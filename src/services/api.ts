@@ -67,6 +67,7 @@ export interface User {
   prenom?: string;
   email: string;
   role: 'admin' | 'client';
+  dateCreation: string;
   adresse?: string;
   ville?: string;
   codePostal?: string;
@@ -160,30 +161,7 @@ export const productsAPI = {
   search: (query: string) => API.get<Product[]>(`/products/search?q=${encodeURIComponent(query)}`),
 };
 
-// Interface pour les préférences de cookies
-export interface CookiePreferences {
-  essential: boolean;
-  performance: boolean;
-  functional: boolean;
-  marketing: boolean;
-}
-
-// Services pour les préférences de cookies
-export const cookiePreferencesAPI = {
-  get: (userId: string) => API.get<CookiePreferences>(`/cookie-preferences/${userId}`),
-  save: (userId: string, preferences: CookiePreferences) => 
-    API.post(`/cookie-preferences/${userId}`, preferences),
-};
-
 // Interface Review (Commentaire)
-export interface ReviewFormData {
-  productId: string;
-  productRating: number;
-  deliveryRating: number;
-  comment: string;
-  photos?: File[];
-}
-
 export interface Review {
   id: string;
   userId: string;
@@ -195,6 +173,15 @@ export interface Review {
   photos?: string[]; // Nouveau champ pour les photos
   createdAt: string;
   updatedAt: string;
+}
+
+// Interface pour l'ajout de commentaire avec photos
+export interface ReviewFormData {
+  productId: string;
+  productRating: number;
+  deliveryRating: number;
+  comment: string;
+  photos?: File[];
 }
 
 // Services pour les commentaires
@@ -314,6 +301,8 @@ export interface OrderItem {
 export interface Order {
   id: string;
   userId: string;
+  userName: string;
+  userEmail: string;
   items: OrderItem[];
   totalAmount: number;
   shippingAddress: ShippingAddress;
@@ -325,12 +314,12 @@ export interface Order {
 
 // Services pour les commandes
 export const ordersAPI = {
+  getAll: () => API.get<Order[]>('/orders'),
   getUserOrders: () => API.get<Order[]>('/orders/user'),
   getById: (orderId: string) => API.get<Order>(`/orders/${orderId}`),
   create: (orderData: any) => API.post<Order>('/orders', orderData),
   updateStatus: (orderId: string, status: string) => 
     API.put(`/orders/${orderId}/status`, { status }),
-  getAllOrders: () => API.get<Order[]>('/orders'),
 };
 
 // Interface pour les messages
@@ -348,22 +337,15 @@ export interface Message {
 
 // Interface pour les conversations admin
 export interface Conversation {
-  id: string;
   messages: Message[];
   participants: string[];
-  lastMessage?: Message;
-  unreadCount?: number;
 }
 
 // Interface pour les conversations client-service
-export interface ServiceConversation {
-  id: string;
+export interface ServiceConversation extends Conversation {
   type: 'service';
-  clientId: string;
-  clientInfo: User;
-  messages: Message[];
+  clientInfo?: User;
   unreadCount?: number;
-  lastUpdated: string;
 }
 
 // Services pour le chat entre administrateurs

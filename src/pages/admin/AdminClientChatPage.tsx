@@ -1,380 +1,463 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { toast } from '@/components/ui/sonner';
-import { format, formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { Send, Edit, Trash2, Circle } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { clientChatAPI, Message, ServiceConversation, User } from '@/services/api';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Send, User as UserIcon, Search, Edit, Trash2, Smile, MessageSquare } from 'lucide-react';
+import { toast } from 'sonner';
+import AdminLayout from './AdminLayout';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator 
+} from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface ClientInfo {
-  id: string;
-  nom: string;
-  prenom?: string;
-  email: string;
+// Define the type for conversations to fix TypeScript errors
+interface ConversationsType {
+  [key: string]: ServiceConversation;
 }
 
-interface EnhancedServiceConversation extends Omit<ServiceConversation, 'clientInfo' | 'messages'> {
-  clientInfo: ClientInfo;
-  messages: Message[];
-}
-
-const AdminClientChatPage: React.FC = () => {
+const AdminClientChatPage = () => {
   const { user } = useAuth();
-  const [conversations, setConversations] = useState<EnhancedServiceConversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<EnhancedServiceConversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [isEditing, setIsEditing] = useState<string | null>(null);
-  const [editContent, setEditContent] = useState('');
-  const [loading, setLoading] = useState(true);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [messageText, setMessageText] = useState('');
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const queryClient = useQueryClient();
+  
+  // Verify if the current user is a service client admin
+  useEffect(() => {
+    if (user && user.email !== "service.client@example.com") {
+      toast.error("Accès restreint au service client");
+    }
+  }, [user]);
 
-  useEffect(() => {
-    // Signaler que l'administrateur est en ligne
-    clientChatAPI.setOnline();
-    
-    // Charger les conversations
-    loadConversations();
-    
-    return () => {
-      // Signaler que l'administrateur est hors ligne à la fermeture de la page
-      clientChatAPI.setOffline();
-    };
-  }, []);
-  
-  useEffect(() => {
-    // Mise à jour des messages lorsqu'une conversation est sélectionnée
-    if (selectedConversation) {
-      setMessages(selectedConversation.messages || []);
-    }
-  }, [selectedConversation]);
-  
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-  
-  const loadConversations = async () => {
-    try {
-      setLoading(true);
-      const response = await clientChatAPI.getServiceConversations();
-      
-      // Type assertion pour corriger le problème de type
-      const enhancedConversations = response.data as unknown as EnhancedServiceConversation[];
-      
-      setConversations(enhancedConversations);
-    } catch (error) {
-      console.error('Erreur lors du chargement des conversations:', error);
-      toast.error('Impossible de charger les conversations');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const selectConversation = (conversation: EnhancedServiceConversation) => {
-    setSelectedConversation(conversation);
-    setMessages(conversation.messages || []);
-    setNewMessage('');
-    setIsEditing(null);
-  };
-  
-  const sendMessage = async () => {
-    if (!selectedConversation || !newMessage.trim()) return;
-    
-    try {
-      await clientChatAPI.sendServiceReply(selectedConversation.id, newMessage);
-      setNewMessage('');
-      loadConversations();
-      
-      // Mettre à jour les messages de la conversation sélectionnée
-      const updated = conversations.find(c => c.id === selectedConversation.id);
-      if (updated) {
-        setSelectedConversation(updated);
-        setMessages(updated.messages || []);
+  // Get all service client conversations
+  const { 
+    data: conversations, 
+    isLoading: isLoadingConversations 
+  } = useQuery<ConversationsType>({
+    queryKey: ['serviceConversations'],
+    queryFn: async () => {
+      try {
+        const response = await clientChatAPI.getServiceConversations();
+        return response.data || {};
+      } catch (error) {
+        console.error("Erreur lors du chargement des conversations:", error);
+        toast.error("Erreur lors du chargement des conversations");
+        return {};
       }
-    } catch (error) {
-      console.error('Erreur lors de l\'envoi du message:', error);
-      toast.error('Impossible d\'envoyer le message');
+    },
+    refetchInterval: 5000, // Refresh every 5 seconds
+    enabled: !!user && user.email === "service.client@example.com"
+  });
+
+  // Send message mutation
+  const sendMessageMutation = useMutation({
+    mutationFn: async ({ conversationId, message }: { conversationId: string; message: string }) => {
+      return clientChatAPI.sendServiceReply(conversationId, message);
+    },
+    onSuccess: () => {
+      setMessageText('');
+      queryClient.invalidateQueries({ queryKey: ['serviceConversations'] });
+    },
+    onError: (error) => {
+      console.error("Erreur lors de l'envoi du message:", error);
+      toast.error("Erreur lors de l'envoi du message");
     }
-  };
-  
-  const startEditing = (message: Message) => {
-    setIsEditing(message.id);
-    setEditContent(message.content);
-  };
-  
-  const saveEdit = async () => {
-    if (!isEditing || !selectedConversation || !editContent.trim()) return;
-    
-    try {
-      await clientChatAPI.editMessage(isEditing, editContent, selectedConversation.id);
-      setIsEditing(null);
+  });
+
+  // Edit message mutation
+  const editMessageMutation = useMutation({
+    mutationFn: async ({ messageId, content, conversationId }: { messageId: string; content: string; conversationId: string }) => {
+      return clientChatAPI.editMessage(messageId, content, conversationId);
+    },
+    onSuccess: () => {
+      setEditingMessageId(null);
+      setEditText('');
+      queryClient.invalidateQueries({ queryKey: ['serviceConversations'] });
+    },
+    onError: (error) => {
+      console.error("Erreur lors de la modification du message:", error);
+      toast.error("La modification du message a échoué");
+    }
+  });
+
+  // Delete message mutation
+  const deleteMessageMutation = useMutation({
+    mutationFn: async ({ messageId, conversationId }: { messageId: string; conversationId: string }) => {
+      return clientChatAPI.deleteMessage(messageId, conversationId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['serviceConversations'] });
+      toast.success("Message supprimé avec succès");
+    },
+    onError: (error) => {
+      console.error("Erreur lors de la suppression du message:", error);
+      toast.error("La suppression du message a échoué");
+    }
+  });
+
+  // Mark as online on mount
+  useEffect(() => {
+    if (user && user.email === "service.client@example.com") {
+      clientChatAPI.setOnline();
       
-      // Recharger les conversations pour mettre à jour les messages
-      loadConversations();
-    } catch (error) {
-      console.error('Erreur lors de la modification du message:', error);
-      toast.error('Impossible de modifier le message');
+      // Set as offline when component unmounts
+      return () => {
+        clientChatAPI.setOffline();
+      };
     }
-  };
-  
-  const deleteMessage = async (messageId: string) => {
-    if (!selectedConversation) return;
+  }, [user]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [activeConversationId, conversations]);
+
+  const handleSendMessage = () => {
+    if (!messageText.trim() || !activeConversationId) return;
     
-    try {
-      await clientChatAPI.deleteMessage(messageId, selectedConversation.id);
-      loadConversations();
-    } catch (error) {
-      console.error('Erreur lors de la suppression du message:', error);
-      toast.error('Impossible de supprimer le message');
-    }
-  };
-  
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-  
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (isEditing) {
-        saveEdit();
-      } else {
-        sendMessage();
-      }
-    }
-  };
-  
-  // Formater la date du dernier message
-  const formatLastMessageTime = (conversation: EnhancedServiceConversation) => {
-    if (!conversation.messages || conversation.messages.length === 0) {
-      return 'Pas de messages';
-    }
-    
-    const lastMessage = conversation.messages[conversation.messages.length - 1];
-    return formatDistanceToNow(new Date(lastMessage.timestamp), { 
-      addSuffix: true,
-      locale: fr 
+    sendMessageMutation.mutate({
+      conversationId: activeConversationId,
+      message: messageText
     });
   };
-  
-  // Obtenir le contenu du dernier message
-  const getLastMessageContent = (conversation: EnhancedServiceConversation) => {
-    if (!conversation.messages || conversation.messages.length === 0) {
-      return 'Pas de messages';
-    }
+
+  const handleEditMessage = (messageId: string) => {
+    if (!editText.trim() || !activeConversationId) return;
     
-    const lastMessage = conversation.messages[conversation.messages.length - 1];
-    return lastMessage.content.length > 20
-      ? `${lastMessage.content.substring(0, 20)}...`
-      : lastMessage.content;
+    editMessageMutation.mutate({
+      messageId,
+      content: editText,
+      conversationId: activeConversationId
+    });
   };
 
+  const startEditMessage = (message: Message) => {
+    setEditingMessageId(message.id);
+    setEditText(message.content);
+  };
+
+  const handleDeleteMessage = (messageId: string) => {
+    if (!activeConversationId || !confirm('Êtes-vous sûr de vouloir supprimer ce message ?')) return;
+    
+    deleteMessageMutation.mutate({
+      messageId,
+      conversationId: activeConversationId
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  const handleEmojiSelect = (emoji: any) => {
+    setMessageText((prev) => prev + emoji.native);
+  };
+
+  const handleEditEmojiSelect = (emoji: any) => {
+    setEditText((prev) => prev + emoji.native);
+  };
+
+  // Filter conversations by search query
+  const filteredConversations = conversations ? Object.entries(conversations).filter(([_, conversation]) => {
+    const client = conversation.clientInfo;
+    if (!client) return false;
+    
+    const fullName = `${client.nom} ${client.prenom || ''}`.toLowerCase();
+    const email = client.email.toLowerCase();
+    const query = searchQuery.toLowerCase();
+    
+    return fullName.includes(query) || email.includes(query);
+  }) : [];
+
+  // Active conversation
+  const activeConversation = activeConversationId && conversations ? 
+    conversations[activeConversationId] : null;
+  
+  // Active client
+  const activeClient = activeConversation?.clientInfo;
+
   return (
-    <div className="h-[calc(100vh-10rem)] flex flex-col">
-      <div className="text-xl font-bold mb-4">Support Client</div>
-      
-      <div className="flex flex-1 gap-4 h-full">
-        {/* Liste des conversations */}
-        <Card className="w-1/4 min-w-[250px]">
-          <CardContent className="p-0 h-full">
-            <ScrollArea className="h-[calc(100vh-12rem)]">
-              <div className="p-4 space-y-1">
-                {loading ? (
-                  <div className="flex justify-center items-center h-20">
-                    <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-red-800"></div>
-                  </div>
-                ) : conversations.length === 0 ? (
-                  <div className="text-center text-gray-500 py-10">
-                    <p>Aucune conversation avec les clients</p>
-                  </div>
+    <AdminLayout>
+      <div className="h-full">
+        <h1 className="text-3xl font-bold mb-6">Service Client - Chat</h1>
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 h-[calc(100vh-200px)]">
+          {/* Conversation List */}
+          <Card className="col-span-1 p-4 overflow-hidden flex flex-col">
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+                <Input 
+                  placeholder="Rechercher un client..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+            
+            <ScrollArea className="flex-1">
+              <div className="space-y-2">
+                {isLoadingConversations ? (
+                  <p className="text-center py-4 text-gray-500">Chargement...</p>
+                ) : filteredConversations.length === 0 ? (
+                  <p className="text-center py-4 text-gray-500">Aucune conversation trouvée</p>
                 ) : (
-                  conversations.map((conversation) => (
-                    <div 
-                      key={conversation.id}
-                      onClick={() => selectConversation(conversation)}
-                      className={`flex items-center p-3 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-neutral-800 ${
-                        selectedConversation?.id === conversation.id ? 'bg-gray-100 dark:bg-neutral-800' : ''
-                      }`}
-                    >
-                      <div className="relative">
-                        <Avatar>
-                          <AvatarImage src={`/images/avatars/avatar-${conversation.clientInfo.id}.jpg`} alt={conversation.clientInfo.nom} />
-                          <AvatarFallback>
-                            {conversation.clientInfo.prenom?.[0] || ''}{conversation.clientInfo.nom?.[0] || ''}
-                          </AvatarFallback>
-                        </Avatar>
-                      </div>
-                      
-                      <div className="ml-3 flex-1 overflow-hidden">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">
-                            {conversation.clientInfo.prenom} {conversation.clientInfo.nom}
-                          </span>
-                          {conversation.unreadCount && conversation.unreadCount > 0 && (
-                            <Badge className="bg-red-500">{conversation.unreadCount}</Badge>
+                  filteredConversations.map(([conversationId, conversation]) => {
+                    const client = conversation.clientInfo;
+                    const lastMessage = conversation.messages[conversation.messages.length - 1];
+                    const unreadCount = conversation.unreadCount || 0;
+                    
+                    return (
+                      <div 
+                        key={conversationId}
+                        className={`p-3 rounded-lg cursor-pointer transition-all ${
+                          activeConversationId === conversationId 
+                            ? 'bg-red-100' 
+                            : 'hover:bg-gray-100'
+                        }`}
+                        onClick={() => setActiveConversationId(conversationId)}
+                      >
+                        <div className="flex items-center mb-1">
+                          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-2">
+                            <UserIcon className="h-4 w-4 text-gray-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium truncate">{client?.nom} {client?.prenom || ''}</p>
+                            <p className="text-xs text-gray-500 truncate">{client?.email}</p>
+                          </div>
+                          {unreadCount > 0 && (
+                            <Badge className="bg-red-600">{unreadCount}</Badge>
                           )}
                         </div>
-                        
-                        <div className="text-sm text-gray-500 truncate">
-                          {getLastMessageContent(conversation)}
-                        </div>
-                        
-                        <div className="text-xs text-gray-400">
-                          {formatLastMessageTime(conversation)}
-                        </div>
+                        {lastMessage && (
+                          <div className="mt-1">
+                            <p className="text-sm text-gray-500 truncate">
+                              {lastMessage.isSystemMessage ? 'Système: ' : 
+                               lastMessage.isAdminReply ? 'Vous: ' : 'Client: '}
+                              {lastMessage.content}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {formatTime(lastMessage.timestamp)}
+                            </p>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </ScrollArea>
-          </CardContent>
-        </Card>
-        
-        {/* Zone de conversation */}
-        <Card className="flex-1">
-          <CardContent className="p-0 h-full flex flex-col">
-            {selectedConversation ? (
+          </Card>
+          
+          {/* Conversation Area */}
+          <Card className="col-span-1 md:col-span-3 p-0 flex flex-col overflow-hidden">
+            {!activeConversationId ? (
+              <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                <MessageSquare className="w-16 h-16 mb-4" />
+                <p>Sélectionnez une conversation pour commencer</p>
+              </div>
+            ) : (
               <>
-                {/* En-tête de la conversation */}
-                <div className="p-4 border-b flex justify-between items-center">
-                  <div className="flex items-center">
-                    <Avatar className="h-8 w-8 mr-2">
-                      <AvatarImage 
-                        src={`/images/avatars/avatar-${selectedConversation.clientInfo.id}.jpg`} 
-                        alt={selectedConversation.clientInfo.nom} 
-                      />
-                      <AvatarFallback>
-                        {selectedConversation.clientInfo.prenom?.[0] || ''}{selectedConversation.clientInfo.nom?.[0] || ''}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div>
-                      <div className="font-medium">
-                        {selectedConversation.clientInfo.prenom} {selectedConversation.clientInfo.nom}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {selectedConversation.clientInfo.email}
-                      </div>
-                    </div>
+                {/* Chat Header */}
+                <div className="p-4 border-b flex items-center">
+                  <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center mr-3">
+                    <UserIcon className="h-5 w-5 text-gray-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">{activeClient?.nom} {activeClient?.prenom || ''}</h3>
+                    <p className="text-sm text-gray-500">{activeClient?.email}</p>
                   </div>
                 </div>
                 
-                {/* Messages */}
+                {/* Messages Area */}
                 <ScrollArea className="flex-1 p-4">
                   <div className="space-y-4">
-                    {selectedConversation.messages.length === 0 ? (
-                      <div className="text-center text-gray-500 py-10">
-                        <p>Aucun message dans cette conversation</p>
-                      </div>
-                    ) : (
-                      selectedConversation.messages.map((message) => (
-                        <div
-                          key={message.id}
-                          className={`flex ${message.senderId === user?.id ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div
-                            className={`max-w-[70%] rounded-lg p-3 ${
-                              message.senderId === user?.id
-                                ? 'bg-red-600 text-white'
-                                : 'bg-gray-200 dark:bg-neutral-800'
+                    {activeConversation?.messages.map(message => (
+                      <div 
+                        key={message.id} 
+                        className={`flex ${
+                          message.isSystemMessage ? 'justify-center' :
+                          message.senderId === user?.id ? 'justify-end' : 'justify-start'
+                        }`}
+                      >
+                        {editingMessageId === message.id ? (
+                          <div className="w-full max-w-[80%] bg-gray-50 p-3 rounded-lg">
+                            <div className="flex">
+                              <Input 
+                                value={editText}
+                                onChange={(e) => setEditText(e.target.value)}
+                                className="flex-1 mr-2"
+                              />
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="outline" size="icon">
+                                    <Smile className="h-4 w-4" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-full p-0" side="top">
+                                  <Picker 
+                                    data={data} 
+                                    onEmojiSelect={handleEditEmojiSelect}
+                                    theme="light"
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                              <Button 
+                                onClick={() => handleEditMessage(message.id)} 
+                                className="ml-2 bg-red-800 hover:bg-red-700"
+                                disabled={editMessageMutation.isPending}
+                              >
+                                Enregistrer
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                onClick={() => setEditingMessageId(null)} 
+                                className="ml-2"
+                              >
+                                Annuler
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div 
+                            className={`max-w-[80%] rounded-lg px-4 py-2 relative group ${
+                              message.isSystemMessage ? 'bg-gray-200 text-gray-700' :
+                              message.senderId === user?.id 
+                                ? 'bg-green-600 text-white' 
+                                : 'bg-blue-600 text-white'
                             }`}
                           >
-                            {isEditing === message.id ? (
-                              <div className="space-y-2">
-                                <Input
-                                  value={editContent}
-                                  onChange={(e) => setEditContent(e.target.value)}
-                                  className="bg-white dark:bg-neutral-700"
-                                  onKeyPress={handleKeyPress}
-                                  autoFocus
-                                />
-                                <div className="flex justify-end space-x-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setIsEditing(null)}
+                            {message.senderId === user?.id && !message.isSystemMessage && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 h-6 w-6 text-white"
                                   >
-                                    Annuler
+                                    <Edit className="h-4 w-4" />
                                   </Button>
-                                  <Button size="sm" onClick={saveEdit}>
-                                    Sauvegarder
-                                  </Button>
-                                </div>
-                              </div>
-                            ) : (
-                              <>
-                                <p>{message.content}</p>
-                                <div className="mt-1 flex justify-between items-center text-xs">
-                                  <span className={message.senderId === user?.id ? 'text-white/70' : 'text-gray-500'}>
-                                    {format(new Date(message.timestamp), 'dd/MM HH:mm', { locale: fr })}
-                                  </span>
-                                  
-                                  {message.senderId === user?.id && (
-                                    <div className="flex space-x-1">
-                                      <button
-                                        onClick={() => startEditing(message)}
-                                        className="text-white/70 hover:text-white"
-                                      >
-                                        <Edit size={14} />
-                                      </button>
-                                      <button
-                                        onClick={() => deleteMessage(message.id)}
-                                        className="text-white/70 hover:text-white"
-                                      >
-                                        <Trash2 size={14} />
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                                
-                                {message.isEdited && (
-                                  <span className="text-xs italic text-white/50">modifié</span>
-                                )}
-                              </>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                  <DropdownMenuItem onClick={() => startEditMessage(message)}>
+                                    <Edit className="mr-2 h-4 w-4" /> Modifier
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    onClick={() => handleDeleteMessage(message.id)}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             )}
+                            <p>{message.content}</p>
+                            <div className="flex items-center justify-between mt-1">
+                              <p className={`text-xs ${
+                                message.isSystemMessage ? 'text-gray-500' :
+                                message.senderId === user?.id ? 'text-green-100' : 'text-blue-100'
+                              }`}>
+                                {formatTime(message.timestamp)}
+                              </p>
+                              {message.isEdited && (
+                                <p className="text-xs ml-2 opacity-80">(modifié)</p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))
-                    )}
+                        )}
+                      </div>
+                    ))}
                     <div ref={messagesEndRef} />
                   </div>
                 </ScrollArea>
                 
-                {/* Zone de saisie */}
+                {/* Input Area */}
                 <div className="p-4 border-t">
-                  <div className="flex space-x-2">
-                    <Input
-                      placeholder="Écrivez votre message..."
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                    />
-                    <Button onClick={sendMessage} disabled={!newMessage.trim()}>
-                      <Send size={18} />
+                  <form 
+                    onSubmit={(e) => { 
+                      e.preventDefault();
+                      handleSendMessage();
+                    }} 
+                    className="flex space-x-2"
+                  >
+                    <div className="relative flex-1">
+                      <Textarea
+                        value={messageText}
+                        onChange={(e) => setMessageText(e.target.value)}
+                        placeholder="Écrivez votre réponse..."
+                        className="resize-none pr-10"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendMessage();
+                          }
+                        }}
+                      />
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="absolute right-2 bottom-2"
+                          >
+                            <Smile className="h-4 w-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0" side="top">
+                          <Picker 
+                            data={data} 
+                            onEmojiSelect={handleEmojiSelect}
+                            theme="light"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <Button 
+                      type="submit" 
+                      className="bg-red-800 hover:bg-red-700 self-end h-10"
+                    >
+                      <Send className="h-4 w-4" />
                     </Button>
-                  </div>
+                  </form>
                 </div>
               </>
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
-                <div className="text-center">
-                  <p className="mb-2">Sélectionnez une conversation client pour répondre</p>
-                  <p className="text-sm">Les demandes de support client apparaîtront ici</p>
-                </div>
-              </div>
             )}
-          </CardContent>
-        </Card>
+          </Card>
+        </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 
