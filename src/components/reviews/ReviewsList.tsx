@@ -1,96 +1,77 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Review } from '@/services/api';
-import StarRating from './StarRating';
-import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import ReviewPhotoThumbnails from './ReviewPhotoThumbnails';
-import ReviewDetail from './ReviewDetail';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { GalleryHorizontal } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import StarRating from './StarRating';
+import ReviewPhotoThumbnails from './ReviewPhotoThumbnails';
+import { Loader2 } from 'lucide-react';
 
-interface ReviewsListProps {
+export interface ReviewsListProps {
   reviews: Review[];
+  loading?: boolean;
+  onViewReview: (reviewId: string) => Promise<void>;
 }
 
-const ReviewsList: React.FC<ReviewsListProps> = ({ reviews }) => {
-  const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
+const ReviewsList: React.FC<ReviewsListProps> = ({ reviews, loading = false, onViewReview }) => {
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-10">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (reviews.length === 0) {
     return (
-      <div className="text-center py-4">
-        <p className="text-muted-foreground">Aucun commentaire pour ce produit.</p>
+      <div className="text-center py-10 border rounded-md">
+        <p className="text-muted-foreground">Aucun avis pour le moment.</p>
       </div>
     );
   }
 
   return (
-    <section className="reviews-section">
-      <h2 className="sr-only">Commentaires des clients</h2>
-      <ul className="space-y-6">
-        {reviews.map((review) => (
-          <li key={review.id} className="border-b pb-4">
-            <article className="review-item">
-              <header className="flex justify-between items-center mb-2">
-                <h3 className="font-medium">{review.userName}</h3>
-                <time 
-                  className="text-sm text-muted-foreground"
-                  dateTime={review.createdAt}
-                >
-                  {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: fr })}
-                </time>
-              </header>
-              
-              <div className="grid grid-cols-2 gap-4 mb-3">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Produit</p>
-                  <div className="flex justify-center">
-                    <StarRating rating={review.productRating} readOnly />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1 text-center">Livraison</p>
-                  <div className="flex justify-center">
-                    <StarRating rating={review.deliveryRating} readOnly />
-                  </div>
+    <div className="space-y-4">
+      {reviews.map(review => (
+        <Card key={review.id} className="overflow-hidden">
+          <CardContent className="p-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="font-medium">{review.userName}</p>
+                <div className="flex items-center space-x-2 mt-1">
+                  <StarRating rating={(review.productRating + review.deliveryRating) / 2} />
+                  <span className="text-sm text-muted-foreground">
+                    {format(new Date(review.createdAt), 'dd MMMM yyyy', { locale: fr })}
+                  </span>
                 </div>
               </div>
-              
-              {review.comment && (
-                <p className="mt-2 text-sm">{review.comment}</p>
-              )}
-              
-              {review.photos && review.photos.length > 0 && (
-                <div className="mt-3">
-                  <div className="flex justify-center w-full">
-                    <ReviewPhotoThumbnails photos={review.photos} reviewId={review.id} />
-                  </div>
+            </div>
 
-                  <div className="flex justify-center mt-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setSelectedReviewId(review.id)}
-                    >
-                      <GalleryHorizontal className="mr-1 h-4 w-4" />
-                      Voir toutes les photos et détails
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </article>
-          </li>
-        ))}
-      </ul>
-      
-      {selectedReviewId && (
-        <ReviewDetail
-          reviewId={selectedReviewId}
-          isOpen={!!selectedReviewId}
-          onClose={() => setSelectedReviewId(null)}
-        />
-      )}
-    </section>
+            <div className="mt-3">
+              <p className="text-sm line-clamp-3">{review.comment}</p>
+            </div>
+
+            {review.photos && review.photos.length > 0 && (
+              <div className="mt-3">
+                <ReviewPhotoThumbnails photos={review.photos} maxDisplay={3} />
+              </div>
+            )}
+
+            <div className="mt-3 text-right">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => onViewReview(review.id)}
+              >
+                Voir détails
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 };
 

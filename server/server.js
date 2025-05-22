@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
@@ -168,6 +167,7 @@ const clientChatRoutes = require('./routes/client-chat');
 const adminChatRoutes = require('./routes/admin-chat');
 const usersRoutes = require('./routes/users');
 const reviewRoutes = require('./routes/reviews');
+const promoRoutes = require('./routes/promos');
 
 // Routes de l'API
 app.use('/api/auth', authRoutes);
@@ -180,6 +180,7 @@ app.use('/api/client-chat', clientChatRoutes);
 app.use('/api/admin-chat', adminChatRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/promos', promoRoutes);
 
 // Socket.io pour la communication en temps réel
 const io = socketIO(server, {

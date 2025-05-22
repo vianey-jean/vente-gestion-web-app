@@ -17,8 +17,9 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from '@/components/ui/sonner';
 import CreditCardForm from '@/components/checkout/CreditCardForm';
-import { ShippingAddress } from '@/services/api';
+import { ShippingAddress, promoAPI } from '@/services/api';
 import { Link } from 'react-router-dom';
+
 // Définition des prix de livraison par ville
 const DELIVERY_PRICES = {
   "Saint-Benoît": 20,
@@ -53,6 +54,14 @@ const CheckoutPage = () => {
   const [showCardForm, setShowCardForm] = useState(false);
   const [deliveryCity, setDeliveryCity] = useState<string>("");
   const [deliveryPrice, setDeliveryPrice] = useState<number>(0);
+  const [promoCode, setPromoCode] = useState<string>('');
+  const [appliedPromoCode, setAppliedPromoCode] = useState<{
+    productId: string;
+    percentage: number;
+    id: string;
+    code: string;
+  } | null>(null);
+  const [validatingPromo, setValidatingPromo] = useState(false);
   
   const [shippingData, setShippingData] = useState<ShippingAddress>({
     nom: user?.nom || '',
@@ -63,6 +72,9 @@ const CheckoutPage = () => {
     pays: user?.pays || 'France',
     telephone: user?.telephone || '',
   });
+  
+  // Check if any product in cart is not on promotion (to enable promo code input)
+  const hasNonPromotedProduct = selectedCartItems.some(item => !item.product.promotion);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -107,6 +119,16 @@ const CheckoutPage = () => {
   const processOrder = async (orderId?: string) => {
     setLoading(true);
     try {
+      // If a promo code was applied, use it (decrease quantity)
+      if (appliedPromoCode) {
+        try {
+          await promoAPI.use(appliedPromoCode.code);
+        } catch (error) {
+          console.error("Error using promo code:", error);
+          // Continue with order creation even if promo code usage fails
+        }
+      }
+      
       const order = await createOrder(shippingData, paymentMethod);
       
       if (order) {
@@ -139,9 +161,64 @@ const CheckoutPage = () => {
     );
   };
   
-  const total = getCartTotal();
-  const shipping = total > 50 ? 0 : 4.99;
-  const orderTotal = total + deliveryPrice;
+  const handleApplyPromoCode = async () => {
+    if (!promoCode.trim()) {
+      toast.error("Veuillez saisir un code promo");
+      return;
+    }
+    
+    // Find the first non-promoted product to apply the code
+    const nonPromotedProduct = selectedCartItems.find(item => !item.product.promotion);
+    
+    if (!nonPromotedProduct) {
+      toast.error("Aucun produit éligible pour ce code promo");
+      return;
+    }
+    
+    setValidatingPromo(true);
+    try {
+      const response = await promoAPI.verify(promoCode.trim(), nonPromotedProduct.product.id);
+      
+      if (response.data.valid && response.data.promoCode) {
+        setAppliedPromoCode({
+          ...response.data.promoCode,
+          code: promoCode.trim()
+        });
+        toast.success(`Code promo appliqué : ${response.data.promoCode.percentage}% de réduction`);
+      } else {
+        toast.error(response.data.message || "Code promo invalide");
+      }
+    } catch (error) {
+      console.error("Error verifying promo code:", error);
+      toast.error("Erreur lors de la vérification du code promo");
+    } finally {
+      setValidatingPromo(false);
+    }
+  };
+  
+  // Calculate order total with promo code applied
+  const calculateTotal = () => {
+    let subtotal = 0;
+    
+    // Calculate subtotal with promo code applied if any
+    selectedCartItems.forEach(item => {
+      const itemPrice = item.product.price;
+      let discountedPrice = itemPrice;
+      
+      // Apply promo code if valid and applicable to this product
+      if (appliedPromoCode && appliedPromoCode.productId === item.product.id && !item.product.promotion) {
+        discountedPrice = itemPrice * (1 - appliedPromoCode.percentage / 100);
+      }
+      
+      subtotal += discountedPrice * item.quantity;
+    });
+    
+    return subtotal + deliveryPrice;
+  };
+  
+  const subtotal = getCartTotal();
+  const orderTotal = calculateTotal();
+  const promoSavings = subtotal - (orderTotal - deliveryPrice);
   const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   
   return (
@@ -330,9 +407,17 @@ const CheckoutPage = () => {
                         <p className="text-sm text-muted-foreground">
                           {item.quantity} x {item.product.price.toFixed(2)} €
                         </p>
+                        {item.product.promotion && (
+                          <p className="text-xs text-green-600">En promotion (-{item.product.promotion}%)</p>
+                        )}
+                        {appliedPromoCode && appliedPromoCode.productId === item.product.id && !item.product.promotion && (
+                          <p className="text-xs text-green-600">Code promo appliqué (-{appliedPromoCode.percentage}%)</p>
+                        )}
                       </div>
                       <p className="font-semibold">
-                        {(item.quantity * item.product.price).toFixed(2)} €
+                        {appliedPromoCode && appliedPromoCode.productId === item.product.id && !item.product.promotion 
+                          ? (item.quantity * item.product.price * (1 - appliedPromoCode.percentage / 100)).toFixed(2) 
+                          : (item.quantity * item.product.price).toFixed(2)} €
                       </p>
                     </div>
                   ))}
@@ -341,13 +426,47 @@ const CheckoutPage = () => {
                 <div className="border-t pt-4 space-y-2">
                   <div className="flex justify-between">
                     <p>Sous-total</p>
-                    <p>{total.toFixed(2)} €</p>
+                    <p>{subtotal.toFixed(2)} €</p>
                   </div>
+
+                  {/* Code promo section - only show if at least one product is not on promotion */}
+                  {hasNonPromotedProduct && !appliedPromoCode && (
+                    <div className="py-2">
+                      <Label htmlFor="promoCode" className="text-sm">Code promotion</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input 
+                          id="promoCode" 
+                          value={promoCode} 
+                          onChange={(e) => setPromoCode(e.target.value)}
+                          placeholder="Entrez votre code" 
+                          className="flex-1"
+                        />
+                        <Button 
+                          type="button" 
+                          variant="secondary" 
+                          onClick={handleApplyPromoCode}
+                          disabled={validatingPromo}
+                        >
+                          {validatingPromo ? 'Vérification...' : 'Appliquer'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Display applied promo code */}
+                  {appliedPromoCode && (
+                    <div className="flex justify-between text-green-600">
+                      <p>Réduction (-{appliedPromoCode.percentage}%)</p>
+                      <p>-{promoSavings.toFixed(2)} €</p>
+                    </div>
+                  )}
+                  
                   <div className="flex justify-between">
                     <p>Frais de livraison ({deliveryCity || 'Non sélectionné'})</p>
                     <p>{deliveryPrice === 0 && !deliveryCity ? 'Non calculé' : deliveryPrice === 0 ? 'Gratuit' : `${deliveryPrice.toFixed(2)} €`}</p>
                   </div>
-                  <div className="flex justify-between font-bold text-lg">
+                  
+                  <div className="flex justify-between font-bold text-lg pt-2 border-t">
                     <p>Total</p>
                     <p>{orderTotal.toFixed(2)} €</p>
                   </div>

@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import _ from 'lodash';
 
@@ -390,6 +389,43 @@ export const clientChatAPI = {
     API.delete(`/client-chat/messages/${messageId}?conversationId=${conversationId}`),
   markAsRead: (messageId: string, conversationId: string) => 
     API.put(`/client-chat/messages/${messageId}/read`, { conversationId })
+};
+
+// Interface for promo code
+export interface PromoCode {
+  id: string;
+  code: string;
+  productId: string;
+  productName: string;
+  percentage: number;
+  quantity: number;
+  createdAt: string;
+  isActive: boolean;
+}
+
+export interface PromoCodeVerification {
+  valid: boolean;
+  promoCode?: {
+    id: string;
+    percentage: number;
+    productId: string;
+  };
+  message?: string;
+}
+
+// Services for promo codes
+export const promoAPI = {
+  getAll: () => API.get<PromoCode[]>('/promos'),
+  create: (data: { productId: string; percentage: number; quantity: number }) => 
+    API.post<PromoCode>('/promos', data),
+  update: (id: string, quantity: number) => 
+    API.put<PromoCode>(`/promos/${id}`, { quantity }),
+  delete: (id: string) => API.delete(`/promos/${id}`),
+  verify: (code: string, productId: string) => 
+    API.post<PromoCodeVerification>('/promos/verify', { code, productId }),
+  use: (code: string) => API.post('/promos/use', { code }),
+  searchProducts: (query: string) => 
+    API.get<Product[]>(`/promos/search-products?query=${encodeURIComponent(query)}`)
 };
 
 export default API;
