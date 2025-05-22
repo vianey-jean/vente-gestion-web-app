@@ -34,7 +34,17 @@ const CookieConsent: React.FC = () => {
     } else {
       try {
         // Récupérer les préférences sauvegardées
-        const savedPreferences = JSON.parse(consentGiven);
+        let savedPreferences;
+        try {
+          savedPreferences = JSON.parse(consentGiven);
+        } catch (parseError) {
+          console.error("Erreur lors du parsing des préférences:", parseError);
+          // Réinitialiser les préférences en cas d'erreur
+          localStorage.removeItem('cookie-consent');
+          setShowConsent(true);
+          return;
+        }
+        
         if (savedPreferences && typeof savedPreferences === 'object') {
           setCookiePreferences(prev => ({
             ...prev,
@@ -43,6 +53,8 @@ const CookieConsent: React.FC = () => {
         }
       } catch (error) {
         console.error("Erreur lors de la récupération des préférences de cookies:", error);
+        // En cas d'erreur, afficher la bannière
+        setShowConsent(true);
       }
     }
   }, []);

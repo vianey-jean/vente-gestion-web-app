@@ -1,8 +1,8 @@
 
 import axios from 'axios';
 
-// Base URL for API requests
-const API_URL = 'http://localhost:5000/api';
+// Base URL for API requests - using environment variable
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 // Configure axios with default headers
 const api = axios.create({
@@ -85,11 +85,13 @@ export interface Product {
   originalPrice?: number;
   description: string;
   image: string;
+  images?: string[];  // Adding images array for backward compatibility
   category: string;
   stock?: number;
   isActive?: boolean;
   isSold?: boolean;
   isFeatured?: boolean;
+  dateAjout?: string;
   createdAt?: string;
   updatedAt?: string;
   promotion?: string | null;
@@ -139,6 +141,7 @@ export interface Order {
   totalAmount: number;
   orderStatus: string;
   paymentStatus: string;
+  status?: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -148,6 +151,7 @@ export interface Message {
   id: string;
   userId: string;
   text: string;
+  content?: string;
   timestamp: string;
   read: boolean;
   sender: 'user' | 'admin';
@@ -238,6 +242,8 @@ export const productsAPI = {
   search: (query: string) => api.get(`/products/search?q=${query}`),
   getFeatured: () => api.get('/products/featured'),
   getPromo: () => api.get('/products/promotions'),
+  getMostFavorited: () => api.get('/products/stats/most-favorited'),
+  getNewArrivals: () => api.get('/products/stats/new-arrivals'),
 };
 
 // Panier (Cart) API
@@ -288,6 +294,12 @@ export const clientChatAPI = {
   sendMessage: (userId: string, text: string) => 
     api.post(`/client-chat/${userId}`, { text }),
   markRead: (userId: string) => api.put(`/client-chat/${userId}/read`),
+  getServiceChat: () => api.get('/client-chat/service'),
+  sendServiceMessage: (text: string) => api.post('/client-chat/service', { text }),
+  editMessage: (messageId: string, text: string) => api.put(`/client-chat/message/${messageId}`, { text }),
+  deleteMessage: (messageId: string) => api.delete(`/client-chat/message/${messageId}`),
+  setOnline: () => api.put('/client-chat/status/online'),
+  setOffline: () => api.put('/client-chat/status/offline'),
 };
 
 export const adminChatAPI = {
@@ -296,6 +308,12 @@ export const adminChatAPI = {
   sendMessage: (userId: string, text: string) => 
     api.post(`/admin-chat/${userId}`, { text }),
   markRead: (userId: string) => api.put(`/admin-chat/${userId}/read`),
+  getAdmins: () => api.get('/admin-chat/admins'),
+  getConversation: (conversationId: string) => api.get(`/admin-chat/conversation/${conversationId}`),
+  setOnline: () => api.put('/admin-chat/status/online'),
+  getStatus: (userId: string) => api.get(`/admin-chat/status/${userId}`),
+  editMessage: (messageId: string, text: string) => api.put(`/admin-chat/message/${messageId}`, { text }),
+  deleteMessage: (messageId: string) => api.delete(`/admin-chat/message/${messageId}`),
 };
 
 // Export default API instance

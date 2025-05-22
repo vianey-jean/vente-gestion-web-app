@@ -27,6 +27,7 @@ import SecureRoute from './components/SecureRoute';
 import AdminPromoCodes from "./pages/admin/AdminPromoCodes";
 import ProtectedRoute from './components/ProtectedRoute';
 import FavoritesPage from './pages/FavoritesPage';
+import CookieConsent from './components/prompts/CookieConsent';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -42,12 +43,18 @@ function App() {
   }, []);
 
   if (loading || authLoading) {
-    return <div>Loading...</div>;
+    return <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="text-center">
+        <div className="w-16 h-16 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-gray-600">Chargement...</p>
+      </div>
+    </div>;
   }
 
   return (
     <>
       <Toaster richColors position="top-center" />
+      <CookieConsent />
       <Routes>
         {/* Routes publiques */}
         <Route path="/login" element={<LoginPage />} />
