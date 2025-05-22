@@ -19,6 +19,9 @@ import { toast } from '@/components/ui/sonner';
 import CreditCardForm from '@/components/checkout/CreditCardForm';
 import { ShippingAddress } from '@/services/api';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
+import { Discount, Tag } from 'lucide-react';
+
 // Définition des prix de livraison par ville
 const DELIVERY_PRICES = {
   "Saint-Benoît": 20,
@@ -53,6 +56,13 @@ const CheckoutPage = () => {
   const [showCardForm, setShowCardForm] = useState(false);
   const [deliveryCity, setDeliveryCity] = useState<string>("");
   const [deliveryPrice, setDeliveryPrice] = useState<number>(0);
+  const [promoCode, setPromoCode] = useState<string>("");
+  const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
+  const [promoError, setPromoError] = useState<string>("");
+  const [promoLoading, setPromoLoading] = useState<boolean>(false);
+  const [promoProductId, setPromoProductId] = useState<string | null>(null);
+  const [hasPromotion, setHasPromotion] = useState<boolean>(false);
+  const [hasNonPromotionProduct, setHasNonPromotionProduct] = useState<boolean>(false);
   
   const [shippingData, setShippingData] = useState<ShippingAddress>({
     nom: user?.nom || '',
@@ -63,6 +73,15 @@ const CheckoutPage = () => {
     pays: user?.pays || 'France',
     telephone: user?.telephone || '',
   });
+  
+  useEffect(() => {
+    // Vérifier s'il y a des produits en promotion et des produits sans promotion
+    const hasPromotionItems = selectedCartItems.some(item => item.product.promotion && item.product.promotion > 0);
+    const hasNonPromotionItems = selectedCartItems.some(item => !item.product.promotion || item.product.promotion <= 0);
+    
+    setHasPromotion(hasPromotionItems);
+    setHasNonPromotionProduct(hasNonPromotionItems);
+  }, [selectedCartItems]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -76,6 +95,56 @@ const CheckoutPage = () => {
     
     const price = DELIVERY_PRICES[city as keyof typeof DELIVERY_PRICES] || 0;
     setDeliveryPrice(price);
+  };
+
+  // Vérifier le code promo
+  const verifyPromoCode = async (productId: string) => {
+    if (promoCode.trim().length === 0) return;
+    
+    setPromoLoading(true);
+    setPromoError("");
+    setPromoDiscount(null);
+    
+    try {
+      const response = await axios.post('/api/promo-codes/verify', {
+        code: promoCode,
+        productId
+      });
+      
+      if (response.data && response.data.valid) {
+        setPromoDiscount(response.data.discount);
+        setPromoProductId(productId);
+        toast.success(`Code promo appliqué: -${response.data.discount}%`);
+      } else {
+        setPromoError("Code promo invalide ou expiré");
+      }
+    } catch (error: any) {
+      console.error("Erreur lors de la vérification du code promo:", error);
+      setPromoError(error?.response?.data?.message || "Code promo invalide ou expiré");
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+  
+  // Vérifier le code promo pour chaque article sans promotion
+  const handlePromoCodeVerify = async () => {
+    if (promoCode.trim().length === 0) return;
+    
+    // Trouver le premier produit sans promotion
+    const firstNonPromotionItem = selectedCartItems.find(item => !item.product.promotion);
+    
+    if (firstNonPromotionItem) {
+      await verifyPromoCode(firstNonPromotionItem.product.id);
+    } else {
+      setPromoError("Aucun produit éligible pour ce code promo");
+    }
+  };
+  
+  const handlePromoCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPromoCode(e.target.value.toUpperCase());
+    setPromoError("");
+    setPromoDiscount(null);
+    setPromoProductId(null);
   };
   
   const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
@@ -107,6 +176,19 @@ const CheckoutPage = () => {
   const processOrder = async (orderId?: string) => {
     setLoading(true);
     try {
+      // Si un code promo est appliqué, utiliser le code
+      if (promoDiscount !== null && promoProductId !== null) {
+        try {
+          await axios.post('/api/promo-codes/use', {
+            code: promoCode,
+            productId: promoProductId
+          });
+          console.log("Code promo utilisé avec succès");
+        } catch (error) {
+          console.error("Erreur lors de l'utilisation du code promo:", error);
+        }
+      }
+      
       const order = await createOrder(shippingData, paymentMethod);
       
       if (order) {
@@ -139,9 +221,47 @@ const CheckoutPage = () => {
     );
   };
   
-  const total = getCartTotal();
-  const shipping = total > 50 ? 0 : 4.99;
+  // Calculer le total avec remise si un code promo est appliqué
+  const calculateTotal = () => {
+    let total = selectedCartItems.reduce((sum, item) => {
+      // Si le produit a une promotion appliquée ou n'est pas celui avec le code promo, utiliser le prix normal
+      if (item.product.id !== promoProductId) {
+        return sum + (item.product.price * item.quantity);
+      }
+      
+      // Si le produit est celui avec code promo, appliquer la remise
+      if (promoDiscount !== null) {
+        const discountFactor = 1 - (promoDiscount / 100);
+        return sum + (item.product.price * item.quantity * discountFactor);
+      }
+      
+      // Cas par défaut
+      return sum + (item.product.price * item.quantity);
+    }, 0);
+    
+    return total;
+  };
+  
+  // Prix total avant remise
+  const subtotal = getCartTotal();
+  
+  // Prix total avec remise si applicable
+  const total = calculateTotal();
+  
+  // Prix total avec livraison
   const orderTotal = total + deliveryPrice;
+  
+  // Interface pour voir si un code promo peut être appliqué
+  const canApplyPromoCode = () => {
+    // Si tous les produits sont en promotion, désactiver le champ de code promo
+    if (hasPromotion && !hasNonPromotionProduct) {
+      return false;
+    }
+    
+    // Si au moins un produit n'est pas en promotion, activer le champ de code promo
+    return true;
+  };
+  
   const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   
   return (
@@ -299,7 +419,7 @@ const CheckoutPage = () => {
                 </Button>
                 <div className="flex justify-center mt-4">
                   <Link to="/panier" className="text-brand-blue hover:underline text-sm flex items-center">
-                    Annuler vos commande
+                    Annuler votre commande
                   </Link>
                 </div>
               </form>
@@ -326,7 +446,18 @@ const CheckoutPage = () => {
                         }}
                       />
                       <div className="flex-grow">
-                        <p className="font-medium">{item.product.name}</p>
+                        <div className="flex items-center">
+                          <p className="font-medium">{item.product.name}</p>
+                          {item.product.promotion ? (
+                            <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 rounded-full">
+                              -{item.product.promotion}%
+                            </span>
+                          ) : promoProductId === item.product.id && promoDiscount ? (
+                            <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                              Code: -{promoDiscount}%
+                            </span>
+                          ) : null}
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           {item.quantity} x {item.product.price.toFixed(2)} €
                         </p>
@@ -341,13 +472,59 @@ const CheckoutPage = () => {
                 <div className="border-t pt-4 space-y-2">
                   <div className="flex justify-between">
                     <p>Sous-total</p>
-                    <p>{total.toFixed(2)} €</p>
+                    <p>{subtotal.toFixed(2)} €</p>
                   </div>
                   <div className="flex justify-between">
                     <p>Frais de livraison ({deliveryCity || 'Non sélectionné'})</p>
                     <p>{deliveryPrice === 0 && !deliveryCity ? 'Non calculé' : deliveryPrice === 0 ? 'Gratuit' : `${deliveryPrice.toFixed(2)} €`}</p>
                   </div>
-                  <div className="flex justify-between font-bold text-lg">
+                  
+                  {/* Zone de code promo */}
+                  <div className="py-2">
+                    <Label htmlFor="promoCode" className="flex items-center gap-1 mb-1">
+                      <Discount className="h-4 w-4" />
+                      Code promo
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="promoCode"
+                        placeholder="Saisir un code promo"
+                        value={promoCode}
+                        onChange={handlePromoCodeChange}
+                        className="uppercase"
+                        disabled={!canApplyPromoCode() || promoLoading || promoDiscount !== null}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={!canApplyPromoCode() || !promoCode || promoLoading || promoDiscount !== null}
+                        onClick={handlePromoCodeVerify}
+                        className="whitespace-nowrap"
+                      >
+                        Appliquer
+                      </Button>
+                    </div>
+                    
+                    {promoError && (
+                      <p className="text-sm text-red-500 mt-1">{promoError}</p>
+                    )}
+                    
+                    {promoDiscount !== null && (
+                      <p className="text-sm text-green-600 mt-1 flex items-center">
+                        <Tag className="h-3 w-3 mr-1" />
+                        Code promo appliqué: -{promoDiscount}%
+                      </p>
+                    )}
+                    
+                    {!canApplyPromoCode() && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Les codes promo ne peuvent pas être utilisés avec des produits déjà en promotion.
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="flex justify-between font-bold text-lg pt-2 border-t">
                     <p>Total</p>
                     <p>{orderTotal.toFixed(2)} €</p>
                   </div>
