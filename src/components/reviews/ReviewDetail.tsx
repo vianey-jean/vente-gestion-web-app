@@ -8,28 +8,44 @@ import { fr } from 'date-fns/locale';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ReviewDetailProps {
-  reviewId: string;
+  reviewId?: string;
+  review?: Review;
   onClose: () => void;
   isOpen: boolean;
+  onDelete?: (reviewId: string) => void;
+  canDelete?: boolean;
 }
 
-const ReviewDetail: React.FC<ReviewDetailProps> = ({ reviewId, onClose, isOpen }) => {
-  const [review, setReview] = useState<Review | null>(null);
-  const [loading, setLoading] = useState(true);
+const ReviewDetail: React.FC<ReviewDetailProps> = ({ 
+  reviewId, 
+  review: initialReview, 
+  onClose, 
+  isOpen,
+  onDelete,
+  canDelete = false
+}) => {
+  const [review, setReview] = useState<Review | null>(initialReview || null);
+  const [loading, setLoading] = useState(!initialReview && !!reviewId);
   const [error, setError] = useState<string | null>(null);
   
   // URL de base récupérée depuis le .env
   const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
-    if (isOpen && reviewId) {
+    if (initialReview) {
+      setReview(initialReview);
+      setLoading(false);
+    } else if (isOpen && reviewId) {
       fetchReviewDetails();
     }
-  }, [reviewId, isOpen]);
+  }, [reviewId, isOpen, initialReview]);
 
   const fetchReviewDetails = async () => {
+    if (!reviewId) return;
+    
     setLoading(true);
     setError(null);
     
@@ -41,6 +57,14 @@ const ReviewDetail: React.FC<ReviewDetailProps> = ({ reviewId, onClose, isOpen }
       setError('Impossible de charger les détails du commentaire');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (!review || !onDelete) return;
+    
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce commentaire ?')) {
+      onDelete(review.id);
     }
   };
 
@@ -106,6 +130,14 @@ const ReviewDetail: React.FC<ReviewDetailProps> = ({ reviewId, onClose, isOpen }
                     />
                   ))}
                 </div>
+              </div>
+            )}
+
+            {canDelete && onDelete && (
+              <div className="mt-4 flex justify-end">
+                <Button variant="destructive" onClick={handleDelete}>
+                  Supprimer ce commentaire
+                </Button>
               </div>
             )}
           </div>

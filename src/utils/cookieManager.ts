@@ -1,80 +1,79 @@
 
-import { CookiePreferences } from "@/services/api";
-
-/**
- * Gestionnaire de cookies qui fournit des méthodes pour gérer les préférences de cookies
- */
-class CookieManager {
-  /**
-   * Vérifie si un consentement aux cookies a été donné
-   */
-  static hasConsent(): boolean {
-    return localStorage.getItem('cookie-consent') !== null;
-  }
-  
-  /**
-   * Obtient le type de consentement donné: 'all', 'essential', 'custom', ou null si aucun
-   */
-  static getConsentType(): 'all' | 'essential' | 'custom' | null {
-    return localStorage.getItem('cookie-consent') as 'all' | 'essential' | 'custom' | null;
-  }
-  
-  /**
-   * Obtient les préférences de cookies actuelles
-   */
-  static getPreferences(): CookiePreferences {
-    const defaultPreferences: CookiePreferences = {
-      essential: true,
-      performance: true,
-      functional: true,
-      marketing: false
-    };
-    
-    try {
-      const storedPrefs = localStorage.getItem('cookie-preferences');
-      if (storedPrefs) {
-        const parsedPrefs = JSON.parse(storedPrefs);
-        return {
-          ...defaultPreferences,
-          ...parsedPrefs
-        };
-      }
-    } catch (error) {
-      console.error("Erreur lors du chargement des préférences de cookies:", error);
-    }
-    
-    return defaultPreferences;
-  }
-  
-  /**
-   * Vérifie si un type spécifique de cookie est autorisé
-   */
-  static isAllowed(type: keyof CookiePreferences): boolean {
-    // Les cookies essentiels sont toujours autorisés
-    if (type === 'essential') return true;
-    
-    // Si aucun consentement n'a été donné, rien n'est autorisé sauf les essentiels
-    const consentType = this.getConsentType();
-    if (!consentType) return false;
-    
-    // Si 'all' est le type de consentement, tout est autorisé
-    if (consentType === 'all') return true;
-    
-    // Si 'essential', seuls les cookies essentiels sont autorisés
-    if (consentType === 'essential') return type === 'essential';
-    
-    // Pour 'custom', vérifier les préférences spécifiques
-    const preferences = this.getPreferences();
-    return preferences[type] || false;
-  }
-  
-  /**
-   * Réinitialise les préférences de cookies (supprime le consentement)
-   */
-  static resetConsent(): void {
-    localStorage.removeItem('cookie-consent');
-    localStorage.removeItem('cookie-preferences');
-  }
+// Cookie type definitions
+export interface CookiePreferences {
+  essential: boolean; // Always true, can't be disabled
+  performance: boolean;
+  functional: boolean;
+  marketing: boolean;
 }
 
-export default CookieManager;
+export interface SavedCookiePreferences extends CookiePreferences {
+  userId: string;
+  updatedAt: string;
+}
+
+// Default cookie preferences
+export const defaultCookiePreferences: CookiePreferences = {
+  essential: true, // Cannot be disabled
+  performance: false,
+  functional: false,
+  marketing: false
+};
+
+// Set a cookie with a name, value, and optional days to expiration
+export const setCookie = (name: string, value: string, days: number = 365): void => {
+  const date = new Date();
+  date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
+  const expires = `expires=${date.toUTCString()}`;
+  document.cookie = `${name}=${value}; ${expires}; path=/; SameSite=Lax`;
+};
+
+// Get a cookie value by name
+export const getCookie = (name: string): string | null => {
+  const nameEQ = `${name}=`;
+  const ca = document.cookie.split(';');
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+  }
+  return null;
+};
+
+// Check if a cookie exists
+export const hasCookie = (name: string): boolean => {
+  return getCookie(name) !== null;
+};
+
+// Delete a cookie by name
+export const deleteCookie = (name: string): void => {
+  document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+};
+
+// Save user cookie preferences
+export const saveCookiePreferences = (preferences: CookiePreferences): void => {
+  setCookie('cookiePreferences', JSON.stringify(preferences));
+};
+
+// Get user cookie preferences
+export const getCookiePreferences = (): CookiePreferences => {
+  const preferencesStr = getCookie('cookiePreferences');
+  if (preferencesStr) {
+    try {
+      return JSON.parse(preferencesStr);
+    } catch (e) {
+      console.error('Error parsing cookie preferences:', e);
+      return { ...defaultCookiePreferences };
+    }
+  }
+  return { ...defaultCookiePreferences };
+};
+
+// Check if a specific cookie type is allowed
+export const isCookieTypeAllowed = (type: keyof CookiePreferences): boolean => {
+  // Essential cookies are always allowed
+  if (type === 'essential') return true;
+  
+  const preferences = getCookiePreferences();
+  return preferences[type] === true;
+};

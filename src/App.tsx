@@ -157,15 +157,17 @@ const App: React.FC = () => {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute isAdminRequired>
-                <AdminLayout />
+              <ProtectedRoute requireAdmin={true}>
+                <AdminLayout>
+                  <AdminChatPage />
+                </AdminLayout>
               </ProtectedRoute>
             }
           />
           <Route
             path="/admin/products"
             element={
-              <ProtectedRoute isAdminRequired>
+              <ProtectedRoute requireAdmin={true}>
                 <AdminLayout>
                   <AdminProductsPage />
                 </AdminLayout>
@@ -175,7 +177,7 @@ const App: React.FC = () => {
           <Route
             path="/admin/orders"
             element={
-              <ProtectedRoute isAdminRequired>
+              <ProtectedRoute requireAdmin={true}>
                 <AdminLayout>
                   <AdminOrdersPage />
                 </AdminLayout>
@@ -185,7 +187,7 @@ const App: React.FC = () => {
           <Route
             path="/admin/users"
             element={
-              <ProtectedRoute isAdminRequired>
+              <ProtectedRoute requireAdmin={true}>
                 <AdminLayout>
                   <AdminUsersPage />
                 </AdminLayout>
@@ -195,7 +197,7 @@ const App: React.FC = () => {
           <Route
             path="/admin/messages"
             element={
-              <ProtectedRoute isAdminRequired>
+              <ProtectedRoute requireAdmin={true}>
                 <AdminLayout>
                   <AdminMessagesPage />
                 </AdminLayout>
@@ -205,7 +207,7 @@ const App: React.FC = () => {
           <Route
             path="/admin/settings"
             element={
-              <ProtectedRoute isAdminRequired>
+              <ProtectedRoute requireAdmin={true}>
                 <AdminLayout>
                   <AdminSettingsPage />
                 </AdminLayout>
@@ -215,7 +217,7 @@ const App: React.FC = () => {
           <Route
             path="/admin/chat"
             element={
-              <ProtectedRoute isAdminRequired>
+              <ProtectedRoute requireAdmin={true}>
                 <AdminLayout>
                   <AdminChatPage />
                 </AdminLayout>
@@ -225,7 +227,7 @@ const App: React.FC = () => {
           <Route
             path="/admin/client-chat"
             element={
-              <ProtectedRoute isAdminRequired>
+              <ProtectedRoute requireAdmin={true}>
                 <AdminLayout>
                   <AdminClientChatPage />
                 </AdminLayout>

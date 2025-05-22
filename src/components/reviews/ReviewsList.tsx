@@ -11,10 +11,20 @@ import { GalleryHorizontal } from 'lucide-react';
 
 interface ReviewsListProps {
   reviews: Review[];
+  loading?: boolean;
+  onViewReview?: (reviewId: string) => void;
 }
 
-const ReviewsList: React.FC<ReviewsListProps> = ({ reviews }) => {
+const ReviewsList: React.FC<ReviewsListProps> = ({ reviews, loading, onViewReview }) => {
   const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
+
+  if (loading) {
+    return (
+      <div className="text-center py-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-red-800 mx-auto"></div>
+      </div>
+    );
+  }
 
   if (reviews.length === 0) {
     return (
@@ -23,6 +33,14 @@ const ReviewsList: React.FC<ReviewsListProps> = ({ reviews }) => {
       </div>
     );
   }
+
+  const handleViewDetail = (reviewId: string) => {
+    if (onViewReview) {
+      onViewReview(reviewId);
+    } else {
+      setSelectedReviewId(reviewId);
+    }
+  };
 
   return (
     <section className="reviews-section">
@@ -70,7 +88,7 @@ const ReviewsList: React.FC<ReviewsListProps> = ({ reviews }) => {
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      onClick={() => setSelectedReviewId(review.id)}
+                      onClick={() => handleViewDetail(review.id)}
                     >
                       <GalleryHorizontal className="mr-1 h-4 w-4" />
                       Voir toutes les photos et détails
@@ -83,7 +101,7 @@ const ReviewsList: React.FC<ReviewsListProps> = ({ reviews }) => {
         ))}
       </ul>
       
-      {selectedReviewId && (
+      {selectedReviewId && !onViewReview && (
         <ReviewDetail
           reviewId={selectedReviewId}
           isOpen={!!selectedReviewId}

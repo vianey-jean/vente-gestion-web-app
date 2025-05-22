@@ -15,8 +15,15 @@ import { User as UserType, authAPI } from '@/services/api';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
+// Extend UserType to include the fields used on this page
+interface ExtendedUser extends UserType {
+  password?: string;
+  passwordUnique?: string;
+  createdAt?: string;
+}
+
 const AdminUsersPage: React.FC = () => {
-  const [users, setUsers] = useState<(UserType & { password?: string; passwordUnique?: string })[]>([]);
+  const [users, setUsers] = useState<ExtendedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -123,6 +130,16 @@ const AdminUsersPage: React.FC = () => {
     );
   });
 
+  // Format date helper function
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return 'N/A';
+    try {
+      return format(new Date(dateStr), 'dd/MM/yyyy', { locale: fr });
+    } catch (e) {
+      return 'Date invalide';
+    }
+  };
+
   return (
     <div className="p-4 space-y-6">
       <Card>
@@ -171,7 +188,7 @@ const AdminUsersPage: React.FC = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {user.dateCreation ? format(new Date(user.dateCreation), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}
+                        {formatDate(user.createdAt)}
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
@@ -185,7 +202,7 @@ const AdminUsersPage: React.FC = () => {
                             variant="outline" 
                             size="icon" 
                             onClick={() => handleDelete(user.id)}
-                            disabled={user.id === user.id} // Désactiver pour l'utilisateur actuel
+                            disabled={user.id === user?.id} // Désactiver pour l'utilisateur actuel
                           >
                             <Trash2 size={16} />
                           </Button>
