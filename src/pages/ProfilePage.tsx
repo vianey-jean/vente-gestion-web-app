@@ -11,9 +11,11 @@ import { toast } from 'sonner';
 import { UpdateProfileData } from '@/services/api';
 import axios from 'axios';
 
+type Genre = "homme" | "femme" | "autre" | "";
+
 const ProfilePage: React.FC = () => {
   const { user, updateUserProfile } = useAuth();
-  const [profileData, setProfileData] = useState<UpdateProfileData & { id?: string }>({});
+  const [profileData, setProfileData] = useState<UpdateProfileData & { id?: string; genre?: Genre }>({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -24,7 +26,7 @@ const ProfilePage: React.FC = () => {
         prenom: user.prenom || '',
         email: user.email || '',
         telephone: user.telephone || '',
-        genre: user.genre || '',
+        genre: (user.genre || '') as Genre,
         adresse: user.adresse || '',
         ville: user.ville || '',
         codePostal: user.codePostal || '',
@@ -39,7 +41,11 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleGenreChange = (value: string) => {
-    setProfileData(prev => ({ ...prev, genre: value }));
+    setProfileData(prev => {
+      // Ensure we're setting a valid genre value
+      const validatedGenre = value === "homme" || value === "femme" || value === "autre" ? value : "";
+      return { ...prev, genre: validatedGenre as Genre };
+    });
   };
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
@@ -47,7 +53,10 @@ const ProfilePage: React.FC = () => {
     setLoading(true);
 
     try {
-      await updateUserProfile(profileData);
+      await updateUserProfile({
+        ...profileData,
+        genre: profileData.genre === "" ? undefined : profileData.genre
+      });
       toast.success("Profil mis à jour avec succès");
     } catch (error) {
       console.error("Erreur lors de la mise à jour du profil:", error);

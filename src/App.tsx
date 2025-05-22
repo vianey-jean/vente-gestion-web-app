@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -153,7 +152,7 @@ const App: React.FC = () => {
             }
           />
 
-          {/* Pages d'administration */}
+          {/* Pages d'administration - change isAdminRequired to requireAdmin */}
           <Route
             path="/admin"
             element={
