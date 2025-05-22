@@ -88,6 +88,12 @@ const ProductDetail: React.FC<ProductDetailProps> = () => {
   const isProductFavorite = isFavorite(product.id);
 
   const calculateDiscountedPrice = () => {
+    // Make sure product.price exists and is a number
+    if (!product || typeof product.price !== 'number') {
+      console.error("Product price is undefined or not a number:", product);
+      return "0.00";
+    }
+    
     if (product.promotion && product.promotion > 0) {
       return (product.price * (1 - product.promotion / 100)).toFixed(2);
     }
@@ -113,7 +119,7 @@ const ProductDetail: React.FC<ProductDetailProps> = () => {
                         className="h-16 w-16 object-cover rounded-md cursor-pointer"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
-                          target.src = `${AUTH_BASE_URL}/uploads/placeholder.jpg`;
+                          target.src = '/placeholder.svg';
                         }}
                       />
                     </TabsTrigger>
@@ -127,7 +133,7 @@ const ProductDetail: React.FC<ProductDetailProps> = () => {
                       className="w-full h-auto rounded-md"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        target.src = `${AUTH_BASE_URL}/uploads/placeholder.jpg`;
+                        target.src = '/placeholder.svg';
                       }}
                     />
                   </TabsContent>
@@ -140,7 +146,7 @@ const ProductDetail: React.FC<ProductDetailProps> = () => {
                 className="w-full h-auto rounded-md"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
-                  target.src = `${AUTH_BASE_URL}/uploads/placeholder.jpg`;
+                  target.src = '/placeholder.svg';
                 }}
               />
             )}
@@ -158,11 +164,11 @@ const ProductDetail: React.FC<ProductDetailProps> = () => {
               {product.promotion && product.promotion > 0 ? (
                 <>
                   <span className="text-red-600 text-2xl font-bold mr-2">{discountedPrice} €</span>
-                  <span className="text-gray-500 line-through">{product.price.toFixed(2)} €</span>
+                  <span className="text-gray-500 line-through">{typeof product.price === 'number' ? product.price.toFixed(2) : '0.00'} €</span>
                   <Badge className="ml-2">-{product.promotion}%</Badge>
                 </>
               ) : (
-                <span className="text-2xl font-bold">{product.price.toFixed(2)} €</span>
+                <span className="text-2xl font-bold">{typeof product.price === 'number' ? product.price.toFixed(2) : '0.00'} €</span>
               )}
             </div>
 
