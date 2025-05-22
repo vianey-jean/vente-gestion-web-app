@@ -1,146 +1,110 @@
 
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Eye, EyeOff, Info, Reply, LogIn, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Link, useNavigate } from 'react-router-dom';
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+  Card, CardContent, CardDescription, CardFooter,
+  CardHeader, CardTitle
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AuthService } from '@/services/AuthService';
-import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
-import { toast } from '@/components/ui/use-toast';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage
+} from '@/components/ui/form';
+import { useAuth } from '@/contexts/AuthContext';
+import Layout from '@/components/layout/Layout';
+import { authAPI } from '@/services/api';
+import { toast } from '@/components/ui/sonner';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import PasswordStrengthIndicator from '@/components/auth/PasswordStrengthIndicator';
 
-// Schéma de validation pour l'étape email
+// ✅ Validation schemas
 const emailSchema = z.object({
-  email: z.string().email({
-    message: "Veuillez entrer une adresse email valide.",
-  }),
+  email: z.string().email('Email invalide'),
 });
-
-// Schéma de validation pour l'étape mot de passe
 const passwordSchema = z.object({
-  email: z.string().email(),
-  password: z.string()
-    .min(8, "Le mot de passe doit contenir au moins 8 caractères")
-    .regex(/[A-Z]/, "Doit contenir au moins une majuscule")
-    .regex(/[a-z]/, "Doit contenir au moins une minuscule")
-    .regex(/[0-9]/, "Doit contenir au moins un chiffre")
-    .regex(/[^A-Za-z0-9]/, "Doit contenir au moins un caractère spécial"),
+  password: z.string().min(1, 'Mot de passe requis'),
 });
 
 const LoginPage = () => {
-  const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [step, setStep] = useState<'email' | 'password'>('email');
-  const [emailValue, setEmailValue] = useState('');
-  const [password, setPassword] = useState('');
-  const [emailNotFound, setEmailNotFound] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [isPasswordValid, setIsPasswordValid] = useState(false);
-
+  const { login } = useAuth();
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const [step, setStep] = useState<'email' | 'password'>('email');
+  const [userEmail, setUserEmail] = useState('');
+  const [userName, setUserName] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Formulaire de saisie de l'email
-  const emailForm = useForm<z.infer<typeof emailSchema>>({
+  // ✅ Formulaires
+  const emailForm = useForm<{ email: string }>({
     resolver: zodResolver(emailSchema),
-    defaultValues: {
-      email: "",
-    },
+    defaultValues: { email: '' },
   });
 
-  // Formulaire de saisie du mot de passe
-  const passwordForm = useForm<z.infer<typeof passwordSchema>>({
+  const passwordForm = useForm<{ password: string }>({
     resolver: zodResolver(passwordSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-    mode: "onChange"
+    defaultValues: { password: '' },
   });
 
-  // Soumission de l'email
-  const onSubmitEmail = async (values: z.infer<typeof emailSchema>) => {
-    setIsSubmitting(true);
-    setEmailNotFound(false);
+  // ✅ Gestion soumission email
+  const onEmailSubmit = async (data: { email: string }) => {
+    const normalizedEmail = data.email.trim().toLowerCase();
     try {
-      const exists = await AuthService.checkEmail(values.email);
-      if (exists) {
-        setEmailValue(values.email);
+      setIsLoading(true);
+      const response = await authAPI.checkEmail(normalizedEmail);
+
+      if (response.data.exists) {
+        setUserEmail(normalizedEmail);
+        setUserName(response.data.user.nom || 'Utilisateur');
         setStep('password');
-        passwordForm.setValue('email', values.email);
+        toast.success(`Bienvenue ${response.data.user.nom || 'Utilisateur'}`, {
+          style: { backgroundColor: 'green', color: 'white' },
+        });
       } else {
-        setEmailNotFound(true);
-        emailForm.setError('email', {
-          message: "Cet profil n'existe pas."
+        toast.error("Cet email n'existe pas", {
+          style: { backgroundColor: 'red', color: 'white' },
         });
       }
+    } catch (error) {
+      console.error("Erreur lors de la vérification de l'email:", error);
+      toast.error("Erreur lors de la vérification de l'email", {
+        style: { backgroundColor: 'red', color: 'white' },
+      });
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (step === 'password') {
-      passwordForm.setValue('password', '');
-      setPassword('');
-      setLoginError(null);
-      setIsPasswordValid(false);
-    }
-  }, [step, passwordForm]);
-
-  // Gestionnaire pour vérifier la validité du mot de passe
-  const handlePasswordValidityChange = (isValid: boolean) => {
-    setIsPasswordValid(isValid);
-  };
-
-  // Soumission du mot de passe
-  const onSubmitPassword = async (values: z.infer<typeof passwordSchema>) => {
-    setIsSubmitting(true);
-    setLoginError(null);
+  // ✅ Gestion soumission mot de passe
+  const onPasswordSubmit = async (data: { password: string }) => {
     try {
-      const success = await AuthService.login(values.email, values.password);
-      if (success) {
-        navigate('/dashboard', { replace: true });
-      } else {
-        setLoginError("Mot de passe incorrect");
-      }
+      setIsLoading(true);
+      await login(userEmail, data.password);
+      // La redirection est gérée dans le contexte Auth
+    } catch (error) {
+      console.error("Erreur de connexion:", error);
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
-
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newPassword = e.target.value;
-    setPassword(newPassword);
-    passwordForm.setValue('password', newPassword, { shouldValidate: true });
-  };
+  const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-md mx-auto">
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Connexion</CardTitle>
+    <Layout>
+      <div className="flex justify-center items-center min-h-[70vh]">
+        <Card className="w-[400px]">
+          <CardHeader>
+            <CardTitle>Connexion</CardTitle>
+            <CardDescription>Accédez à votre compte</CardDescription>
           </CardHeader>
+
           <CardContent>
             {step === 'email' ? (
               <Form {...emailForm}>
-                <form onSubmit={emailForm.handleSubmit(onSubmitEmail)} className="space-y-6">
+                <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
                   <FormField
                     control={emailForm.control}
                     name="email"
@@ -148,102 +112,95 @@ const LoginPage = () => {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input 
-                            placeholder="votre@email.com" 
-                            autoComplete="off"
-                            {...field}
-                          />
+                          <div className="relative">
+                            <Input
+                              {...field}
+                              placeholder="email@example.com"
+                              onChange={(e) => field.onChange(e.target.value.trim())}
+                            />
+                            <Mail className="absolute right-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                          </div>
                         </FormControl>
                         <FormMessage />
-                        {emailNotFound && (
-                          <div className="mt-2 text-sm text-red-600 flex items-center space-x-2">
-                            <Link to="/inscription" className="text-blue-600 underline">
-                              S'inscrire
-                            </Link>
-                          </div>
-                        )}
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
-                    <Info className="mr-1 h-4 w-4" />
-                    {isSubmitting ? "Vérification..." : "Continuer"}
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Chargement..." : "Continuer"}
                   </Button>
                 </form>
               </Form>
             ) : (
               <Form {...passwordForm}>
-                <form onSubmit={passwordForm.handleSubmit(onSubmitPassword)} className="space-y-6">
+                <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                <p className="text-sm text-green-600 mb-4">
+                    Connecté en tant que : <strong>{userEmail}</strong>
+                </p>
+
                   <FormField
                     control={passwordForm.control}
                     name="password"
-                    render={() => (
+                    render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Mot de passe pour {emailValue}</FormLabel>
+                        <FormLabel>Mot de passe</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Input 
-                              type={showPassword ? "text" : "password"}
-                              placeholder="Votre mot de passe"
-                              autoComplete="new-password"
-                              value={password}
-                              onChange={handlePasswordChange}
+                            <Input
+                              {...field}
+                              type={showPassword ? 'text' : 'password'}
+                              placeholder="********"
                             />
-                            <button
+                            <Button
                               type="button"
-                              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-0 top-0"
                               onClick={togglePasswordVisibility}
                             >
                               {showPassword ? (
-                                <EyeOff className="h-4 w-4 text-gray-400" />
+                                <EyeOff className="h-5 w-5 text-muted-foreground" />
                               ) : (
-                                <Eye className="h-4 w-4 text-gray-400" />
+                                <Eye className="h-5 w-5 text-muted-foreground" />
                               )}
-                            </button>
+                            </Button>
                           </div>
                         </FormControl>
                         <FormMessage />
-                        {loginError && (
-                          <Alert variant="destructive" className="mt-2">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertDescription>
-                              {loginError}
-                            </AlertDescription>
-                          </Alert>
-                        )}
-                        <PasswordStrengthIndicator 
-                          password={password} 
-                          onValidityChange={handlePasswordValidityChange}
-                        />
+                        <PasswordStrengthIndicator password={field.value} />
                       </FormItem>
                     )}
                   />
-                  <div className="flex justify-between gap-4">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => setStep('email')} 
-                      className="w-1/2"
-                    >
-                       <Reply className="mr-1 h-4 w-4" />
-                      Retour
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      className="w-1/2" 
-                      disabled={isSubmitting || !isPasswordValid}
-                    >
-                      <LogIn className="mr-1 h-4 w-4" />
-                      {isSubmitting ? "Connexion..." : "Se connecter"}
-                    </Button>
-                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Connexion..." : "Se connecter"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full mt-2"
+                    onClick={() => setStep('email')}
+                    disabled={isLoading}
+                  >
+                    Modifier l'email
+                  </Button>
                 </form>
               </Form>
             )}
           </CardContent>
+
+          <CardFooter className="flex flex-col gap-2">
+            <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
+              Mot de passe oublié ?
+            </Link>
+            <div className="text-sm text-muted-foreground">
+              Pas encore de compte ?{" "}
+              <Link to="/register" className="text-blue-600 hover:underline">
+                S'inscrire
+              </Link>
+            </div>
+          </CardFooter>
         </Card>
       </div>
-    </div>
+    </Layout>
   );
 };
 

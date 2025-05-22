@@ -4,18 +4,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Riziky-Agendas | Gestion de Rendez-vous</title>
-    <meta name="description" content="Application de gestion de rendez-vous et d'agenda en ligne" />
+    <title>Riziky Boutique | Perruques, Tissages et Accessoires Premium</title>
+    <meta name="description" content="Découvrez notre collection de produits capillaires haut de gamme : perruques naturelles, tissages de qualité, queues de cheval et accessoires capillaires." />
+    <meta name="keywords" content="perruques, tissages, queue de cheval, peigne chauffante, colle, dissolvant, accessoires capillaires" />
     <meta name="author" content="RABEMANALINA JMV" />
     <link rel="icon" href="/public/images/favicon.ico">
-    <meta property="title" content="Riziky-Agendas | Gestion de Rendez-vous" />
-    <meta property="description" content="Application de gestion de rendez-vous et d'agenda en ligne" />
-    <meta property="type" content="website" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:title" content="Riziky Boutique | Produits Capillaires Premium" />
+    <meta property="og:description" content="Découvrez notre collection de produits capillaires haut de gamme : perruques naturelles, tissages de qualité et accessoires." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://riziky-boutique.com/" />
+    <meta name="theme-color" content="#ea384c" />
+    <!-- Préchargement des polices pour améliorer les performances -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Protection XSS avec exceptions pour les domaines nécessaires -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.gpteng.co 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: http://localhost:* wss://riziky-boutic-server.onrender.com/ ws://riziky-boutic-server.onrender.com/; media-src 'self' data: blob: mediastream:;">
   </head>
 
   <body>
     <div id="root"></div>
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script type="module" src="/src/main.tsx"></script>
+    <noscript>
+      <p>Cette application nécessite JavaScript pour fonctionner correctement. Veuillez activer JavaScript dans votre navigateur.</p>
+    </noscript>
   </body>
 </html>

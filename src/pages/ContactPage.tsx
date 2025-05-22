@@ -1,148 +1,78 @@
-// Importation des hooks et services nécessaires
-import { useState } from 'react'; // Hook pour gérer l'état local du composant
-import { useForm } from 'react-hook-form'; // Hook pour gérer les formulaires avec validation
-import { zodResolver } from '@hookform/resolvers/zod'; // Intégration de Zod avec react-hook-form pour la validation
-import * as z from 'zod'; // Zod est utilisé pour la validation du schéma de données
-import { Mail, Phone, MapPin } from 'lucide-react'; // Icones pour afficher les coordonnées
-import { Button } from '@/components/ui/button'; // Composant bouton personnalisé
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'; // Composants pour gérer les champs de formulaire
-import { Input } from '@/components/ui/input'; // Composant de champ de texte pour les entrées
-import { Textarea } from '@/components/ui/textarea'; // Composant de zone de texte pour les messages longs
-import { Card, CardContent } from '@/components/ui/card'; // Composants pour afficher un cadre autour du contenu
-import { ContactService, ContactForm } from '@/services/ContactService'; // Service pour envoyer les données du formulaire
 
-// Définition du schéma de validation avec Zod
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import Layout from '@/components/layout/Layout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from '@/components/ui/sonner';
+import { useMutation } from '@tanstack/react-query';
+import API from '@/services/api';
+
 const formSchema = z.object({
-  nom: z.string().min(2, {
-    message: "Le nom doit contenir au moins 2 caractères.",
-  }),
-  email: z.string().email({
-    message: "Veuillez entrer une adresse email valide.",
-  }),
-  sujet: z.string().min(5, {
-    message: "Le sujet doit contenir au moins 5 caractères.",
-  }),
-  message: z.string().min(10, {
-    message: "Le message doit contenir au moins 10 caractères.",
-  }),
+  nom: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
+  prenom: z.string().min(2, 'Le prénom doit contenir au moins 2 caractères'),
+  email: z.string().email('Email invalide'),
+  telephone: z.string().min(8, 'Numéro de téléphone invalide'),
+  adresse: z.string().min(5, 'Adresse requise'),
+  objet: z.string().min(3, 'Objet requis'),
+  message: z.string().min(10, 'Le message doit contenir au moins 10 caractères'),
 });
 
-// Définition du composant de la page de contact
+type FormValues = z.infer<typeof formSchema>;
+
 const ContactPage = () => {
-  // État local pour gérer l'envoi du formulaire
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Initialisation du formulaire avec react-hook-form et validation Zod
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      nom: "",
-      email: "",
-      sujet: "",
-      message: "",
+      nom: '',
+      prenom: '',
+      email: '',
+      telephone: '',
+      adresse: '',
+      objet: '',
+      message: '',
     },
   });
-  
-  // Fonction appelée lors de la soumission du formulaire
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsSubmitting(true); // Indique que la soumission est en cours
-    try {
-      const success = ContactService.send(values as ContactForm); // Envoi des données via le service
-      if (success) {
-        form.reset(); // Réinitialisation du formulaire si l'envoi réussit
-      }
-    } finally {
-      setIsSubmitting(false); // Réinitialisation de l'état de soumission
+
+  const contactMutation = useMutation({
+    mutationFn: async (data: FormValues) => {
+      return API.post('/contacts', data);
+    },
+    onSuccess: () => {
+      toast.success("Votre message a été envoyé avec succès");
+      form.reset();
+    },
+    onError: () => {
+      toast.error("Une erreur est survenue lors de l'envoi de votre message");
     }
+  });
+
+  const onSubmit = (data: FormValues) => {
+    contactMutation.mutate(data);
   };
-  
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Conteneur principal de la page */}
-      <div className="max-w-4xl mx-auto">
+    <Layout>
+      <div className="container mx-auto py-8">
+        <h1 className="text-3xl font-bold mb-8 text-red-800">Contactez-nous</h1>
         
-        {/* Section de présentation avec le titre et la description */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 text-primary">Contactez-nous</h1>
-          <p className="text-xl text-gray-600">
-            Nous sommes à votre écoute pour toute question ou suggestion
-          </p>
-        </div>
-        
-        {/* Grid pour organiser les coordonnées et le formulaire en deux colonnes */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div>
-            <h2 className="text-2xl font-semibold mb-6">Nos coordonnées</h2>
-            
-            {/* Carte contenant les informations de contact */}
-            <Card className="mb-6">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {/* Informations email */}
-                  <div className="flex items-start">
-                    <Mail className="h-5 w-5 text-primary mr-3 mt-0.5" />
-                    <div>
-                      <h3 className="font-medium">Email</h3>
-                      <a href="mailto:contact@riziky-agendas.com" className="text-gray-600 hover:text-primary">
-                        contact@riziky-agendas.com
-                      </a>
-                    </div>
-                  </div>
-                  
-                  {/* Informations téléphone */}
-                  <div className="flex items-start">
-                    <Phone className="h-5 w-5 text-primary mr-3 mt-0.5" />
-                    <div>
-                      <h3 className="font-medium">Téléphone</h3>
-                      <a href="tel:+33612345678" className="text-gray-600 hover:text-primary">
-                        +33 6 12 34 56 78
-                      </a>
-                    </div>
-                  </div>
-                  
-                  {/* Informations adresse */}
-                  <div className="flex items-start">
-                    <MapPin className="h-5 w-5 text-primary mr-3 mt-0.5" />
-                    <div>
-                      <h3 className="font-medium">Adresse</h3>
-                      <address className="text-gray-600 not-italic">
-                        123 Avenue des Champs-Élysées<br />
-                        75008 Paris, France
-                      </address>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            {/* Section pour la carte de localisation (actuellement fictive) */}
-            <div className="bg-gray-200 h-64 rounded-lg">
-              {/* Placeholder pour une carte intégrée */}
-              <div className="h-full flex items-center justify-center text-gray-500">
-                Carte de localisation
-              </div>
-            </div>
-          </div>
-          
-          {/* Formulaire de contact */}
-          <div>
-            <h2 className="text-2xl font-semibold mb-6">Formulaire de contact</h2>
-            
-            {/* Carte contenant le formulaire */}
-            <Card>
-              <CardContent className="p-6">
-                {/* Formulaire avec react-hook-form */}
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    
-                    {/* Champ pour le nom */}
+        <div className="grid md:grid-cols-2 gap-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Formulaire de contact</CardTitle>
+              <CardDescription>
+                Remplissez ce formulaire et nous vous répondrons dans les plus brefs délais.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="nom"
@@ -150,14 +80,29 @@ const ContactPage = () => {
                         <FormItem>
                           <FormLabel>Nom</FormLabel>
                           <FormControl>
-                            <Input placeholder="Votre nom" {...field} />
+                            <Input placeholder="Dupont" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                     
-                    {/* Champ pour l'email */}
+                    <FormField
+                      control={form.control}
+                      name="prenom"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Prénom</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Jean" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="email"
@@ -165,59 +110,116 @@ const ContactPage = () => {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input placeholder="votre@email.com" {...field} />
+                            <Input placeholder="email@example.com" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                     
-                    {/* Champ pour le sujet */}
                     <FormField
                       control={form.control}
-                      name="sujet"
+                      name="telephone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Sujet</FormLabel>
+                          <FormLabel>Téléphone</FormLabel>
                           <FormControl>
-                            <Input placeholder="Sujet de votre message" {...field} />
+                            <Input placeholder="06 12 34 56 78" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    
-                    {/* Champ pour le message */}
-                    <FormField
-                      control={form.control}
-                      name="message"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Message</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Votre message..." 
-                              className="min-h-[120px]" 
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    {/* Bouton d'envoi */}
-                    <Button type="submit" className="w-full" disabled={isSubmitting}>
-                      {isSubmitting ? "Envoi en cours..." : "Envoyer"}
-                    </Button>
-                  </form>
-                </Form>
+                  </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name="adresse"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Adresse</FormLabel>
+                        <FormControl>
+                          <Input placeholder="123 rue des Exemples, 75000 Paris" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="objet"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Objet</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Objet de votre message" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="message"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Message</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Votre message..." {...field} rows={5} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-red-800 hover:bg-red-700"
+                    disabled={contactMutation.isPending}
+                  >
+                    {contactMutation.isPending ? "Envoi en cours..." : "Envoyer"}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+          
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Informations de contact</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h3 className="font-medium text-red-800">Adresse</h3>
+                  <p className="text-gray-600">123 Rue du Commerce</p>
+                  <p className="text-gray-600">75015 Paris, France</p>
+                </div>
+                
+                <div>
+                  <h3 className="font-medium text-red-800">Téléphone</h3>
+                  <p className="text-gray-600">+33 (0)1 23 45 67 89</p>
+                </div>
+                
+                <div>
+                  <h3 className="font-medium text-red-800">Email</h3>
+                  <p className="text-gray-600">contact@Riziky-Boutic.fr</p>
+                </div>
+                
+                <div>
+                  <h3 className="font-medium text-red-800">Heures d'ouverture</h3>
+                  <p className="text-gray-600">Lundi - Vendredi: 9h00 - 18h00</p>
+                  <p className="text-gray-600">Samedi: 10h00 - 16h00</p>
+                  <p className="text-gray-600">Dimanche: Fermé</p>
+                </div>
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 };
 

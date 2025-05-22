@@ -1,125 +1,208 @@
 
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Eye, EyeOff } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+
+import {
+  Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AuthService } from '@/services/AuthService';
-import { toast } from 'sonner';
-import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
+import {
+  Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage
+} from '@/components/ui/form';
+import { toast } from '@/components/ui/sonner';
+import Layout from '@/components/layout/Layout';
+import { authAPI } from '@/services/api';
+import PasswordStrengthIndicator from '@/components/auth/PasswordStrengthIndicator';
+import { Eye, EyeOff, CheckCircle, Mail } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-// Schéma de validation pour l'email
-const emailSchema = z.object({
-  email: z.string().email({
-    message: "Veuillez entrer une adresse email valide.",
-  }),
+const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+const emailFormSchema = z.object({
+  email: z.string().email('Email invalide'),
 });
 
-// Schéma de validation pour le mot de passe avec critères de complexité
-const passwordSchema = z.object({
-  password: z.string().min(8, {
-    message: "Le mot de passe doit contenir au moins 8 caractères.",
-  }).refine((password) => /[A-Z]/.test(password), {
-    message: "Le mot de passe doit contenir au moins une lettre majuscule.",
-  }).refine((password) => /[a-z]/.test(password), {
-    message: "Le mot de passe doit contenir au moins une lettre minuscule.",
-  }).refine((password) => /[0-9]/.test(password), {
-    message: "Le mot de passe doit contenir au moins un chiffre.",
-  }).refine((password) => /[!@#$%^&*(),.?":{}|<>]/.test(password), {
-    message: "Le mot de passe doit contenir au moins un caractère spécial.",
-  }),
+const resetFormSchema = z.object({
+  email: z.string().email('Email invalide'),
+  passwordUnique: z.string().min(1, 'Le code temporaire est requis'),
+  newPassword: z.string()
+    .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
+    .refine((val) => /[A-Z]/.test(val), 'Au moins une majuscule')
+    .refine((val) => /[a-z]/.test(val), 'Au moins une minuscule')
+    .refine((val) => /[0-9]/.test(val), 'Au moins un chiffre')
+    .refine((val) => /[^A-Za-z0-9]/.test(val), 'Au moins un caractère spécial'),
   confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Les mots de passe ne correspondent pas.",
-  path: ["confirmPassword"],
+}).refine(data => data.newPassword === data.confirmPassword, {
+  message: 'Les mots de passe ne correspondent pas',
+  path: ['confirmPassword'],
 });
 
-// Composant de réinitialisation de mot de passe
-const ForgotPasswordPage = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+type EmailFormValues = z.infer<typeof emailFormSchema>;
+type ResetFormValues = z.infer<typeof resetFormSchema>;
+
+const ForgotPasswordPage: React.FC = () => {
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [step, setStep] = useState<'email' | 'password'>('email');
-  const [isPasswordValid, setIsPasswordValid] = useState(false);
-  
   const navigate = useNavigate();
-  
-  // Formulaire pour l'email
-  const emailForm = useForm<z.infer<typeof emailSchema>>({
-    resolver: zodResolver(emailSchema),
-    defaultValues: { email: "" },
+  const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isTempPasswordValid, setIsTempPasswordValid] = useState(false);
+  const [showContactAdmin, setShowContactAdmin] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+
+  const emailForm = useForm<EmailFormValues>({
+    resolver: zodResolver(emailFormSchema),
+    defaultValues: { email: '' },
   });
-  
-  // Formulaire pour le mot de passe
-  const passwordForm = useForm<z.infer<typeof passwordSchema>>({
-    resolver: zodResolver(passwordSchema),
+
+  const resetForm = useForm<ResetFormValues>({
+    resolver: zodResolver(resetFormSchema),
     defaultValues: {
-      password: "",
-      confirmPassword: "",
+      email: '', passwordUnique: '', newPassword: '', confirmPassword: '',
     },
+    mode: 'onChange',
   });
-  
-  // Soumission du formulaire d'email
-  const onSubmitEmail = async (values: z.infer<typeof emailSchema>) => {
-    setIsSubmitting(true);
+
+  const onSubmitEmail = async (data: EmailFormValues) => {
     try {
-      const emailExists = await AuthService.checkEmail(values.email);
-      
-      if (emailExists) {
-        setEmail(values.email);
-        setStep('password');
+      setIsLoading(true);
+
+      const emailCheckResponse = await authAPI.checkEmail(data.email);
+      if (!emailCheckResponse.data.exists) {
+        toast.error(`Aucun compte trouvé avec l'email ${data.email}`, {
+          style: { backgroundColor: 'red', color: 'white' },
+        });
+                  
+        return;
+      }
+
+      setUserEmail(data.email);
+      setUserId(emailCheckResponse.data.userId);
+
+      const response = await fetch(`${AUTH_BASE_URL}/api/auth/user-temp-password?email=${encodeURIComponent(data.email)}`);
+      if (!response.ok) throw new Error(`Erreur serveur: ${response.status}`);
+
+      const userData = await response.json();
+      if (!userData.passwordUnique) {
+        setShowContactAdmin(true);
+        toast.error("Aucun code temporaire n'a été défini pour ce compte.",{
+          style: { backgroundColor: 'red', color: 'white' },
+        });
       } else {
-        toast.error("Cette adresse email n'est pas enregistrée");
+        resetForm.setValue('email', data.email);
+        toast.success("Veuillez saisir le code temporaire transmis.",{
+          style: { backgroundColor: 'green', color: 'white' },
+        });
       }
+    } catch (err) {
+      console.error('Erreur dans la vérification email:', err);
+      toast.error("Une erreur est survenue. Veuillez réessayer plus tard.");
     } finally {
-      setIsSubmitting(false);
-    }
-  };
-  
-  // Vérification de la validité du mot de passe
-  const handlePasswordValidityChange = (isValid: boolean) => {
-    setIsPasswordValid(isValid);
-  };
-  
-  // Soumission du formulaire de mot de passe
-  const onSubmitPassword = (values: z.infer<typeof passwordSchema>) => {
-    setIsSubmitting(true);
-    try {
-      const success = AuthService.resetPassword(email, values.password);
-      
-      if (success) {
-        toast.success("Mot de passe réinitialisé avec succès");
-        navigate('/connexion');
-      }
-    } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
-  // Gestion du changement de mot de passe
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPassword(e.target.value);
-    passwordForm.setValue('password', e.target.value);
+  const verifyTempPassword = async () => {
+    const tempPassword = resetForm.getValues('passwordUnique');
+    if (!userId || !userEmail || !tempPassword) return;
+
+    try {
+      setIsLoading(true);
+
+      const res = await fetch(`${AUTH_BASE_URL}/api/auth/verify-temp-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail, tempPassword }),
+      });
+
+      const result = await res.json();
+
+      if (res.ok && result.valid) {
+        setIsTempPasswordValid(true);
+        toast.success("Code temporaire valide.",{
+          style: { backgroundColor: 'green', color: 'white' },
+        });
+      } else {
+        setIsTempPasswordValid(false);
+        toast.error("Code temporaire invalide.",
+          {
+            style: { backgroundColor: 'red', color: 'white' },
+          }
+        );
+      }
+    } catch (error) {
+      console.error('Erreur de vérification du code temporaire:', error);
+      toast.error("Une erreur est survenue.",
+        {
+          style: { backgroundColor: 'red', color: 'white' },
+        }
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const onSubmitReset = async (data: ResetFormValues) => {
+    if (!userId) return;
+
+    try {
+      setIsLoading(true);
+      const res = await fetch(`${AUTH_BASE_URL}/api/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: data.email,
+          passwordUnique: data.passwordUnique,
+          newPassword: data.newPassword
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Erreur inconnue");
+      }
+
+      toast.success("Mot de passe réinitialisé avec succès.",
+        {
+          style: { backgroundColor: 'green', color: 'white' },
+        }
+      );
+      navigate('/login');
+    } catch (error: any) {
+      console.error('Erreur de réinitialisation:', error);
+      toast.error(error.message || "Une erreur est survenue.",
+        {
+          style: { backgroundColor: 'red', color: 'white' },
+        }
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const toggleNewPasswordVisibility  = () => setShowNewPassword(!showNewPassword);
+  const togglePasswordConfirmVisibility = () => setShowConfirmPassword(!showConfirmPassword);
   
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-md mx-auto">
-        <Card>
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Mot de passe oublié</CardTitle>
+    <Layout>
+      <div className="flex justify-center items-center min-h-[70vh]">
+        <Card className="w-[400px]">
+          <CardHeader>
+            <CardTitle>Mot de passe oublié</CardTitle>
+            <CardDescription>
+              {userId && !showContactAdmin
+                ? 'Entrez le code temporaire et créez un nouveau mot de passe'
+                : 'Entrez votre adresse email pour commencer'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {step === 'email' ? (
+            {!userId ? (
               <Form {...emailForm}>
-                <form onSubmit={emailForm.handleSubmit(onSubmitEmail)} className="space-y-6">
+                <form onSubmit={emailForm.handleSubmit(onSubmitEmail)} className="space-y-4">
                   <FormField
                     control={emailForm.control}
                     name="email"
@@ -127,119 +210,183 @@ const ForgotPasswordPage = () => {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input placeholder="votre@email.com" {...field} />
+                          <Input placeholder="email@example.com" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? "Vérification en cours..." : "Continuer"}
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Vérification..." : "Continuer"}
                   </Button>
                 </form>
               </Form>
+            ) : showContactAdmin ? (
+              <div className="space-y-4">
+                <Alert variant="destructive">
+                  <Mail className="h-4 w-4" />
+                  <AlertTitle>Code temporaire non trouvé</AlertTitle>
+                  <AlertDescription>
+                    Aucun code temporaire n'a été défini pour votre compte. Contactez l'administrateur :
+                  </AlertDescription>
+                </Alert>
+                <div className="flex items-center justify-center p-4 bg-muted rounded-md">
+                  <a href="mailto:vianey.jean@ymail.com" className="text-blue-600 font-medium hover:underline">
+                    vianey.jean@ymail.com
+                  </a>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setUserId(null);
+                    setShowContactAdmin(false);
+                    emailForm.reset();
+                  }}
+                >
+                  Retour
+                </Button>
+              </div>
             ) : (
-              <Form {...passwordForm}>
-                <form onSubmit={passwordForm.handleSubmit(onSubmitPassword)} className="space-y-6">
-                  <p className="text-sm text-gray-600 mb-4">
-                    Veuillez définir un nouveau mot de passe pour votre compte {email}.
-                  </p>
-                  
+              <Form {...resetForm}>
+                <form onSubmit={resetForm.handleSubmit(onSubmitReset)} className="space-y-4">
                   <FormField
-                    control={passwordForm.control}
-                    name="password"
+                    control={resetForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="email@example.com" disabled {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={resetForm.control}
+                    name="passwordUnique"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Code temporaire</FormLabel>
+                        <div className="flex space-x-2">
+                          <FormControl>
+                            <Input
+                              placeholder="Code temporaire"
+                              {...field}
+                              disabled={isTempPasswordValid}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                setIsTempPasswordValid(false);
+                              }}
+                            />
+                          </FormControl>
+                          {!isTempPasswordValid ? (
+                            <Button
+                              type="button"
+                              onClick={verifyTempPassword}
+                              disabled={!field.value || isLoading}
+                            >
+                              Vérifier
+                            </Button>
+                          ) : (
+                            <CheckCircle className="h-10 w-10 text-green-500" />
+                          )}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={resetForm.control}
+                    name="newPassword"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Nouveau mot de passe</FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <Input 
-                              type={showPassword ? "text" : "password"} 
-                              placeholder="Votre nouveau mot de passe" 
-                              autoComplete="off"
-                              {...field} 
-                              onChange={(e) => {
-                                field.onChange(e);
-                                handlePasswordChange(e);
-                              }}
-                            />
-                            <button
+                        <div className="relative">
+                          <Input
+                            {...field}
+                              type={showNewPassword ? 'text' : 'password'}
+                              placeholder="********"
+                          />
+                            <Button
                               type="button"
-                              className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                              onClick={() => setShowPassword(!showPassword)}
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-0 top-0"
+                              onClick={toggleNewPasswordVisibility}
                             >
-                              {showPassword ? (
-                                <EyeOff className="h-4 w-4 text-gray-400" />
-                              ) : (
-                                <Eye className="h-4 w-4 text-gray-400" />
-                              )}
-                            </button>
-                          </div>
+                            {showNewPassword ? (
+                             <EyeOff className="h-5 w-5 text-muted-foreground" />
+                               ) : (
+                              <Eye className="h-5 w-5 text-muted-foreground" />
+                                )}
+                               </Button>
+                              </div>
                         </FormControl>
                         <FormMessage />
-                        <PasswordStrengthIndicator 
-                          password={password} 
-                          onValidityChange={handlePasswordValidityChange}
-                        />
+                        <PasswordStrengthIndicator password={field.value} />
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
-                    control={passwordForm.control}
+                    control={resetForm.control}
                     name="confirmPassword"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Confirmer le mot de passe</FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <Input 
-                              type={showConfirmPassword ? "text" : "password"} 
-                              placeholder="Confirmez votre mot de passe" 
-                              autoComplete="off"
-                              {...field} 
-                            />
-                            <button
+                       <div className="relative">
+                          <Input
+                            {...field}
+                              type={showConfirmPassword ? 'text' : 'password'}
+                               placeholder="********"
+                                  />
+                            <Button
                               type="button"
-                              className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                               variant="ghost"
+                                 size="icon"
+                                className="absolute right-0 top-0"
+                              onClick={togglePasswordConfirmVisibility}
                             >
-                              {showConfirmPassword ? (
-                                <EyeOff className="h-4 w-4 text-gray-400" />
-                              ) : (
-                                <Eye className="h-4 w-4 text-gray-400" />
-                              )}
-                            </button>
-                          </div>
+                            {showConfirmPassword ? (
+                              <EyeOff className="h-5 w-5 text-muted-foreground" />
+                               ) : (
+                              <Eye className="h-5 w-5 text-muted-foreground" />
+                                )}
+                            </Button>
+                        </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    disabled={isSubmitting || !isPasswordValid}
+
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={isLoading || !isTempPasswordValid}
                   >
-                    {isSubmitting ? "Mise à jour en cours..." : "Réinitialiser le mot de passe"}
+                    {isLoading ? "Réinitialisation..." : "Réinitialiser"}
                   </Button>
                 </form>
               </Form>
             )}
-            
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                <Link to="/connexion" className="text-primary hover:underline">
-                  Retour à la connexion
-                </Link>
-              </p>
-            </div>
           </CardContent>
+          <CardFooter>
+            <div className="text-sm text-muted-foreground w-full text-center">
+              <Link to="/login" className="text-blue-600 hover:underline">
+                Retour à la connexion
+              </Link>
+            </div>
+          </CardFooter>
         </Card>
       </div>
-    </div>
+    </Layout>
   );
 };
 
