@@ -190,17 +190,10 @@ const CheckoutPage = () => {
   const processOrder = async () => {
     setLoading(true);
     try {
-      // Prepare the cart items for the order
-      const orderItems = selectedCartItems.map(item => ({ 
-        productId: item.product.id, 
-        quantity: item.quantity,
-        price: item.product.price
-      }));
-
       console.log('Traitement de commande avec données:', {
         shippingAddress: shippingData,
         paymentMethod: paymentMethod,
-        cartItems: orderItems,
+        cartItems: selectedCartItems.length,
         promoDetails: verifiedPromo ? {
           code: verifiedPromo.code,
           productId: verifiedPromo.productId,
@@ -208,7 +201,7 @@ const CheckoutPage = () => {
         } : undefined
       });
       
-      // Ensure we're actually sending items to the server
+      // Check if cart is empty
       if (selectedCartItems.length === 0) {
         toast.error("Votre panier est vide. Impossible de créer la commande.");
         setLoading(false);

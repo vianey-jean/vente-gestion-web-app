@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import _ from 'lodash';
 import Cookies from 'js-cookie';
@@ -436,7 +435,11 @@ export const codePromosAPI = {
   getById: (id: string) => API.get<CodePromo>(`/code-promos/${id}`),
   create: (data: { pourcentage: number, quantite: number, productId: string }) => 
     API.post<CodePromo>('/code-promos', data),
-  update: (id: string, quantite: number) => API.put<CodePromo>(`/code-promos/${id}`, { quantite }),
+  update: (id: string, data: { quantite: number } | number) => {
+    // Support both object format and direct number format
+    const payload = typeof data === 'number' ? { quantite: data } : data;
+    return API.put<CodePromo>(`/code-promos/${id}`, payload);
+  },
   delete: (id: string) => API.delete(`/code-promos/${id}`),
   verify: (code: string, productId: string) => 
     API.post<{ valid: boolean, pourcentage?: number, message?: string }>('/code-promos/verify', { code, productId }),

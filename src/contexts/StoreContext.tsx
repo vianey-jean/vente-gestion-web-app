@@ -372,38 +372,43 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       const orderItems = selectedCartItems.map(item => ({
         productId: item.product.id,
-        quantity: item.quantity,
-        price: item.product.price
+        quantity: item.quantity
       }));
       
       console.log('Order items mapped:', orderItems);
 
-    const orderPayload = {
-      items: orderItems,
-      shippingAddress,
-      paymentMethod,
-      codePromo: codePromo || null
-    };
+      // Ensure we have valid items for the order
+      if (!orderItems.length) {
+        toast.error('Le panier est vide. Impossible de créer la commande.');
+        return null;
+      }
 
-    console.log('Sending order payload:', orderPayload);
-    
-    const response = await ordersAPI.create(orderPayload);
+      const orderPayload = {
+        items: orderItems,
+        shippingAddress,
+        paymentMethod,
+        codePromo: codePromo || null
+      };
 
-    if (response.data) {
-      toast.success('Commande créée avec succès');
-      fetchOrders(); // recharge les commandes
-      clearCart(); // vide le panier
-      return response.data;
-    } else {
-      toast.error('Échec de la création de la commande');
+      console.log('Sending order payload:', orderPayload);
+      
+      const response = await ordersAPI.create(orderPayload);
+
+      if (response.data) {
+        toast.success('Commande créée avec succès');
+        fetchOrders(); // recharge les commandes
+        clearCart(); // vide le panier
+        return response.data;
+      } else {
+        toast.error('Échec de la création de la commande');
+        return null;
+      }
+    } catch (error) {
+      console.error("Erreur lors de la création de la commande:", error);
+      toast.error('Erreur lors de la création de la commande');
       return null;
     }
-  } catch (error) {
-    console.error("Erreur lors de la création de la commande:", error);
-    toast.error('Erreur lors de la création de la commande');
-    return null;
-  }
-};
+  };
 
   const favoriteCount = favorites.length;
 
