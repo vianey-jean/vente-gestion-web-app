@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -132,7 +131,7 @@ const AdminPromoCodesPage = () => {
       };
 
       if (editingPromo) {
-        response = await codePromosAPI.update(editingPromo.id, promoData);
+        response = await codePromosAPI.update(editingPromo.id, quantiteValue);
         toast.success('Code promo mis à jour avec succès');
       } else {
         response = await codePromosAPI.create(promoData);

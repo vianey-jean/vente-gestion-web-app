@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Outlet } from 'react-router-dom';
 import { Toaster } from "@/components/ui/sonner";
 
 // Main pages
@@ -67,7 +67,7 @@ function App() {
             <Route path="/categorie/:name" element={<CategoryPage />} />
             
             {/* Protected routes - require authentication */}
-            <Route element={<ProtectedRoute />}>
+            <Route element={<ProtectedRoute>{<Outlet />}</ProtectedRoute>}>
               <Route path="/panier" element={<CartPage />} />
               <Route path="/favoris" element={<FavoritesPage />} />
               <Route path="/paiement" element={<CheckoutPage />} />
