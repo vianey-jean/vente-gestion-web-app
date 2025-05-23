@@ -85,6 +85,25 @@ const CheckoutPage = () => {
   const hasNonPromotionProduct = selectedCartItems.some(item => 
     !item.product.promotion || item.product.promotion <= 0
   );
+
+  useEffect(() => {
+    console.log("Selected cart items:", selectedCartItems);
+  }, [selectedCartItems]);
+  
+  // Si les items du panier changent, mettre à jour les informations de livraison
+  useEffect(() => {
+    if (user) {
+      setShippingData({
+        nom: user.nom || '',
+        prenom: user.prenom || '',
+        adresse: user.adresse || '',
+        ville: user.ville || '',
+        codePostal: user.codePostal || '',
+        pays: user.pays || 'France',
+        telephone: user.telephone || '',
+      });
+    }
+  }, [user]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -169,9 +188,23 @@ const CheckoutPage = () => {
     }
   };
   
-  const processOrder = async (orderId?: string) => {
+  const processOrder = async () => {
     setLoading(true);
     try {
+      console.log('Traitement de commande avec données:', {
+        shippingAddress: shippingData,
+        paymentMethod: paymentMethod,
+        cartItems: selectedCartItems.map(item => ({ 
+          productId: item.product.id, 
+          quantity: item.quantity 
+        })),
+        promoDetails: verifiedPromo ? {
+          code: verifiedPromo.code,
+          productId: verifiedPromo.productId,
+          pourcentage: verifiedPromo.pourcentage
+        } : undefined
+      });
+      
       const order = await createOrder(
         shippingData, 
         paymentMethod, 
@@ -197,6 +230,7 @@ const CheckoutPage = () => {
   };
 
   const handlePaymentSuccess = () => {
+    console.log("Payment success, processing order...");
     processOrder();
   };
   
@@ -252,9 +286,7 @@ const CheckoutPage = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="bg-white p-6 rounded-lg shadow pl-[9rem]">
-
               <h2 className="text-xl font-semibold mb-4">Informations de livraison</h2>
-              
               <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
@@ -388,7 +420,7 @@ const CheckoutPage = () => {
                 </Button>
                 <div className="flex justify-center mt-4">
                   <Link to="/panier" className="text-brand-blue hover:underline text-sm flex items-center">
-                    Annuler vos commande
+                    Annuler votre commande
                   </Link>
                 </div>
               </form>

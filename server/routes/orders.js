@@ -5,11 +5,12 @@ const fs = require('fs');
 const path = require('path');
 const { isAuthenticated, isAdmin } = require('../middlewares/auth');
 
-const ordersFilePath = path.join(__dirname, '../data/commandes.json');
+// Utiliser le chemin absolu correct pour les fichiers de données
+const ordersFilePath = path.join(__dirname, '../data/orders.json');
 const productsFilePath = path.join(__dirname, '../data/products.json');
 const codePromosFilePath = path.join(__dirname, '../data/code-promos.json');
 
-// Vérifier si le fichier commandes.json existe, sinon le créer
+// Vérifier si le fichier orders.json existe, sinon le créer
 if (!fs.existsSync(ordersFilePath)) {
   fs.writeFileSync(ordersFilePath, JSON.stringify([], null, 2));
 }
@@ -20,6 +21,7 @@ router.get('/', isAuthenticated, isAdmin, (req, res) => {
     const orders = JSON.parse(fs.readFileSync(ordersFilePath));
     res.json(orders);
   } catch (error) {
+    console.error('Erreur lors de la récupération des commandes:', error);
     res.status(500).json({ message: 'Erreur lors de la récupération des commandes' });
   }
 });
@@ -31,6 +33,7 @@ router.get('/user', isAuthenticated, (req, res) => {
     const userOrders = orders.filter(order => order.userId === req.user.id);
     res.json(userOrders);
   } catch (error) {
+    console.error('Erreur lors de la récupération des commandes:', error);
     res.status(500).json({ message: 'Erreur lors de la récupération des commandes' });
   }
 });
@@ -52,6 +55,7 @@ router.get('/:orderId', isAuthenticated, (req, res) => {
     
     res.json(order);
   } catch (error) {
+    console.error('Erreur lors de la récupération de la commande:', error);
     res.status(500).json({ message: 'Erreur lors de la récupération de la commande' });
   }
 });
@@ -61,12 +65,41 @@ router.post('/', isAuthenticated, async (req, res) => {
   try {
     const { items, shippingAddress, paymentMethod, codePromo } = req.body;
     
+    console.log('Création de commande:', JSON.stringify({ 
+      userId: req.user.id,
+      itemCount: items ? items.length : 0,
+      shippingAddress: !!shippingAddress,
+      paymentMethod,
+      codePromo: !!codePromo
+    }));
+    
+    // Validation: vérifier si les items existent et ne sont pas vides
     if (!items || !Array.isArray(items) || items.length === 0) {
+      console.error('Erreur: Aucun article dans la commande');
       return res.status(400).json({ message: 'Aucun article dans la commande' });
+    }
+
+    // Validation des items - assurez-vous qu'ils contiennent productId et quantity
+    const invalidItems = items.filter(item => !item.productId || !item.quantity);
+    if (invalidItems.length > 0) {
+      console.error('Erreur: Items invalides dans la commande:', invalidItems);
+      return res.status(400).json({ message: 'Format des articles invalide' });
+    }
+    
+    if (!shippingAddress) {
+      console.error('Erreur: Adresse de livraison manquante');
+      return res.status(400).json({ message: 'Adresse de livraison manquante' });
     }
     
     // Vérifier et mettre à jour le stock de chaque produit
-    const products = JSON.parse(fs.readFileSync(productsFilePath));
+    let products;
+    try {
+      products = JSON.parse(fs.readFileSync(productsFilePath));
+    } catch (error) {
+      console.error('Erreur lors de la lecture des produits:', error);
+      return res.status(500).json({ message: 'Erreur lors de la lecture des produits' });
+    }
+    
     let totalAmount = 0;
     const orderItems = [];
     
@@ -81,15 +114,17 @@ router.post('/', isAuthenticated, async (req, res) => {
       
       const product = products[productIndex];
       
-      if (!product.stock || product.stock < item.quantity) {
+      if (product.stock !== undefined && product.stock < item.quantity) {
         return res.status(400).json({ 
           message: `Stock insuffisant pour le produit ${product.name}` 
         });
       }
       
-      // Mettre à jour le stock
-      product.stock -= item.quantity;
-      product.isSold = product.stock > 0;
+      // Mettre à jour le stock si défini
+      if (product.stock !== undefined) {
+        product.stock -= item.quantity;
+        product.isSold = product.stock > 0;
+      }
       
       // Déterminer l'image principale à utiliser
       let productImage = '';
@@ -107,7 +142,14 @@ router.post('/', isAuthenticated, async (req, res) => {
       
       if (codePromo && codePromo.code && codePromo.productId === product.id) {
         // Vérifier et utiliser le code promo
-        const codePromos = JSON.parse(fs.readFileSync(codePromosFilePath));
+        let codePromos;
+        try {
+          codePromos = JSON.parse(fs.readFileSync(codePromosFilePath));
+        } catch (error) {
+          console.error('Erreur lors de la lecture des codes promo:', error);
+          codePromos = [];
+        }
+        
         const promoIndex = codePromos.findIndex(cp => cp.code === codePromo.code && cp.productId === product.id);
         
         if (promoIndex !== -1 && codePromos[promoIndex].quantite > 0) {
@@ -140,10 +182,22 @@ router.post('/', isAuthenticated, async (req, res) => {
     }
     
     // Enregistrer les modifications de stock
-    fs.writeFileSync(productsFilePath, JSON.stringify(products, null, 2));
+    try {
+      fs.writeFileSync(productsFilePath, JSON.stringify(products, null, 2));
+    } catch (error) {
+      console.error('Erreur lors de l\'écriture des produits:', error);
+      return res.status(500).json({ message: 'Erreur lors de l\'enregistrement des modifications de stock' });
+    }
     
     // Créer la commande
-    const orders = JSON.parse(fs.readFileSync(ordersFilePath));
+    let orders;
+    try {
+      orders = JSON.parse(fs.readFileSync(ordersFilePath));
+    } catch (error) {
+      console.error('Erreur lors de la lecture des commandes:', error);
+      orders = [];
+    }
+    
     const newOrder = {
       id: `ORD-${Date.now()}`,
       userId: req.user.id,
@@ -160,8 +214,15 @@ router.post('/', isAuthenticated, async (req, res) => {
     };
     
     orders.push(newOrder);
-    fs.writeFileSync(ordersFilePath, JSON.stringify(orders, null, 2));
     
+    try {
+      fs.writeFileSync(ordersFilePath, JSON.stringify(orders, null, 2));
+    } catch (error) {
+      console.error('Erreur lors de l\'écriture des commandes:', error);
+      return res.status(500).json({ message: 'Erreur lors de l\'enregistrement de la commande' });
+    }
+    
+    console.log('Commande créée avec succès:', newOrder.id);
     res.status(201).json(newOrder);
   } catch (error) {
     console.error('Erreur lors de la création de la commande:', error);
@@ -192,6 +253,7 @@ router.put('/:orderId/status', isAuthenticated, isAdmin, (req, res) => {
     
     res.json(orders[orderIndex]);
   } catch (error) {
+    console.error('Erreur lors de la mise à jour du statut de la commande:', error);
     res.status(500).json({ message: 'Erreur lors de la mise à jour du statut de la commande' });
   }
 });

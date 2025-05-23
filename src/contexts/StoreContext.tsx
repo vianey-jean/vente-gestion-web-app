@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { productsAPI, Product, panierAPI, favoritesAPI, Cart, ordersAPI, Order, codePromosAPI } from '@/services/api';
 import { toast } from '@/components/ui/sonner';
@@ -348,74 +349,71 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return products.find(p => p.id === id);
   };
 
-  const createOrder = async (
-    shippingAddress: any, 
-    paymentMethod: string, 
-    codePromo?: {code: string, productId: string, pourcentage: number}
-  ): Promise<Order | null> => {
-    if (!isAuthenticated || !user || selectedCartItems.length === 0) {
+ const createOrder = async (
+  shippingAddress: any,
+  paymentMethod: string,
+  codePromo?: { code: string; productId: string; pourcentage: number }
+): Promise<Order | null> => {
+  if (!isAuthenticated || !user || selectedCartItems.length === 0) {
+    toast.error('Impossible de créer la commande: utilisateur non connecté ou panier vide');
+    return null;
+  }
+
+  // Vérifie que chaque produit a encore assez de stock
+  for (const item of selectedCartItems) {
+    const currentProduct = products.find(p => p.id === item.product.id);
+    if (currentProduct && currentProduct.stock !== undefined && item.quantity > currentProduct.stock) {
+      toast.error(`Stock insuffisant pour ${currentProduct.name}. Disponible: ${currentProduct.stock}`);
       return null;
     }
+  }
 
-    // Check stock availability for each item before placing order
-    for (const item of selectedCartItems) {
-      const currentProduct = products.find(p => p.id === item.product.id);
-      if (currentProduct && currentProduct.stock !== undefined && item.quantity > currentProduct.stock) {
-        toast.error(`Stock insuffisant pour ${currentProduct.name}. Disponible: ${currentProduct.stock}`);
-        return null;
-      }
+  // Crée une copie locale des items avec ou sans réduction
+  const updatedItems = selectedCartItems.map(item => {
+    let updatedProduct = { ...item.product };
+
+    if (codePromo && item.product.id === codePromo.productId) {
+      const reduction = updatedProduct.price * (codePromo.pourcentage / 100);
+      updatedProduct.price = parseFloat((updatedProduct.price - reduction).toFixed(2));
     }
 
-    try {
-      const orderItems = selectedCartItems.map(item => ({
+    return {
+      product: updatedProduct,
+      quantity: item.quantity
+    };
+  });
+
+  try {
+    const orderPayload = {
+      userId: user.id,
+      items: updatedItems.map(item => ({
         productId: item.product.id,
         quantity: item.quantity,
-        price: item.product.price, // Prix déjà avec promotion si applicable
-        name: item.product.name,
-        image: item.product.image,
-        subtotal: item.product.price * item.quantity
-      }));
-      
-      const orderData = {
-        items: orderItems,
-        shippingAddress,
-        paymentMethod,
-        codePromo // Ajouter le code promo si disponible
-      };
-      
-      const response = await ordersAPI.create(orderData);
-      
-      if (response.data) {
-        // Update local products with new stock levels
-        const updatedProducts = [...products];
-        selectedCartItems.forEach(item => {
-          const productIndex = updatedProducts.findIndex(p => p.id === item.product.id);
-          if (productIndex !== -1 && updatedProducts[productIndex].stock !== undefined) {
-            const newStock = Math.max(0, updatedProducts[productIndex].stock! - item.quantity);
-            updatedProducts[productIndex] = {
-              ...updatedProducts[productIndex],
-              stock: newStock,
-              isSold: newStock > 0
-            };
-          }
-        });
-        setProducts(updatedProducts);
-        
-        // Refresh data
-        await fetchOrders();
-        await fetchProducts();
-        await clearCart();
-        
-        return response.data;
-      }
-      
-      return null;
-    } catch (error) {
-      console.error("Erreur lors de la création de la commande:", error);
-      toast.error('Erreur lors de la création de la commande');
+        unitPrice: item.product.price
+      })),
+      total: updatedItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
+      shippingAddress,
+      paymentMethod,
+      codePromo: codePromo || null
+    };
+
+    const response = await ordersAPI.create(orderPayload);
+
+    if (response.data) {
+      toast.success('Commande créée avec succès');
+      fetchOrders(); // recharge les commandes
+      clearCart(); // vide le panier
+      return response.data;
+    } else {
+      toast.error('Échec de la création de la commande');
       return null;
     }
-  };
+  } catch (error) {
+    console.error("Erreur lors de la création de la commande:", error);
+    toast.error('Erreur lors de la création de la commande');
+    return null;
+  }
+};
 
   const favoriteCount = favorites.length;
 

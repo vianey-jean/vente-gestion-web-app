@@ -1,5 +1,7 @@
+
 import axios from 'axios';
 import _ from 'lodash';
+import Cookies from 'js-cookie';
 
 // 🔁 URL de base récupérée depuis le .env
 const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -7,7 +9,7 @@ const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 // Créer une instance axios avec la configuration de base
 const API = axios.create({
   baseURL: `${AUTH_BASE_URL}/api`, // Utilisation correcte de la template string
-  timeout: 10000, // Timeout plus long pour éviter les erreurs de connexion
+  timeout: 30000, // Timeout plus long pour éviter les erreurs de connexion
 });
 
 // Ajouter un intercepteur pour inclure le token d'authentification
@@ -26,16 +28,27 @@ API.interceptors.request.use(
       };
     }
 
+    // Log des requêtes pour le débogage
+    console.log(`${config.method?.toUpperCase()} Request to ${config.url}`, 
+      config.method === 'post' || config.method === 'put' 
+        ? JSON.stringify(config.data)
+        : config.params || {});
+
     return config;
   },
   (error) => {
+    console.error('Request error:', error);
     return Promise.reject(error);
   }
 );
 
 // Ajouter un intercepteur pour gérer les erreurs globalement
 API.interceptors.response.use(
-  response => response,
+  response => {
+    // Log des réponses pour le débogage
+    console.log(`Response from ${response.config.url}:`, response.data);
+    return response;
+  },
   error => {
     // Log de l'erreur pour le débogage
     console.error("API Error:", error.response || error);
@@ -316,7 +329,24 @@ export const ordersAPI = {
   getAll: () => API.get<Order[]>('/orders'),
   getUserOrders: () => API.get<Order[]>('/orders/user'),
   getById: (orderId: string) => API.get<Order>(`/orders/${orderId}`),
-  create: (orderData: any) => API.post<Order>('/orders', orderData),
+  create: (orderData: any) => {
+    console.log('Sending order data to server:', JSON.stringify(orderData));
+    
+    // Ensure orderData has the required properties with correct types
+    const validatedData = {
+      items: Array.isArray(orderData.items) 
+        ? orderData.items.map((item: any) => ({
+            productId: item.productId,
+            quantity: Number(item.quantity)
+          })) 
+        : [],
+      shippingAddress: orderData.shippingAddress,
+      paymentMethod: orderData.paymentMethod,
+      codePromo: orderData.codePromo
+    };
+    
+    return API.post<Order>('/orders', validatedData);
+  },
   updateStatus: (orderId: string, status: string) => 
     API.put(`/orders/${orderId}/status`, { status }),
 };
