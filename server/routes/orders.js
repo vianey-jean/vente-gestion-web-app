@@ -9,6 +9,7 @@ const { isAuthenticated, isAdmin } = require('../middlewares/auth');
 const ordersFilePath = path.join(__dirname, '../data/orders.json');
 const productsFilePath = path.join(__dirname, '../data/products.json');
 const codePromosFilePath = path.join(__dirname, '../data/code-promos.json');
+const panierFilePath = path.join(__dirname, '../data/panier.json');
 
 // Vérifier si le fichier orders.json existe, sinon le créer
 if (!fs.existsSync(ordersFilePath)) {
@@ -220,6 +221,20 @@ router.post('/', isAuthenticated, async (req, res) => {
     } catch (error) {
       console.error('Erreur lors de l\'écriture des commandes:', error);
       return res.status(500).json({ message: 'Erreur lors de l\'enregistrement de la commande' });
+    }
+
+    // Vider le panier de l'utilisateur après commande réussie
+    try {
+      const paniers = JSON.parse(fs.readFileSync(panierFilePath));
+      const userPanierIndex = paniers.findIndex(p => p.userId === req.user.id);
+      
+      if (userPanierIndex !== -1) {
+        paniers[userPanierIndex].items = [];
+        fs.writeFileSync(panierFilePath, JSON.stringify(paniers, null, 2));
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du panier:', error);
+      // Ne pas bloquer la création de commande si l'effacement du panier échoue
     }
     
     console.log('Commande créée avec succès:', newOrder.id);

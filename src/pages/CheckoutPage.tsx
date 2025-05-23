@@ -190,13 +190,17 @@ const CheckoutPage = () => {
   const processOrder = async () => {
     setLoading(true);
     try {
+      // Prepare the cart items for the order
+      const orderItems = selectedCartItems.map(item => ({ 
+        productId: item.product.id, 
+        quantity: item.quantity,
+        price: item.product.price
+      }));
+
       console.log('Traitement de commande avec données:', {
         shippingAddress: shippingData,
         paymentMethod: paymentMethod,
-        cartItems: selectedCartItems.map(item => ({ 
-          productId: item.product.id, 
-          quantity: item.quantity 
-        })),
+        cartItems: orderItems,
         promoDetails: verifiedPromo ? {
           code: verifiedPromo.code,
           productId: verifiedPromo.productId,

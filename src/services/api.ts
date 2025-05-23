@@ -332,7 +332,7 @@ export const ordersAPI = {
   create: (orderData: any) => {
     console.log('Sending order data to server:', JSON.stringify(orderData));
     
-    // Ensure orderData has the required properties with correct types
+    // Prepare valid order items format
     const validatedData = {
       items: Array.isArray(orderData.items) 
         ? orderData.items.map((item: any) => ({
@@ -342,7 +342,7 @@ export const ordersAPI = {
         : [],
       shippingAddress: orderData.shippingAddress,
       paymentMethod: orderData.paymentMethod,
-      codePromo: orderData.codePromo
+      codePromo: orderData.codePromo || null
     };
     
     return API.post<Order>('/orders', validatedData);

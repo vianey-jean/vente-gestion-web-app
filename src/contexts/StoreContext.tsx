@@ -378,32 +378,32 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       console.log('Order items mapped:', orderItems);
 
-      const orderPayload = {
-        items: orderItems,
-        shippingAddress,
-        paymentMethod,
-        codePromo: codePromo || null
-      };
+    const orderPayload = {
+      items: orderItems,
+      shippingAddress,
+      paymentMethod,
+      codePromo: codePromo || null
+    };
 
-      console.log('Sending order payload:', orderPayload);
-      
-      const response = await ordersAPI.create(orderPayload);
+    console.log('Sending order payload:', orderPayload);
+    
+    const response = await ordersAPI.create(orderPayload);
 
-      if (response.data) {
-        toast.success('Commande créée avec succès');
-        fetchOrders(); // recharge les commandes
-        clearCart(); // vide le panier
-        return response.data;
-      } else {
-        toast.error('Échec de la création de la commande');
-        return null;
-      }
-    } catch (error) {
-      console.error("Erreur lors de la création de la commande:", error);
-      toast.error('Erreur lors de la création de la commande');
+    if (response.data) {
+      toast.success('Commande créée avec succès');
+      fetchOrders(); // recharge les commandes
+      clearCart(); // vide le panier
+      return response.data;
+    } else {
+      toast.error('Échec de la création de la commande');
       return null;
     }
-  };
+  } catch (error) {
+    console.error("Erreur lors de la création de la commande:", error);
+    toast.error('Erreur lors de la création de la commande');
+    return null;
+  }
+};
 
   const favoriteCount = favorites.length;
 
