@@ -208,6 +208,13 @@ const CheckoutPage = () => {
         return;
       }
       
+      // Valider l'adresse de livraison
+      if (!validateForm()) {
+        toast.error("Veuillez compléter correctement l'adresse de livraison");
+        setLoading(false);
+        return;
+      }
+      
       const order = await createOrder(
         shippingData, 
         paymentMethod, 

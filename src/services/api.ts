@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import _ from 'lodash';
 import Cookies from 'js-cookie';
@@ -331,7 +332,7 @@ export const ordersAPI = {
   create: (orderData: any) => {
     console.log('Sending order data to server:', JSON.stringify(orderData));
     
-    // Prepare valid order items format
+    // S'assurer que les données sont dans le format attendu par le serveur
     const validatedData = {
       items: Array.isArray(orderData.items) 
         ? orderData.items.map((item: any) => ({

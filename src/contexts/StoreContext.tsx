@@ -348,7 +348,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return products.find(p => p.id === id);
   };
 
- const createOrder = async (
+  const createOrder = async (
     shippingAddress: any,
     paymentMethod: string,
     codePromo?: { code: string; productId: string; pourcentage: number }
@@ -370,6 +370,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       console.log('Preparing order payload with items:', selectedCartItems.length);
       
+      // Simplifier la structure des items pour l'API
       const orderItems = selectedCartItems.map(item => ({
         productId: item.product.id,
         quantity: item.quantity

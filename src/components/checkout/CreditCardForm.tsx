@@ -143,10 +143,13 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess }) => {
       setLoading(false);
       toast.success("Paiement accepté");
       
-      // Call onSuccess to proceed with order creation
+      // Appeler onSuccess pour traiter la commande
       if (onSuccess && typeof onSuccess === 'function') {
         console.log("Calling onSuccess after payment");
-        onSuccess();
+        // Ajouter un petit délai pour s'assurer que le toast est affiché avant de continuer
+        setTimeout(() => {
+          onSuccess();
+        }, 300);
       } else {
         console.error("onSuccess callback is not properly defined");
       }
