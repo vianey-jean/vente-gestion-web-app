@@ -61,6 +61,7 @@
     "framer-motion": "^12.12.1",
     "helmet": "^7.1.0",
     "input-otp": "^1.2.4",
+    "js-cookie": "^3.0.5",
     "lodash": "^4.17.21",
     "lucide-react": "^0.462.0",
     "nanoid": "^5.1.5",

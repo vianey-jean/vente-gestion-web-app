@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { productsAPI, Product, panierAPI, favoritesAPI, Cart, ordersAPI, Order, codePromosAPI } from '@/services/api';
 import { toast } from '@/components/ui/sonner';
@@ -350,70 +349,61 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
  const createOrder = async (
-  shippingAddress: any,
-  paymentMethod: string,
-  codePromo?: { code: string; productId: string; pourcentage: number }
-): Promise<Order | null> => {
-  if (!isAuthenticated || !user || selectedCartItems.length === 0) {
-    toast.error('Impossible de créer la commande: utilisateur non connecté ou panier vide');
-    return null;
-  }
-
-  // Vérifie que chaque produit a encore assez de stock
-  for (const item of selectedCartItems) {
-    const currentProduct = products.find(p => p.id === item.product.id);
-    if (currentProduct && currentProduct.stock !== undefined && item.quantity > currentProduct.stock) {
-      toast.error(`Stock insuffisant pour ${currentProduct.name}. Disponible: ${currentProduct.stock}`);
+    shippingAddress: any,
+    paymentMethod: string,
+    codePromo?: { code: string; productId: string; pourcentage: number }
+  ): Promise<Order | null> => {
+    if (!isAuthenticated || !user || selectedCartItems.length === 0) {
+      toast.error('Impossible de créer la commande: utilisateur non connecté ou panier vide');
       return null;
     }
-  }
 
-  // Crée une copie locale des items avec ou sans réduction
-  const updatedItems = selectedCartItems.map(item => {
-    let updatedProduct = { ...item.product };
-
-    if (codePromo && item.product.id === codePromo.productId) {
-      const reduction = updatedProduct.price * (codePromo.pourcentage / 100);
-      updatedProduct.price = parseFloat((updatedProduct.price - reduction).toFixed(2));
+    // Vérifie que chaque produit a encore assez de stock
+    for (const item of selectedCartItems) {
+      const currentProduct = products.find(p => p.id === item.product.id);
+      if (currentProduct && currentProduct.stock !== undefined && item.quantity > currentProduct.stock) {
+        toast.error(`Stock insuffisant pour ${currentProduct.name}. Disponible: ${currentProduct.stock}`);
+        return null;
+      }
     }
 
-    return {
-      product: updatedProduct,
-      quantity: item.quantity
-    };
-  });
-
-  try {
-    const orderPayload = {
-      userId: user.id,
-      items: updatedItems.map(item => ({
+    try {
+      console.log('Preparing order payload with items:', selectedCartItems.length);
+      
+      const orderItems = selectedCartItems.map(item => ({
         productId: item.product.id,
         quantity: item.quantity,
-        unitPrice: item.product.price
-      })),
-      total: updatedItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
-      shippingAddress,
-      paymentMethod,
-      codePromo: codePromo || null
-    };
+        price: item.product.price
+      }));
+      
+      console.log('Order items mapped:', orderItems);
 
-    const response = await ordersAPI.create(orderPayload);
+      const orderPayload = {
+        items: orderItems,
+        shippingAddress,
+        paymentMethod,
+        codePromo: codePromo || null
+      };
 
-    if (response.data) {
-      toast.success('Commande créée avec succès');
-      fetchOrders(); // recharge les commandes
-      clearCart(); // vide le panier
-      return response.data;
-    } else {
-      toast.error('Échec de la création de la commande');
+      console.log('Sending order payload:', orderPayload);
+      
+      const response = await ordersAPI.create(orderPayload);
+
+      if (response.data) {
+        toast.success('Commande créée avec succès');
+        fetchOrders(); // recharge les commandes
+        clearCart(); // vide le panier
+        return response.data;
+      } else {
+        toast.error('Échec de la création de la commande');
+        return null;
+      }
+    } catch (error) {
+      console.error("Erreur lors de la création de la commande:", error);
+      toast.error('Erreur lors de la création de la commande');
       return null;
     }
-  } catch (error) {
-    console.error("Erreur lors de la création de la commande:", error);
-    toast.error('Erreur lors de la création de la commande');
-    return null;
-  }
-};
+  };
 
   const favoriteCount = favorites.length;
 

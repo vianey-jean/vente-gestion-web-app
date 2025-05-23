@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -204,6 +203,13 @@ const CheckoutPage = () => {
           pourcentage: verifiedPromo.pourcentage
         } : undefined
       });
+      
+      // Ensure we're actually sending items to the server
+      if (selectedCartItems.length === 0) {
+        toast.error("Votre panier est vide. Impossible de créer la commande.");
+        setLoading(false);
+        return;
+      }
       
       const order = await createOrder(
         shippingData, 
