@@ -87,7 +87,13 @@ const CheckoutPage = () => {
 
   useEffect(() => {
     console.log("Selected cart items:", selectedCartItems);
-  }, [selectedCartItems]);
+    
+    // Rediriger vers le panier si les items sélectionnés sont vides
+    if (selectedCartItems.length === 0) {
+      toast.error("Votre panier est vide");
+      navigate('/panier');
+    }
+  }, [selectedCartItems, navigate]);
   
   // Si les items du panier changent, mettre à jour les informations de livraison
   useEffect(() => {
@@ -171,6 +177,7 @@ const CheckoutPage = () => {
     
     if (selectedCartItems.length === 0) {
       toast.error("Votre panier est vide");
+      navigate('/panier');
       return;
     }
 

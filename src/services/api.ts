@@ -332,7 +332,7 @@ export const ordersAPI = {
   create: (orderData: any) => {
     console.log('Sending order data to server:', JSON.stringify(orderData));
     
-    // S'assurer que les données sont dans le format attendu par le serveur
+    // Assurons-nous que les données sont correctement formatées
     const validatedData = {
       items: Array.isArray(orderData.items) 
         ? orderData.items.map((item: any) => ({
