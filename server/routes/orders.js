@@ -224,6 +224,9 @@ router.post('/:id/cancel', isAuthenticated, async (req, res) => {
     const { itemsToCancel } = req.body;
     const orderId = req.params.id;
     
+    console.log('Demande d\'annulation pour commande:', orderId);
+    console.log('Produits à annuler:', itemsToCancel);
+    
     // Lire les commandes existantes
     const orders = readJSON(ordersPath);
     const commandes = readJSON(commandesPath);
@@ -254,6 +257,8 @@ router.post('/:id/cancel', isAuthenticated, async (req, res) => {
       ? itemsToCancel 
       : order.items.map(item => item.productId);
     
+    console.log('Produits qui seront supprimés:', itemsToRemove);
+    
     // Restaurer le stock pour les items annulés
     const updatedProducts = products.map(product => {
       const cancelledItem = order.items.find(item => 
@@ -262,6 +267,7 @@ router.post('/:id/cancel', isAuthenticated, async (req, res) => {
       
       if (cancelledItem) {
         const newStock = (product.stock || 0) + cancelledItem.quantity;
+        console.log(`Restauration stock pour ${product.name}: ${product.stock} + ${cancelledItem.quantity} = ${newStock}`);
         return {
           ...product,
           stock: newStock,
@@ -280,12 +286,17 @@ router.post('/:id/cancel', isAuthenticated, async (req, res) => {
       !itemsToRemove.includes(item.productId)
     );
     
+    console.log('Produits restants dans la commande:', remainingItems.length);
+    
     if (remainingItems.length === 0) {
       // Supprimer complètement la commande si tous les items sont annulés
+      console.log('Suppression complète de la commande - tous les produits annulés');
       orders.splice(orderIndex, 1);
       commandes.splice(commandeIndex, 1);
     } else {
       // Mettre à jour la commande avec les items restants
+      console.log('Mise à jour de la commande avec les produits restants');
+      
       const newTotalAmount = remainingItems.reduce((sum, item) => sum + item.subtotal, 0);
       
       // Recalculer la remise si un code promo était appliqué
@@ -301,6 +312,10 @@ router.post('/:id/cancel', isAuthenticated, async (req, res) => {
         if (promoProductStillInOrder) {
           // Recalculer la remise sur le produit restant
           newDiscount = (order.codePromoUsed.pourcentage / 100) * promoProductStillInOrder.subtotal;
+          newCodePromoUsed = {
+            ...order.codePromoUsed,
+            discountAmount: newDiscount
+          };
         } else {
           // Le produit avec le code promo a été annulé, supprimer le code promo
           newCodePromoUsed = null;
@@ -319,6 +334,13 @@ router.post('/:id/cancel', isAuthenticated, async (req, res) => {
         updatedAt: new Date().toISOString()
       };
       
+      console.log('Nouvelle commande mise à jour:', {
+        itemsCount: updatedOrder.items.length,
+        totalAmount: updatedOrder.totalAmount,
+        originalAmount: updatedOrder.originalAmount,
+        discount: updatedOrder.discount
+      });
+      
       orders[orderIndex] = updatedOrder;
       commandes[commandeIndex] = updatedOrder;
     }
@@ -333,9 +355,9 @@ router.post('/:id/cancel', isAuthenticated, async (req, res) => {
       res.json({ message: 'Commande complètement annulée', cancelled: true });
     } else {
       res.json({ 
-        message: 'Items sélectionnés annulés avec succès', 
+        message: 'Produits sélectionnés annulés avec succès', 
         cancelled: false,
-        updatedOrder: orders[orderIndex]
+        updatedOrder: orders[orderIndex] || null
       });
     }
     
