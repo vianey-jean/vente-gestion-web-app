@@ -1,4 +1,3 @@
-
 import React, { useEffect, lazy, Suspense } from 'react';
 import './App.css';
 import { Toaster } from './components/ui/sonner';
@@ -68,7 +67,7 @@ const AdminClientChatPage = lazy(() => import('./pages/admin/AdminClientChatPage
 
 const AdminCodePromosPage = lazy(() => import('./pages/admin/AdminCodePromosPage'));
 
-
+const AdminPubLayoutPage = lazy(() => import('./pages/admin/AdminPubLayoutPage'));
 
 // Création d'un nouveau QueryClient avec configuration optimisée
 const queryClient = new QueryClient({
@@ -117,6 +116,7 @@ function AppRoutes() {
         
         {/* Pages d'information */}
         <Route path="/livraison" element={<DeliveryPage />} />
+        <Route path="/mentions-legales" element={<ReturnsPage />} />
         <Route path="/retours" element={<ReturnsPage />} />
         <Route path="/service-client" element={<CustomerServicePage />} />
         <Route path="/contact" element={<ContactPage />} />
@@ -252,7 +252,17 @@ function AppRoutes() {
         <Route path={getSecureRoute('/admin/code-promos')} element={<AdminCodePromosPage />} />
         <Route path="/admin/service-client" element={<Navigate to={secureRoutes.get('/admin/service-client') || '/'} replace />} />
         
-        {/* Page 404 */}
+        {/* Ajout de la route sécurisée pour la page pub-layout */}
+        <Route path={secureRoutes.get('/admin/pub-layout')?.substring(1)} element={
+          <SecureRoute>
+            <ProtectedRoute requireAdmin>
+              <AdminPubLayoutPage />
+            </ProtectedRoute>
+          </SecureRoute>
+        } />
+        <Route path="/admin/pub-layout" element={<Navigate to={secureRoutes.get('/admin/pub-layout') || '/'} replace />} />
+        
+        {/* Route 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

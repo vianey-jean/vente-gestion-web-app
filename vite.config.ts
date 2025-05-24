@@ -9,14 +9,21 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@emoji-mart/data': path.resolve(__dirname, 'node_modules/@emoji-mart/data'),
+      '@emoji-mart/react': path.resolve(__dirname, 'node_modules/@emoji-mart/react')
     },
   },
   build: {
     rollupOptions: {
-      external: ['emoji-mart']
+      output: {
+        manualChunks: {
+          'emoji-mart': ['@emoji-mart/data', '@emoji-mart/react']
+        }
+      },
+      external: []
     }
   },
   server: {
-    port: 3000,
+    port: 8080,
   },
 });

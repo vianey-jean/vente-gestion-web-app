@@ -141,6 +141,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       if (!cartData || !Array.isArray(cartData.items)) {
         setCart([]);
+        setLoadingCart(false);
         return;
       }
       
@@ -191,27 +192,39 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  // Charger les produits au démarrage
   useEffect(() => {
     fetchProducts();
   }, []);
 
+  // Charger les favoris, le panier et les commandes quand l'utilisateur change
   useEffect(() => {
-    fetchFavorites();
-    fetchCart();
-    fetchOrders();
-  }, [user]);
+    if (isAuthenticated && user) {
+      fetchFavorites();
+      fetchCart();
+      fetchOrders();
+    } else {
+      setFavorites([]);
+      setCart([]);
+      setOrders([]);
+      setLoadingFavorites(false);
+      setLoadingCart(false);
+      setLoadingOrders(false);
+    }
+  }, [isAuthenticated, user]);
 
+  // Mettre à jour les items sélectionnés quand le panier change
   useEffect(() => {
-    setSelectedCartItems(cart);
+    setSelectedCartItems([...cart]);
   }, [cart]);
 
   const addToCart = async (product: Product, quantity: number = 1) => {
     if (!isAuthenticated || !user) {
-      toast.error('Vous devez être connecté pour ajouter un produit au panier',
-        {
-          style: { backgroundColor: 'red', color: 'white' },
-        }
-      );
+      toast.error('Vous devez être connecté pour ajouter un produit au panier', {
+        style: { backgroundColor: '#EF4444', color: 'white', fontWeight: 'bold' },
+        duration: 4000,
+        position: 'top-center',
+      });
       return;
     }
     
@@ -308,11 +321,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const toggleFavorite = async (product: Product) => {
     if (!isAuthenticated || !user) {
-      toast.error('Vous devez être connecté pour ajouter un produit aux favoris',
-        {
-          style: { backgroundColor: 'red', color: 'white' },
-        }
-      );
+      toast.error('Vous devez être connecté pour ajouter un produit aux favoris', {
+        style: { backgroundColor: '#EF4444', color: 'white', fontWeight: 'bold' },
+        duration: 4000,
+        position: 'top-center',
+      });
       return;
     }
     
@@ -354,13 +367,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     paymentMethod: string,
     codePromo?: { code: string; productId: string; pourcentage: number }
   ): Promise<Order | null> => {
-    if (!isAuthenticated || !user) {
-      toast.error('Impossible de créer la commande: utilisateur non connecté');
-      return null;
-    }
-
-    if (selectedCartItems.length === 0) {
-      toast.error('Impossible de créer la commande: panier vide');
+    if (!isAuthenticated || !user || selectedCartItems.length === 0) {
+      toast.error('Impossible de créer la commande: utilisateur non connecté ou panier vide');
       return null;
     }
 
@@ -376,20 +384,28 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       console.log('Preparing order payload with items:', selectedCartItems.length);
       
-      // Simplifier la structure des items pour l'API
-      const orderItems = selectedCartItems.map(item => ({
-        productId: item.product.id,
-        quantity: item.quantity,
-        price: item.product.price
-      }));
+      // Prépare les éléments de la commande avec toutes les informations nécessaires
+      const orderItems = selectedCartItems.map(item => {
+        // Déterminer le prix final (avec ou sans code promo)
+        const finalPrice = codePromo && codePromo.productId === item.product.id
+          ? item.product.price * (1 - codePromo.pourcentage / 100)
+          : item.product.price;
+
+        return {
+          productId: item.product.id,
+          name: item.product.name,
+          price: finalPrice,
+          originalPrice: item.product.originalPrice || item.product.price,
+          quantity: item.quantity,
+          image: item.product.images && item.product.images.length > 0 
+            ? item.product.images[0] 
+            : item.product.image,
+          subtotal: finalPrice * item.quantity,
+          codePromoApplied: codePromo && codePromo.productId === item.product.id
+        };
+      });
       
       console.log('Order items mapped:', orderItems);
-
-      // Ensure we have valid items for the order
-      if (!orderItems.length) {
-        toast.error('Le panier est vide. Impossible de créer la commande.');
-        return null;
-      }
 
       const orderPayload = {
         items: orderItems,
@@ -406,6 +422,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toast.success('Commande créée avec succès');
         fetchOrders(); // recharge les commandes
         clearCart(); // vide le panier
+        
+        // Mettre à jour les produits pour refléter le stock actualisé
+        fetchProducts();
+        
         return response.data;
       } else {
         toast.error('Échec de la création de la commande');

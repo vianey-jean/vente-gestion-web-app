@@ -1,157 +1,142 @@
 
 import React, { useState, useEffect } from 'react';
+import AdminLayout from './AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Trash2, Plus, Edit } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from '@/components/ui/sonner';
-import { codePromosAPI, Product } from '@/services/api';
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Search, Plus, Trash2 } from 'lucide-react';
+import { codePromosAPI, CodePromo } from '@/services/api';
+import { formatDate } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
-const AdminPromoCodesPage = () => {
-  const [codePromos, setCodePromos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingPromo, setEditingPromo] = useState(null);
-  const [pourcentage, setPourcentage] = useState('');
-  const [quantite, setQuantite] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<Product[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+// Define proper product type
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  image?: string;
+}
+
+const AdminPromocodesPage: React.FC = () => {
+  const [codePromos, setCodePromos] = useState<CodePromo[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedProduct, setSelectedProduct] = useState<string>('');
+  const [productOptions, setProductOptions] = useState<Product[]>([]);
+  const [pourcentage, setPourcentage] = useState<number>(10);
+  const [quantite, setQuantite] = useState<number>(1);
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Redirect if not admin
+    if (isAuthenticated && user && user.role !== 'admin') {
+      navigate('/');
+      toast.error("Accès non autorisé");
+    } else if (!isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, user, navigate]);
 
   useEffect(() => {
     fetchCodePromos();
   }, []);
 
   const fetchCodePromos = async () => {
+    setIsLoading(true);
     try {
-      setLoading(true);
       const response = await codePromosAPI.getAll();
-      if (Array.isArray(response.data)) {
+      if (response.data) {
         setCodePromos(response.data);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des codes promo:', error);
       toast.error('Erreur lors du chargement des codes promo');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const searchProducts = async (term) => {
-    if (term.length < 3) {
-      setSearchResults([]);
+  const searchProducts = async (query: string) => {
+    if (!query || query.length < 2) {
+      setProductOptions([]);
       return;
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/products/search?term=${encodeURIComponent(term)}`);
-      const data = await response.json();
-      setSearchResults(data);
+      const response = await codePromosAPI.searchProducts(query);
+      if (response.data) {
+        setProductOptions(response.data);
+      }
     } catch (error) {
-      console.error('Erreur lors de la recherche des produits:', error);
-      toast.error('Erreur lors de la recherche des produits');
+      console.error('Erreur lors de la recherche de produits:', error);
     }
   };
 
-  const handleSearchChange = (e) => {
-    const term = e.target.value;
-    setSearchTerm(term);
-    searchProducts(term);
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    searchProducts(value);
   };
 
-  const handleProductSelect = (product) => {
-    setSelectedProduct(product);
-    setSearchResults([]);
-    setSearchTerm(product.name);
-  };
-
-  const handleOpenDialog = (promo = null) => {
-    if (promo) {
-      setEditingPromo(promo);
-      setPourcentage(promo.pourcentage.toString());
-      setQuantite(promo.quantite.toString());
-      
-      // Find the product for this promo
-      fetch(`${import.meta.env.VITE_API_BASE_URL}/api/products/${promo.productId}`)
-        .then(response => response.json())
-        .then(data => {
-          setSelectedProduct(data);
-          setSearchTerm(data.name);
-        })
-        .catch(error => {
-          console.error('Erreur lors de la récupération du produit:', error);
-        });
-    } else {
-      setEditingPromo(null);
-      setPourcentage('');
-      setQuantite('');
-      setSelectedProduct(null);
-      setSearchTerm('');
-    }
-    setDialogOpen(true);
-  };
-
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
+  const handleCreatePromoCode = async () => {
     if (!selectedProduct) {
       toast.error('Veuillez sélectionner un produit');
       return;
     }
 
-    if (!pourcentage || !quantite) {
-      toast.error('Veuillez remplir tous les champs');
+    if (pourcentage <= 0 || pourcentage > 100) {
+      toast.error('Le pourcentage doit être entre 1 et 100');
       return;
     }
 
-    const pourcentageValue = parseInt(pourcentage);
-    const quantiteValue = parseInt(quantite);
-
-    if (isNaN(pourcentageValue) || pourcentageValue <= 0 || pourcentageValue > 100) {
-      toast.error('Le pourcentage doit être compris entre 1 et 100');
-      return;
-    }
-
-    if (isNaN(quantiteValue) || quantiteValue <= 0) {
-      toast.error('La quantité doit être un nombre positif');
+    if (quantite <= 0) {
+      toast.error('La quantité doit être positive');
       return;
     }
 
     try {
-      let response;
-      const promoData = {
-        pourcentage: pourcentageValue,
-        quantite: quantiteValue,
-        productId: selectedProduct.id
-      };
+      await codePromosAPI.create({
+        productId: selectedProduct,
+        pourcentage: pourcentage,
+        quantite: quantite
+      });
 
-      if (editingPromo) {
-        response = await codePromosAPI.update(editingPromo.id, promoData);
-        toast.success('Code promo mis à jour avec succès');
-      } else {
-        response = await codePromosAPI.create(promoData);
-        toast.success('Code promo créé avec succès');
-      }
-
+      toast.success('Code promo créé avec succès');
       fetchCodePromos();
-      handleCloseDialog();
+      setSelectedProduct('');
+      setPourcentage(10);
+      setQuantite(1);
     } catch (error) {
-      console.error('Erreur lors de l\'enregistrement du code promo:', error);
-      toast.error('Erreur lors de l\'enregistrement du code promo');
+      console.error('Erreur lors de la création du code promo:', error);
+      toast.error('Erreur lors de la création du code promo');
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce code promo?')) {
-      return;
-    }
-
+  const handleDeletePromoCode = async (id: string) => {
     try {
       await codePromosAPI.delete(id);
       toast.success('Code promo supprimé avec succès');
@@ -162,125 +147,177 @@ const AdminPromoCodesPage = () => {
     }
   };
 
+  const filteredCodePromos = codePromos.filter(code => 
+    code.code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Fonction pour obtenir le nom du produit
+  const getProductName = async (productId: string) => {
+    try {
+      const response = await codePromosAPI.searchProducts(productId);
+      if (response.data && response.data.length > 0) {
+        return response.data[0].name;
+      }
+      return productId;
+    } catch (error) {
+      console.error('Erreur lors de la récupération du nom du produit:', error);
+      return productId;
+    }
+  };
+
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Gestion des codes promo</h1>
-        <Button onClick={() => handleOpenDialog()} className="flex items-center">
-          <Plus className="w-4 h-4 mr-2" /> Nouveau code promo
-        </Button>
-      </div>
+    <AdminLayout>
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-8">Gestion des codes promo</h1>
 
-      {loading ? (
-        <div className="text-center py-4">Chargement...</div>
-      ) : (
-        <Table>
-          <TableCaption>Liste des codes promo</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Code</TableHead>
-              <TableHead>Pourcentage</TableHead>
-              <TableHead>Quantité</TableHead>
-              <TableHead>Produit</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {codePromos.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center">Aucun code promo disponible</TableCell>
-              </TableRow>
-            ) : (
-              codePromos.map(promo => (
-                <TableRow key={promo.id}>
-                  <TableCell className="font-medium">{promo.code}</TableCell>
-                  <TableCell>{promo.pourcentage}%</TableCell>
-                  <TableCell>{promo.quantite}</TableCell>
-                  <TableCell>{promo.productId}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(promo)}>
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(promo.id)}>
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      )}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader>
+                <CardTitle>Créer un code promo</CardTitle>
+                <CardDescription>
+                  Les codes promo seront générés automatiquement
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Rechercher un produit</label>
+                    <Input
+                      placeholder="Nom du produit..."
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                    />
+                  </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingPromo ? 'Modifier le code promo' : 'Créer un nouveau code promo'}</DialogTitle>
-          </DialogHeader>
-          
-          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-            <div>
-              <Label htmlFor="product">Produit</Label>
-              <div className="relative">
-                <Input
-                  type="text"
-                  id="product"
-                  placeholder="Rechercher un produit..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                />
-                {searchResults.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-                    {searchResults.map(product => (
-                      <div
-                        key={product.id}
-                        className="p-2 hover:bg-gray-100 cursor-pointer"
-                        onClick={() => handleProductSelect(product)}
+                  {productOptions.length > 0 && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Sélectionner un produit</label>
+                      <Select
+                        value={selectedProduct}
+                        onValueChange={setSelectedProduct}
                       >
-                        {product.name}
-                      </div>
-                    ))}
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner un produit" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {productOptions.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name} {product.price ? `- ${product.price}€` : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Pourcentage de remise</label>
+                    <div className="flex items-center">
+                      <Input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={pourcentage}
+                        onChange={(e) => setPourcentage(Number(e.target.value))}
+                      />
+                      <span className="ml-2">%</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Nombre d'utilisations</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={quantite}
+                      onChange={(e) => setQuantite(Number(e.target.value))}
+                    />
+                  </div>
+
+                  <Button
+                    onClick={handleCreatePromoCode}
+                    className="w-full"
+                    disabled={!selectedProduct}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Créer
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="lg:col-span-3">
+            <Card>
+              <CardHeader>
+                <CardTitle>Liste des codes promo</CardTitle>
+                <CardDescription>
+                  {filteredCodePromos.length} codes promo disponibles
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+                    <Input
+                      placeholder="Rechercher un code..."
+                      className="pl-10"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {isLoading ? (
+                  <div className="text-center py-8">Chargement...</div>
+                ) : filteredCodePromos.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Aucun code promo trouvé
+                  </div>
+                ) : (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Code</TableHead>
+                          <TableHead>Produit</TableHead>
+                          <TableHead>Remise</TableHead>
+                          <TableHead>Utilisations restantes</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredCodePromos.map((codePromo) => (
+                          <TableRow key={codePromo.id}>
+                            <TableCell className="font-mono font-medium">
+                              {codePromo.code}
+                            </TableCell>
+                            <TableCell>{codePromo.productId}</TableCell>
+                            <TableCell>{codePromo.pourcentage}%</TableCell>
+                            <TableCell>{codePromo.quantite}</TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeletePromoCode(codePromo.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="pourcentage">Pourcentage de réduction</Label>
-              <Input
-                type="number"
-                id="pourcentage"
-                min="1"
-                max="100"
-                value={pourcentage}
-                onChange={e => setPourcentage(e.target.value)}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="quantite">Quantité</Label>
-              <Input
-                type="number"
-                id="quantite"
-                min="1"
-                value={quantite}
-                onChange={e => setQuantite(e.target.value)}
-              />
-            </div>
-            
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                Annuler
-              </Button>
-              <Button type="submit">
-                {editingPromo ? 'Mettre à jour' : 'Créer'}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </AdminLayout>
   );
 };
 
-export default AdminPromoCodesPage;
+export default AdminPromocodesPage;

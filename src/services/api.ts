@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import _ from 'lodash';
 import Cookies from 'js-cookie';
@@ -308,6 +307,8 @@ export interface OrderItem {
   image: string;
   images?: string[]; // Support pour multiples images
   subtotal: number;
+  codePromoApplied?: boolean;
+  originalPrice?: number;
 }
 
 export interface Order {
@@ -319,6 +320,7 @@ export interface Order {
   totalAmount: number;
   shippingAddress: ShippingAddress;
   paymentMethod: string;
+  codePromoUsed?: string | null;
   status: 'confirmée' | 'en préparation' | 'en livraison' | 'livrée';
   createdAt: string;
   updatedAt: string;
@@ -332,17 +334,18 @@ export const ordersAPI = {
   create: (orderData: any) => {
     console.log('Sending order data to server:', JSON.stringify(orderData));
     
-    // Assurons-nous que les données sont correctement formatées
+    // Ensure orderData has the required properties with correct types
     const validatedData = {
       items: Array.isArray(orderData.items) 
         ? orderData.items.map((item: any) => ({
             productId: item.productId,
-            quantity: Number(item.quantity)
+            quantity: Number(item.quantity),
+            ...(item.price !== undefined && { price: Number(item.price) }),
           })) 
         : [],
       shippingAddress: orderData.shippingAddress,
       paymentMethod: orderData.paymentMethod,
-      codePromo: orderData.codePromo || null
+      codePromo: orderData.codePromo
     };
     
     return API.post<Order>('/orders', validatedData);
@@ -436,11 +439,7 @@ export const codePromosAPI = {
   getById: (id: string) => API.get<CodePromo>(`/code-promos/${id}`),
   create: (data: { pourcentage: number, quantite: number, productId: string }) => 
     API.post<CodePromo>('/code-promos', data),
-  update: (id: string, data: { quantite: number } | number) => {
-    // Support both object format and direct number format
-    const payload = typeof data === 'number' ? { quantite: data } : data;
-    return API.put<CodePromo>(`/code-promos/${id}`, payload);
-  },
+  update: (id: string, quantite: number) => API.put<CodePromo>(`/code-promos/${id}`, { quantite }),
   delete: (id: string) => API.delete(`/code-promos/${id}`),
   verify: (code: string, productId: string) => 
     API.post<{ valid: boolean, pourcentage?: number, message?: string }>('/code-promos/verify', { code, productId }),

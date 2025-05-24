@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -13,12 +14,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from '@/components/ui/sonner';
 import CreditCardForm from '@/components/checkout/CreditCardForm';
 import { ShippingAddress, codePromosAPI } from '@/services/api';
 import { Link } from 'react-router-dom';
-import { Percent } from 'lucide-react';
+import { Percent, ShoppingCart } from 'lucide-react';
+import PaymentMethods from '@/components/checkout/PaymentMethods';
+import CartSummary from '@/components/cart/CartSummary';
+import LoadingSpinner from '@/components/ui/loading-spinner';
+import { formatPrice } from '@/lib/utils';
 
 // Définition des prix de livraison par ville
 const DELIVERY_PRICES = {
@@ -50,10 +54,11 @@ const CheckoutPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('stripe');
+  const [paymentMethod, setPaymentMethod] = useState('card');
   const [showCardForm, setShowCardForm] = useState(false);
   const [deliveryCity, setDeliveryCity] = useState<string>("");
   const [deliveryPrice, setDeliveryPrice] = useState<number>(0);
+  const [step, setStep] = useState<'shipping' | 'payment'>('shipping');
   
   // État pour le code promo
   const [codePromo, setCodePromo] = useState<string>('');
@@ -65,13 +70,14 @@ const CheckoutPage = () => {
     code: string;
   } | null>(null);
   
+  // Formulaire d'adresse
   const [shippingData, setShippingData] = useState<ShippingAddress>({
     nom: user?.nom || '',
     prenom: user?.prenom || '',
     adresse: user?.adresse || '',
     ville: user?.ville || '',
     codePostal: user?.codePostal || '',
-    pays: user?.pays || 'France',
+    pays: user?.pays || 'La Réunion',
     telephone: user?.telephone || '',
   });
   
@@ -86,11 +92,9 @@ const CheckoutPage = () => {
   );
 
   useEffect(() => {
-    console.log("Selected cart items:", selectedCartItems);
-    
-    // Rediriger vers le panier si les items sélectionnés sont vides
+    // Rediriger si le panier est vide
     if (selectedCartItems.length === 0) {
-      toast.error("Votre panier est vide");
+      toast.error("Votre panier est vide. Veuillez ajouter des produits avant de procéder au paiement.");
       navigate('/panier');
     }
   }, [selectedCartItems, navigate]);
@@ -104,7 +108,7 @@ const CheckoutPage = () => {
         adresse: user.adresse || '',
         ville: user.ville || '',
         codePostal: user.codePostal || '',
-        pays: user.pays || 'France',
+        pays: user.pays || 'La Réunion',
         telephone: user.telephone || '',
       });
     }
@@ -167,29 +171,31 @@ const CheckoutPage = () => {
     }
   };
   
-  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const handleShippingSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    if (!validateShippingForm()) {
       toast.error("Veuillez remplir tous les champs obligatoires");
       return;
     }
     
-    if (selectedCartItems.length === 0) {
-      toast.error("Votre panier est vide");
-      navigate('/panier');
-      return;
-    }
-
     if (!deliveryCity) {
       toast.error("Veuillez sélectionner une ville de livraison");
       return;
     }
 
-    if (paymentMethod === 'stripe') {
+    // Passer à l'étape suivante
+    setStep('payment');
+    window.scrollTo(0, 0);
+  };
+  
+  const handlePaymentSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    if (paymentMethod === 'card') {
       setShowCardForm(true);
-    } else if (paymentMethod === 'paypal') {
-      // PayPal payment process would go here
+    } else {
+      // Traiter les autres méthodes de paiement
       processOrder();
     }
   };
@@ -200,7 +206,10 @@ const CheckoutPage = () => {
       console.log('Traitement de commande avec données:', {
         shippingAddress: shippingData,
         paymentMethod: paymentMethod,
-        cartItems: selectedCartItems.length,
+        cartItems: selectedCartItems.map(item => ({ 
+          productId: item.product.id, 
+          quantity: item.quantity 
+        })),
         promoDetails: verifiedPromo ? {
           code: verifiedPromo.code,
           productId: verifiedPromo.productId,
@@ -208,16 +217,9 @@ const CheckoutPage = () => {
         } : undefined
       });
       
-      // Check if cart is empty
+      // Ensure we're actually sending items to the server
       if (selectedCartItems.length === 0) {
         toast.error("Votre panier est vide. Impossible de créer la commande.");
-        setLoading(false);
-        return;
-      }
-      
-      // Valider l'adresse de livraison
-      if (!validateForm()) {
-        toast.error("Veuillez compléter correctement l'adresse de livraison");
         setLoading(false);
         return;
       }
@@ -251,7 +253,7 @@ const CheckoutPage = () => {
     processOrder();
   };
   
-  const validateForm = () => {
+  const validateShippingForm = () => {
     return (
       shippingData.nom.trim() !== '' &&
       shippingData.prenom.trim() !== '' &&
@@ -281,12 +283,64 @@ const CheckoutPage = () => {
   const hasPromoDiscount = subtotal !== discountedSubtotal;
   const orderTotal = discountedSubtotal + deliveryPrice;
   
+  // URL de base pour les images
   const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  
+  // Si aucun élément n'est sélectionné, retourner au panier
+  if (selectedCartItems.length === 0) {
+    return (
+      <Layout>
+        <div className="max-w-4xl mx-auto px-4 py-12">
+          <div className="text-center">
+            <ShoppingCart className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+            <h1 className="text-2xl font-bold mb-4">Votre panier est vide</h1>
+            <p className="text-gray-500 mb-6">Ajoutez des produits à votre panier pour commander</p>
+            <Button asChild>
+              <Link to="/panier">Retour au panier</Link>
+            </Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+  
+  if (loading) {
+    return (
+      <Layout>
+        <div className="max-w-4xl mx-auto px-4 py-12">
+          <div className="flex flex-col items-center justify-center min-h-[400px]">
+            <LoadingSpinner size="lg" text="Traitement de votre commande..." />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
   
   return (
     <Layout>
-      <div className="py-8">
+      <div className="max-w-6xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8 text-center">Finaliser la commande</h1>
+        
+        {/* Étapes du processus d'achat */}
+        <div className="mb-12">
+          <div className="flex justify-between items-center">
+            <div className={`flex-1 text-center ${step === 'shipping' ? 'font-semibold' : ''}`}>
+              <div className={`w-8 h-8 mx-auto mb-2 rounded-full flex items-center justify-center ${step === 'shipping' ? 'bg-primary text-white' : 'bg-gray-200'}`}>
+                1
+              </div>
+              <span className="text-sm">Livraison</span>
+            </div>
+            <div className="w-1/4 h-1 bg-gray-200">
+              <div className={`h-full bg-primary ${step === 'payment' ? 'w-full' : 'w-0'} transition-all duration-500`}></div>
+            </div>
+            <div className={`flex-1 text-center ${step === 'payment' ? 'font-semibold' : ''}`}>
+              <div className={`w-8 h-8 mx-auto mb-2 rounded-full flex items-center justify-center ${step === 'payment' ? 'bg-primary text-white' : 'bg-gray-200'}`}>
+                2
+              </div>
+              <span className="text-sm">Paiement</span>
+            </div>
+          </div>
+        </div>
         
         {showCardForm ? (
           <div className="max-w-md mx-auto bg-white p-6 rounded-lg shadow">
@@ -301,156 +355,165 @@ const CheckoutPage = () => {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white p-6 rounded-lg shadow pl-[9rem]">
-              <h2 className="text-xl font-semibold mb-4">Informations de livraison</h2>
-              <form onSubmit={handleSubmit}>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <Label htmlFor="nom">Nom*</Label>
-                    <Input
-                      id="nom"
-                      name="nom"
-                      value={shippingData.nom}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="prenom">Prénom*</Label>
-                    <Input
-                      id="prenom"
-                      name="prenom"
-                      value={shippingData.prenom}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div className="mb-4">
-                  <Label htmlFor="adresse">Adresse*</Label>
-                  <Input
-                    id="adresse"
-                    name="adresse"
-                    value={shippingData.adresse}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <Label htmlFor="ville">Ville de livraison*</Label>
-                    <Select 
-                      value={deliveryCity}
-                      onValueChange={handleCityChange}
-                    >
-                      <SelectTrigger id="ville">
-                        <SelectValue placeholder="Sélectionnez une ville" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.keys(DELIVERY_PRICES).sort().map(city => (
-                          <SelectItem key={city} value={city}>
-                            {city} {DELIVERY_PRICES[city as keyof typeof DELIVERY_PRICES] === 0 
-                              ? "(Gratuit)" 
-                              : `(+${DELIVERY_PRICES[city as keyof typeof DELIVERY_PRICES]}€)`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="codePostal">Code postal*</Label>
-                    <Input
-                      id="codePostal"
-                      name="codePostal"
-                      value={shippingData.codePostal}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <Label htmlFor="pays">Pays*</Label>
-                    <Select 
-                      value={shippingData.pays}
-                      onValueChange={(value) => setShippingData({...shippingData, pays: value})}
-                    >
-                      <SelectTrigger id="pays">
-                        <SelectValue placeholder="Sélectionnez un pays" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="France">France</SelectItem>
-                        <SelectItem value="Belgique">Belgique</SelectItem>
-                        <SelectItem value="Suisse">Suisse</SelectItem>
-                        <SelectItem value="Luxembourg">Luxembourg</SelectItem>
-                        <SelectItem value="La Réunion">La Réunion</SelectItem>
-                        <SelectItem value="Madagascar">Madagascar</SelectItem>
-                        <SelectItem value="Mayotte">Mayotte</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="telephone">Téléphone*</Label>
-                    <Input
-                      id="telephone"
-                      name="telephone"
-                      type="tel"
-                      value={shippingData.telephone}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <h2 className="text-xl font-semibold mb-4 mt-8">Mode de paiement</h2>
-                
-                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mb-6">
-                  <div className="flex items-center space-x-2 rounded-md border p-3 mb-2">
-                    <RadioGroupItem value="stripe" id="stripe" />
-                    <Label htmlFor="stripe" className="flex-grow cursor-pointer">
-                      Carte bancaire
-                    </Label>
-                    <div className="flex space-x-1">
-                      <div className="w-8 h-5 bg-blue-600 rounded"></div>
-                      <div className="w-8 h-5 bg-red-500 rounded"></div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-8 space-y-6">
+              {step === 'shipping' && (
+                <form onSubmit={handleShippingSubmit}>
+                  <div className="bg-white p-6 rounded-lg shadow">
+                    <h2 className="text-xl font-semibold mb-4">Informations de livraison</h2>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <Label htmlFor="nom">Nom*</Label>
+                        <Input
+                          id="nom"
+                          name="nom"
+                          value={shippingData.nom}
+                          onChange={handleChange}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="prenom">Prénom*</Label>
+                        <Input
+                          id="prenom"
+                          name="prenom"
+                          value={shippingData.prenom}
+                          onChange={handleChange}
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="mb-4">
+                      <Label htmlFor="adresse">Adresse*</Label>
+                      <Input
+                        id="adresse"
+                        name="adresse"
+                        value={shippingData.adresse}
+                        onChange={handleChange}
+                        required
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <Label htmlFor="ville">Ville de livraison*</Label>
+                        <Select 
+                          value={deliveryCity}
+                          onValueChange={handleCityChange}
+                        >
+                          <SelectTrigger id="ville">
+                            <SelectValue placeholder="Sélectionnez une ville" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.keys(DELIVERY_PRICES).sort().map(city => (
+                              <SelectItem key={city} value={city}>
+                                {city} {DELIVERY_PRICES[city as keyof typeof DELIVERY_PRICES] === 0 
+                                  ? "(Gratuit)" 
+                                  : `(+${DELIVERY_PRICES[city as keyof typeof DELIVERY_PRICES]}€)`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="codePostal">Code postal*</Label>
+                        <Input
+                          id="codePostal"
+                          name="codePostal"
+                          value={shippingData.codePostal}
+                          onChange={handleChange}
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <Label htmlFor="pays">Pays*</Label>
+                        <Select 
+                          value={shippingData.pays}
+                          onValueChange={(value) => setShippingData({...shippingData, pays: value})}
+                        >
+                          <SelectTrigger id="pays">
+                            <SelectValue placeholder="Sélectionnez un pays" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="La Réunion">La Réunion</SelectItem>
+                            <SelectItem value="France">France</SelectItem>
+                            <SelectItem value="Madagascar">Madagascar</SelectItem>
+                            <SelectItem value="Mayotte">Mayotte</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="telephone">Téléphone*</Label>
+                        <Input
+                          id="telephone"
+                          name="telephone"
+                          type="tel"
+                          value={shippingData.telephone}
+                          onChange={handleChange}
+                          required
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2 rounded-md border p-3 mb-2">
-                    <RadioGroupItem value="paypal" id="paypal" />
-                    <Label htmlFor="paypal" className="flex-grow cursor-pointer">
-                      PayPal
-                    </Label>
-                    <div className="w-8 h-5 bg-blue-500 rounded"></div>
+                  
+                  <div className="flex justify-between mt-6">
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      onClick={() => navigate('/panier')}
+                    >
+                      Retour au panier
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      className="bg-red-800 hover:bg-red-700"
+                    >
+                      Continuer au paiement
+                    </Button>
                   </div>
-                </RadioGroup>
-                
-                <Button 
-                  type="submit" 
-                  className="w-full mt-4 bg-red-800 hover:bg-red-700"
-                  disabled={loading}
-                >
-                  {loading ? 'Traitement en cours...' : 'Confirmer la commande'}
-                </Button>
-                <div className="flex justify-center mt-4">
-                  <Link to="/panier" className="text-brand-blue hover:underline text-sm flex items-center">
-                    Annuler votre commande
-                  </Link>
-                </div>
-              </form>
+                </form>
+              )}
+              
+              {step === 'payment' && (
+                <form onSubmit={handlePaymentSubmit}>
+                  <PaymentMethods 
+                    selectedMethod={paymentMethod}
+                    onMethodChange={setPaymentMethod}
+                  />
+                  
+                  <div className="flex justify-between mt-6">
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      onClick={() => setStep('shipping')}
+                    >
+                      Retour
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      className="bg-red-800 hover:bg-red-700"
+                      disabled={loading}
+                    >
+                      {loading ? 'Traitement en cours...' : 'Confirmer la commande'}
+                    </Button>
+                  </div>
+                </form>
+              )}
             </div>
             
-            <div>
-              <div className="bg-white p-6 rounded-lg shadow mb-4 pr-[9rem]">
-                <h2 className="text-xl font-semibold mb-4">Récapitulatif de commande</h2>
+            <div className="lg:col-span-4">
+              <div className="bg-white p-6 rounded-lg shadow mb-6">
+                <h2 className="text-lg font-semibold mb-4">Récapitulatif de commande</h2>
                 
                 <div className="space-y-4 mb-6">
                   {selectedCartItems.map(item => (
                     <div key={item.product.id} className="flex items-center space-x-3">
-                     <img 
+                      <img 
                         src={`${AUTH_BASE_URL}${
                           item.product.images && item.product.images.length > 0 
                             ? item.product.images[0] 
@@ -464,9 +527,9 @@ const CheckoutPage = () => {
                         }}
                       />
                       <div className="flex-grow">
-                        <p className="font-medium">{item.product.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {item.quantity} x {item.product.price.toFixed(2)} €
+                        <p className="font-medium line-clamp-2 text-sm">{item.product.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.quantity} x {formatPrice(item.product.price)}
                           {verifiedPromo && verifiedPromo.valid && item.product.id === verifiedPromo.productId && (
                             <span className="ml-2 text-red-600">
                               (-{verifiedPromo.pourcentage}%)
@@ -479,8 +542,8 @@ const CheckoutPage = () => {
                           )}
                         </p>
                       </div>
-                      <p className="font-semibold">
-                        {calculateItemPrice(item).toFixed(2)} €
+                      <p className="font-semibold text-sm whitespace-nowrap">
+                        {formatPrice(calculateItemPrice(item))}
                       </p>
                     </div>
                   ))}
@@ -489,23 +552,23 @@ const CheckoutPage = () => {
                 <div className="border-t pt-4 space-y-3">
                   <div className="flex justify-between">
                     <p>Sous-total</p>
-                    <p>{subtotal.toFixed(2)} €</p>
+                    <p>{formatPrice(subtotal)}</p>
                   </div>
                   
                   {hasPromoDiscount && (
                     <div className="flex justify-between text-red-600">
                       <p>Remise code promo</p>
-                      <p>-{(subtotal - discountedSubtotal).toFixed(2)} €</p>
+                      <p>-{formatPrice(subtotal - discountedSubtotal)}</p>
                     </div>
                   )}
                   
                   <div className="flex justify-between">
                     <p>Frais de livraison ({deliveryCity || 'Non sélectionné'})</p>
-                    <p>{deliveryPrice === 0 && !deliveryCity ? 'Non calculé' : deliveryPrice === 0 ? 'Gratuit' : `${deliveryPrice.toFixed(2)} €`}</p>
+                    <p>{deliveryPrice === 0 && !deliveryCity ? 'Non calculé' : deliveryPrice === 0 ? 'Gratuit' : formatPrice(deliveryPrice)}</p>
                   </div>
                   
                   {/* Section Code Promo */}
-                  {!allProductsOnPromotion && hasNonPromotionProduct && (
+                  {step === 'shipping' && !allProductsOnPromotion && hasNonPromotionProduct && (
                     <div className="py-3 border-t border-b">
                       <p className="font-medium mb-2">Code Promotion</p>
                       <div className="flex space-x-2">
@@ -534,7 +597,7 @@ const CheckoutPage = () => {
                   
                   <div className="flex justify-between font-bold text-lg pt-2">
                     <p>Total</p>
-                    <p>{orderTotal.toFixed(2)} €</p>
+                    <p>{formatPrice(orderTotal)}</p>
                   </div>
                 </div>
               </div>
@@ -542,7 +605,7 @@ const CheckoutPage = () => {
               <div className="bg-gray-50 p-4 rounded-lg border">
                 <h3 className="font-medium mb-2">Informations sur la livraison</h3>
                 <ul className="text-sm space-y-1 text-muted-foreground">
-                  <li>• Livraison gratuite à partir de 50€ d'achat (frais d'expédition uniquement)</li>
+                  <li>• Livraison gratuite à partir de 50€ d'achat</li>
                   <li>• Les frais de livraison varient selon la ville</li>
                   <li>• Livraison en 3-5 jours ouvrés</li>
                   <li>• Retours gratuits sous 30 jours</li>
