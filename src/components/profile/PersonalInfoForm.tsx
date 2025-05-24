@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { UpdateProfileData } from '@/services/api';
 
 interface PersonalInfoFormProps {
-  profileData: UpdateProfileData & { id?: string; genre?: string };
+  profileData: UpdateProfileData & { id?: string };
   loading: boolean;
   handleProfileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleGenreChange: (value: string) => void;

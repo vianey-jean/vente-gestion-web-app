@@ -1,91 +1,293 @@
-
 import axios from 'axios';
+import _ from 'lodash';
+import Cookies from 'js-cookie';
 
+// 🔁 URL de base récupérée depuis le .env
 const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const authApi = axios.create({
-  baseURL: AUTH_BASE_URL,
-  withCredentials: true,
+// Créer une instance axios avec la configuration de base
+const API = axios.create({
+  baseURL: `${AUTH_BASE_URL}/api`, // Utilisation correcte de la template string
+  timeout: 30000, // Timeout plus long pour éviter les erreurs de connexion
 });
 
-// Interceptor pour gérer les erreurs d'authentification
-authApi.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      // Rediriger vers la page de connexion
-      window.location.href = '/login';
+// Ajouter un intercepteur pour inclure le token d'authentification
+API.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
+
+    // Ajout d'un timestamp pour éviter les problèmes de cache
+    if (config.method === 'get') {
+      config.params = {
+        ...config.params,
+        _t: Date.now(),
+      };
+    }
+
+    // Log des requêtes pour le débogage
+    console.log(`${config.method?.toUpperCase()} Request to ${config.url}`, 
+      config.method === 'post' || config.method === 'put' 
+        ? JSON.stringify(config.data)
+        : config.params || {});
+
+    return config;
+  },
+  (error) => {
+    console.error('Request error:', error);
     return Promise.reject(error);
   }
 );
 
-// Définition des types pour les données
-export interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  originalPrice?: number;
-  images: string[];
-  image?: string;
-  category: string;
-  stock: number;
-  createdAt: string;
-  updatedAt: string;
-  isSold: boolean;
-  promotion?: number;
-  promotionEnd?: string;
-  dateAjout?: string;
-}
+// Ajouter un intercepteur pour gérer les erreurs globalement
+API.interceptors.response.use(
+  response => {
+    // Log des réponses pour le débogage
+    console.log(`Response from ${response.config.url}:`, response.data);
+    return response;
+  },
+  error => {
+    // Log de l'erreur pour le débogage
+    console.error("API Error:", error.response || error);
+    
+    // Si l'erreur est 401 (non autorisé) et que ce n'est pas une tentative de connexion
+    if (error.response && error.response.status === 401 && 
+        !error.config.url.includes('/auth/login') && 
+        !error.config.url.includes('/auth/verify-token')) {
+      // Essayer de rafraîchir le token ou rediriger vers la page de connexion
+      console.log("Session expirée, redirection vers la page de connexion...");
+      localStorage.removeItem('authToken');
+      window.location.href = '/login';
+    }
+    
+    return Promise.reject(error);
+  }
+);
 
-export interface Category {
-  id: string;
-  name: string;
-  description: string;
-  image: string;
-  createdAt: string;
-  updatedAt: string;
+// Interface Auth
+export interface AuthResponse {
+  user: User;
+  token: string;
 }
 
 export interface User {
   id: string;
   nom: string;
-  prenom: string;
+  prenom?: string;
   email: string;
-  role: string;
-  createdAt: string;
-  updatedAt: string;
+  role: 'admin' | 'client';
+  dateCreation: string;
   adresse?: string;
   ville?: string;
   codePostal?: string;
   pays?: string;
   telephone?: string;
-  genre?: string;
+  genre?: 'homme' | 'femme' | 'autre';
+  passwordUnique?: string;
+}
+
+export interface LoginData {
+  email: string;
+  password: string;
+}
+
+export interface RegisterData {
+  nom: string;
+  email: string;
+  password: string;
+}
+
+export interface ForgotPasswordData {
+  email: string;
+}
+
+export interface ResetPasswordData {
+  email: string;
+  passwordUnique: string;
+  newPassword: string;
 }
 
 export interface UpdateProfileData {
   nom?: string;
   prenom?: string;
-  email?: string;
   adresse?: string;
   ville?: string;
   codePostal?: string;
   pays?: string;
   telephone?: string;
-  genre?: string;
+  genre?: 'homme' | 'femme' | 'autre';
 }
 
-export interface OrderItem {
-  productId: string;
+// Services d'authentification
+export const authAPI = {
+  login: (data: LoginData) => API.post<AuthResponse>('/auth/login', data),
+  register: (data: RegisterData) => API.post<AuthResponse>('/auth/register', data),
+  forgotPassword: (email: string) => API.post('/auth/forgot-password', { email }),
+  resetPassword: (data: ResetPasswordData) => API.post('/auth/reset-password', data),
+  verifyToken: () => API.get('/auth/verify-token'),
+  checkEmail: (email: string) => API.post('/auth/check-email', { email }),
+  updateProfile: (userId: string, data: UpdateProfileData) => API.put(`/users/${userId}`, data),
+  updatePassword: (userId: string, currentPassword: string, newPassword: string) => 
+    API.put(`/users/${userId}/password`, { currentPassword, newPassword }),
+  resetPasswordWithTempCode: (userId: string, passwordUnique: string, newPassword: string) =>
+    API.put(`/users/${userId}/password`, { passwordUnique, newPassword }),
+  getUserProfile: (userId: string) => API.get(`/users/${userId}`),
+  verifyPassword: (userId: string, password: string) => 
+    API.post(`/users/${userId}/verify-password`, { password }),
+  setTempPassword: (userId: string, passwordUnique: string) =>
+    API.put(`/users/${userId}/temp-password`, { passwordUnique }),
+};
+
+// Interface Produit
+export interface Product {
+  id: string;
   name: string;
+  description: string;
   price: number;
-  originalPrice: number;
-  quantity: number;
-  image: string | null;
-  subtotal: number;
+  image: string; // Maintenu pour compatibilité
+  images?: string[]; // Nouveau tableau d'images
+  category: string;
+  isSold: boolean;
+  originalPrice?: number;
+  promotion?: number | null;
+  promotionEnd?: string | null;
+  stock?: number;
+  dateAjout?: string;
 }
 
+// Services pour les produits
+export const productsAPI = {
+  getAll: () => API.get<Product[]>('/products'),
+  getById: (id: string) => API.get<Product>(`/products/${id}`),
+  getByCategory: (category: string) => API.get<Product[]>(`/products/category/${category}`),
+  getMostFavorited: () => API.get<Product[]>('/products/stats/most-favorited'),
+  getNewArrivals: () => API.get<Product[]>('/products/stats/new-arrivals'),
+  create: (product: FormData) => API.post<Product>('/products', product),
+  update: (id: string, product: FormData) => API.put<Product>(`/products/${id}`, product),
+  delete: (id: string) => API.delete(`/products/${id}`),
+  applyPromotion: (id: string, promotion: number, duration: number) => 
+    API.post(`/products/${id}/promotion`, { promotion, duration }),
+  search: (query: string) => API.get<Product[]>(`/products/search?q=${encodeURIComponent(query)}`),
+};
+
+// Interface Review (Commentaire)
+export interface Review {
+  id: string;
+  userId: string;
+  userName: string;
+  productId: string;
+  productRating: number;
+  deliveryRating: number;
+  comment: string;
+  photos?: string[]; // Nouveau champ pour les photos
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Interface pour l'ajout de commentaire avec photos
+export interface ReviewFormData {
+  productId: string;
+  productRating: number;
+  deliveryRating: number;
+  comment: string;
+  photos?: File[];
+}
+
+// Services pour les commentaires
+export const reviewsAPI = {
+  getProductReviews: (productId: string) => API.get<Review[]>(`/reviews/product/${productId}`),
+  getReviewDetail: (reviewId: string) => API.get<Review>(`/reviews/${reviewId}`),
+  addReview: (reviewData: ReviewFormData) => {
+    const formData = new FormData();
+    formData.append('productId', reviewData.productId);
+    formData.append('productRating', reviewData.productRating.toString());
+    formData.append('deliveryRating', reviewData.deliveryRating.toString());
+    
+    if (reviewData.comment) {
+      formData.append('comment', reviewData.comment);
+    }
+    
+    if (reviewData.photos && reviewData.photos.length > 0) {
+      reviewData.photos.forEach(photo => {
+        formData.append('photos', photo);
+      });
+    }
+    
+    return API.post<Review>('/reviews', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+  deleteReview: (reviewId: string) => API.delete(`/reviews/${reviewId}`),
+};
+
+// Interface Contact
+export interface Contact {
+  id: string;
+  nom: string;
+  prenom: string;
+  email: string;
+  telephone: string;
+  adresse: string;
+  objet: string;
+  message: string;
+  dateCreation: string;
+  read: boolean;
+}
+
+// Services pour les contacts
+export const contactsAPI = {
+  getAll: () => API.get<Contact[]>('/contacts'),
+  getById: (id: string) => API.get<Contact>(`/contacts/${id}`),
+  create: (contact: any) => API.post<Contact>('/contacts', contact),
+  update: (id: string, data: any) => API.put<Contact>(`/contacts/${id}`, data),
+  delete: (id: string) => API.delete(`/contacts/${id}`),
+  markAsRead: (id: string, read: boolean) => API.put<Contact>(`/contacts/${id}`, { read }),
+};
+
+// Interface Panier
+export interface CartItem {
+  productId: string;
+  quantity: number;
+  price: number;
+}
+
+export interface Cart {
+  userId: string;
+  items: CartItem[];
+}
+
+// Services pour le panier
+export const panierAPI = {
+  get: (userId: string) => API.get<Cart>(`/panier/${userId}`),
+  addItem: (userId: string, productId: string, quantity: number = 1) => 
+    API.post(`/panier/${userId}/add`, { productId, quantity }),
+  updateItem: (userId: string, productId: string, quantity: number) => 
+    API.put(`/panier/${userId}/update`, { productId, quantity }),
+  removeItem: (userId: string, productId: string) => 
+    API.delete(`/panier/${userId}/remove/${productId}`),
+  clear: (userId: string) => API.delete(`/panier/${userId}/clear`),
+};
+
+// Interface Favoris
+export interface Favorites {
+  userId: string;
+  items: Product[];
+}
+
+// Services pour les favoris
+export const favoritesAPI = {
+  get: (userId: string) => API.get<Favorites>(`/favorites/${userId}`),
+  addItem: (userId: string, productId: string) => 
+    API.post(`/favorites/${userId}/add`, { productId }),
+  removeItem: (userId: string, productId: string) => 
+    API.delete(`/favorites/${userId}/remove/${productId}`),
+};
+
+// Interface Adresse de livraison
 export interface ShippingAddress {
   nom: string;
   prenom: string;
@@ -96,6 +298,19 @@ export interface ShippingAddress {
   telephone: string;
 }
 
+// Interface Commande
+export interface OrderItem {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image: string;
+  images?: string[]; // Support pour multiples images
+  subtotal: number;
+  codePromoApplied?: boolean;
+  originalPrice?: number;
+}
+
 export interface Order {
   id: string;
   userId: string;
@@ -103,215 +318,137 @@ export interface Order {
   userEmail: string;
   items: OrderItem[];
   totalAmount: number;
-  originalAmount?: number;
-  discount?: number;
   shippingAddress: ShippingAddress;
   paymentMethod: string;
-  codePromoUsed?: {
-    code: string;
-    productId: string;
-    pourcentage: number;
-    discountAmount: number;
-  } | null;
+  codePromoUsed?: string | null;
   status: 'confirmée' | 'en préparation' | 'en livraison' | 'livrée';
   createdAt: string;
   updatedAt: string;
 }
 
-export interface Cart {
-  id: string;
-  userId: string;
-  items: OrderItem[];
-  createdAt: string;
-  updatedAt: string;
-}
+// Services pour les commandes
+export const ordersAPI = {
+  getAll: () => API.get<Order[]>('/orders'),
+  getUserOrders: () => API.get<Order[]>('/orders/user'),
+  getById: (orderId: string) => API.get<Order>(`/orders/${orderId}`),
+  create: (orderData: any) => {
+    console.log('Sending order data to server:', JSON.stringify(orderData));
+    
+    // Ensure orderData has the required properties with correct types
+    const validatedData = {
+      items: Array.isArray(orderData.items) 
+        ? orderData.items.map((item: any) => ({
+            productId: item.productId,
+            quantity: Number(item.quantity),
+            ...(item.price !== undefined && { price: Number(item.price) }),
+          })) 
+        : [],
+      shippingAddress: orderData.shippingAddress,
+      paymentMethod: orderData.paymentMethod,
+      codePromo: orderData.codePromo
+    };
+    
+    return API.post<Order>('/orders', validatedData);
+  },
+  updateStatus: (orderId: string, status: string) => 
+    API.put(`/orders/${orderId}/status`, { status }),
+  cancelOrder: (orderId: string, itemsToCancel: string[]) => 
+    API.post(`/orders/${orderId}/cancel`, { itemsToCancel }),
+};
 
-export interface Review {
-  id: string;
-  productId: string;
-  userId: string;
-  userName: string;
-  productRating: number;
-  deliveryRating: number;
-  comment: string;
-  photos?: string[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ReviewFormData {
-  productRating: number;
-  deliveryRating: number;
-  comment: string;
-  photos?: File[];
-}
-
+// Interface pour les messages
 export interface Message {
   id: string;
-  userId: string;
-  userName: string;
-  message: string;
-  content?: string;
+  senderId: string;
+  content: string;
   timestamp: string;
-  isAdmin: boolean;
+  read: boolean;
+  isAutoReply?: boolean;
+  isEdited?: boolean;
+  isAdminReply?: boolean;
+  isSystemMessage?: boolean;
 }
 
+// Interface pour les conversations admin
+export interface Conversation {
+  messages: Message[];
+  participants: string[];
+}
+
+// Interface pour les conversations client-service
+export interface ServiceConversation extends Conversation {
+  type: 'service';
+  clientInfo?: User;
+  unreadCount?: number;
+}
+
+// Services pour le chat entre administrateurs
+export const adminChatAPI = {
+  getAdmins: () => API.get('/admin-chat/admins'),
+  getConversations: () => API.get('/admin-chat/conversations'),
+  getConversation: (adminId: string) => API.get(`/admin-chat/conversations/${adminId}`),
+  sendMessage: (adminId: string, message: string) => 
+    API.post(`/admin-chat/conversations/${adminId}`, { message }),
+  markAsRead: (messageId: string, conversationId: string) => 
+    API.put(`/admin-chat/messages/${messageId}/read`, { conversationId }),
+  setOnline: () => API.post('/admin-chat/online'),
+  setOffline: () => API.post('/admin-chat/offline'),
+  getStatus: (adminId: string) => API.get(`/admin-chat/status/${adminId}`),
+  editMessage: (messageId: string, content: string, conversationId: string) => 
+    API.put(`/admin-chat/messages/${messageId}/edit`, { content, conversationId }),
+  deleteMessage: (messageId: string, conversationId: string) => 
+    API.delete(`/admin-chat/messages/${messageId}?conversationId=${conversationId}`),
+};
+
+// Services pour le chat entre clients et service client
+export const clientChatAPI = {
+  // Gestion de statut
+  setOnline: () => API.post('/client-chat/online'),
+  setOffline: () => API.post('/client-chat/offline'),
+  getStatus: (userId: string) => API.get(`/client-chat/status/${userId}`),
+  
+  // Pour les clients
+  getServiceAdmins: () => API.get('/client-chat/service-admins'),
+  getServiceChat: () => API.get('/client-chat/service'),
+  sendServiceMessage: (message: string) => API.post('/client-chat/service/message', { message }),
+  
+  // Pour les admins (service client)
+  getServiceConversations: () => API.get('/client-chat/admin/service'),
+  sendServiceReply: (conversationId: string, message: string) => 
+    API.post(`/client-chat/admin/service/${conversationId}/reply`, { message }),
+  
+  // Opérations communes sur les messages
+  editMessage: (messageId: string, content: string, conversationId: string) => 
+    API.put(`/client-chat/messages/${messageId}`, { content, conversationId }),
+  deleteMessage: (messageId: string, conversationId: string) => 
+    API.delete(`/client-chat/messages/${messageId}?conversationId=${conversationId}`),
+  markAsRead: (messageId: string, conversationId: string) => 
+    API.put(`/client-chat/messages/${messageId}/read`, { conversationId })
+};
+
+// Interface pour les codes promos
 export interface CodePromo {
   id: string;
   code: string;
-  productId: string;
   pourcentage: number;
-  dateExpiration: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  quantite: number;
+  productId: string;
 }
 
-// Définition des services API
-export const productsAPI = {
-  getAll: async () => await authApi.get('/products'),
-  getOne: async (id: string) => await authApi.get(`/products/${id}`),
-  getById: async (id: string) => await authApi.get(`/products/${id}`),
-  getByCategory: async (categoryId: string) => await authApi.get(`/products/category/${categoryId}`),
-  getMostFavorited: async () => await authApi.get('/products/most-favorited'),
-  getNewArrivals: async () => await authApi.get('/products/new-arrivals'),
-  search: async (query: string) => await authApi.get(`/products/search?q=${query}`),
-  create: async (product: Product) => await authApi.post('/products', product),
-  update: async (id: string, product: Product) => await authApi.put(`/products/${id}`, product),
-  remove: async (id: string) => await authApi.delete(`/products/${id}`),
-};
-
-export const categoriesAPI = {
-  getAll: async () => await authApi.get('/categories'),
-  getOne: async (id: string) => await authApi.get(`/categories/${id}`),
-  create: async (category: Category) => await authApi.post('/categories', category),
-  update: async (id: string, category: Category) => await authApi.put(`/categories/${id}`, category),
-  remove: async (id: string) => await authApi.delete(`/categories/${id}`),
-};
-
-export const usersAPI = {
-  getAll: async () => await authApi.get('/users'),
-  getOne: async (id: string) => await authApi.get(`/users/${id}`),
-  update: async (id: string, user: User) => await authApi.put(`/users/${id}`, user),
-  remove: async (id: string) => await authApi.delete(`/users/${id}`),
-  getPreferences: async (id: string) => await authApi.get(`/users/${id}/preferences`),
-  updatePreferences: async (id: string, preferences: any) => await authApi.post(`/users/${id}/preferences`, preferences),
-};
-
-export const ordersAPI = {
-  getAll: async () => await authApi.get('/orders'),
-  getUserOrders: async () => await authApi.get('/orders/user'),
-  getOne: async (id: string) => await authApi.get(`/orders/${id}`),
-  create: async (order: Partial<Order>) => await authApi.post('/orders', order),
-  cancelOrder: async (orderId: string, itemsToCancel: string[]) =>
-    await authApi.post(`/orders/${orderId}/cancel`, { itemsToCancel }),
-  updateStatus: async (orderId: string, status: string) =>
-    await authApi.put(`/orders/${orderId}/status`, { status }),
-};
-
-export const authAPI = {
-  login: async (credentials: any) => await authApi.post('/auth/login', credentials),
-  register: async (userData: any) => await authApi.post('/auth/register', userData),
-  logout: async () => await authApi.post('/auth/logout'),
-  getUser: async () => await authApi.get('/auth/user'),
-  verifyToken: async () => await authApi.get('/auth/verify'),
-  forgotPassword: async (email: string) => await authApi.post('/auth/forgot-password', { email }),
-  resetPassword: async (token: string, password: string) => await authApi.post('/auth/reset-password', { token, password }),
-  updateProfile: async (data: UpdateProfileData) => await authApi.put('/auth/profile', data),
-  updatePassword: async (currentPassword: string, newPassword: string) => await authApi.put('/auth/password', { currentPassword, newPassword }),
-  verifyPassword: async (password: string) => await authApi.post('/auth/verify-password', { password }),
-  checkEmail: async (email: string) => await authApi.post('/auth/check-email', { email }),
-};
-
-export const panierAPI = {
-  getCart: async () => await authApi.get('/panier'),
-  addToCart: async (productId: string, quantity: number) => await authApi.post('/panier', { productId, quantity }),
-  updateQuantity: async (productId: string, quantity: number) => await authApi.put('/panier', { productId, quantity }),
-  removeFromCart: async (productId: string) => await authApi.delete(`/panier/${productId}`),
-  clearCart: async () => await authApi.delete('/panier'),
-  addItem: async (productId: string, quantity: number) => await authApi.post('/panier', { productId, quantity }),
-  removeItem: async (productId: string) => await authApi.delete(`/panier/${productId}`),
-  updateItem: async (productId: string, quantity: number) => await authApi.put('/panier', { productId, quantity }),
-  clear: async () => await authApi.delete('/panier'),
-};
-
-export const favoritesAPI = {
-  getFavorites: async () => await authApi.get('/favorites'),
-  addToFavorites: async (productId: string) => await authApi.post('/favorites', { productId }),
-  removeFromFavorites: async (productId: string) => await authApi.delete(`/favorites/${productId}`),
-  get: async () => await authApi.get('/favorites'),
-  addItem: async (productId: string) => await authApi.post('/favorites', { productId }),
-  removeItem: async (productId: string) => await authApi.delete(`/favorites/${productId}`),
-};
-
-export const reviewsAPI = {
-  getProductReviews: async (productId: string) => await authApi.get(`/reviews/product/${productId}`),
-  getUserReviews: async () => await authApi.get('/reviews/user'),
-  createReview: async (productId: string, reviewData: ReviewFormData) => {
-    const formData = new FormData();
-    formData.append('productRating', reviewData.productRating.toString());
-    formData.append('deliveryRating', reviewData.deliveryRating.toString());
-    formData.append('comment', reviewData.comment);
-    
-    if (reviewData.photos) {
-      reviewData.photos.forEach((photo, index) => {
-        formData.append(`photos`, photo);
-      });
-    }
-    
-    return await authApi.post(`/reviews/product/${productId}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-  },
-  addReview: async (reviewData: any) => await authApi.post('/reviews', reviewData),
-  getReviewDetail: async (reviewId: string) => await authApi.get(`/reviews/${reviewId}`),
-  updateReview: async (reviewId: string, reviewData: ReviewFormData) => await authApi.put(`/reviews/${reviewId}`, reviewData),
-  deleteReview: async (reviewId: string) => await authApi.delete(`/reviews/${reviewId}`),
-};
-
-export const clientChatAPI = {
-  getMessages: async () => await authApi.get('/client-chat'),
-  sendMessage: async (message: string) => await authApi.post('/client-chat', { message }),
-  markAsRead: async () => await authApi.put('/client-chat/read'),
-  getServiceChat: async () => await authApi.get('/client-chat'),
-  sendServiceMessage: async (message: string) => await authApi.post('/client-chat', { message }),
-  editMessage: async (messageId: string, content: string) => await authApi.put(`/client-chat/${messageId}`, { content }),
-  deleteMessage: async (messageId: string) => await authApi.delete(`/client-chat/${messageId}`),
-  setOnline: async () => await authApi.post('/client-chat/online'),
-  setOffline: async () => await authApi.post('/client-chat/offline'),
-};
-
+// Services pour les codes promos
 export const codePromosAPI = {
-  getAll: async () => await authApi.get('/code-promos'),
-  getByCode: async (code: string) => await authApi.get(`/code-promos/code/${code}`),
-  validateCode: async (code: string, productId: string) => await authApi.post('/code-promos/validate', { code, productId }),
-  verify: async (code: string) => await authApi.post('/code-promos/verify', { code }),
-  create: async (codePromo: CodePromo) => await authApi.post('/code-promos', codePromo),
-  update: async (id: string, codePromo: CodePromo) => await authApi.put(`/code-promos/${id}`, codePromo),
-  remove: async (id: string) => await authApi.delete(`/code-promos/${id}`),
+  getAll: () => API.get<CodePromo[]>('/code-promos'),
+  getById: (id: string) => API.get<CodePromo>(`/code-promos/${id}`),
+  create: (data: { pourcentage: number, quantite: number, productId: string }) => 
+    API.post<CodePromo>('/code-promos', data),
+  update: (id: string, quantite: number) => API.put<CodePromo>(`/code-promos/${id}`, { quantite }),
+  delete: (id: string) => API.delete(`/code-promos/${id}`),
+  verify: (code: string, productId: string) => 
+    API.post<{ valid: boolean, pourcentage?: number, message?: string }>('/code-promos/verify', { code, productId }),
+  use: (code: string, productId: string) => 
+    API.post<{ success: boolean, message: string }>('/code-promos/use', { code, productId }),
+  searchProducts: (query: string) => 
+    API.get<{ id: string, name: string, price: number, image: string }[]>(`/code-promos/products/search?query=${query}`)
 };
 
-export const contactAPI = {
-  post: async (data: any) => await authApi.post('/contact', data),
-};
-
-// Default export for compatibility
-const api = {
-  productsAPI,
-  categoriesAPI,
-  usersAPI,
-  ordersAPI,
-  authAPI,
-  panierAPI,
-  favoritesAPI,
-  reviewsAPI,
-  clientChatAPI,
-  codePromosAPI,
-  contactAPI,
-  get: async (url: string) => await authApi.get(url),
-  post: async (url: string, data: any) => await authApi.post(url, data),
-};
-
-export default api;
+export default API;

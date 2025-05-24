@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -89,14 +90,12 @@ const OrdersPage = () => {
       setCancellingOrder(orderId);
       const itemsToCancel = selectedItems[orderId] || [];
       
-      console.log('Annulation demandée pour:', { orderId, itemsToCancel });
-      
       const response = await ordersAPI.cancelOrder(orderId, itemsToCancel);
       
       if (response.data.cancelled) {
         toast.success('Commande complètement annulée');
       } else {
-        toast.success('Produits sélectionnés annulés avec succès - La commande reste active avec les autres produits');
+        toast.success('Produits sélectionnés annulés avec succès');
       }
       
       // Recharger les commandes pour voir les changements
@@ -131,7 +130,7 @@ const OrdersPage = () => {
                   <div>
                     <CardTitle>Commande #{order.id.split('-')[1]}</CardTitle>
                     <p className="text-sm text-muted-foreground">
-                      {formatDate(order.createdAt)} • {order.items.length} {order.items.length > 1 ? 'produits' : 'produit'}
+                      {formatDate(order.createdAt)}
                     </p>
                   </div>
                   <div className="mt-2 sm:mt-0">
@@ -233,11 +232,6 @@ const OrdersPage = () => {
                     <div>
                       <p className="text-sm font-medium">Total</p>
                       <p className="text-xl font-bold">{order.totalAmount.toFixed(2)} €</p>
-                      {order.discount && order.discount > 0 && (
-                        <p className="text-sm text-green-600">
-                          Économie: -{order.discount.toFixed(2)} €
-                        </p>
-                      )}
                     </div>
                     
                     <div className="flex gap-3">
@@ -250,18 +244,16 @@ const OrdersPage = () => {
                               disabled={cancellingOrder === order.id}
                             >
                               <X className="h-4 w-4 mr-2" />
-                              {order.items.length > 1 ? 'Annuler des produits' : 'Annuler la commande'}
+                              Annuler la commande
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent className="max-w-md">
                             <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                {order.items.length > 1 ? 'Annuler des produits' : 'Annuler la commande'}
-                              </AlertDialogTitle>
+                              <AlertDialogTitle>Annuler la commande</AlertDialogTitle>
                               <AlertDialogDescription>
                                 {order.items.length > 1 ? (
                                   <div className="space-y-4">
-                                    <p>Sélectionnez les produits à annuler. Les autres produits resteront dans votre commande :</p>
+                                    <p>Sélectionnez les produits à annuler :</p>
                                     <div className="space-y-2">
                                       <div className="flex items-center space-x-2">
                                         <Checkbox
@@ -285,17 +277,14 @@ const OrdersPage = () => {
                                             }
                                           />
                                           <label htmlFor={`item-${item.productId}`} className="text-sm">
-                                            {item.name} (x{item.quantity}) - {item.subtotal.toFixed(2)} €
+                                            {item.name} (x{item.quantity})
                                           </label>
                                         </div>
                                       ))}
                                     </div>
-                                    <div className="text-xs text-gray-500">
-                                      Note: Le stock des produits annulés sera restauré automatiquement.
-                                    </div>
                                   </div>
                                 ) : (
-                                  "Êtes-vous sûr de vouloir annuler cette commande ? Cette action est irréversible et le stock sera restauré."
+                                  "Êtes-vous sûr de vouloir annuler cette commande ? Cette action est irréversible."
                                 )}
                               </AlertDialogDescription>
                             </AlertDialogHeader>
