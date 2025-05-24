@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ export function DataRetryLoader<T>({
   const [isLoading, setIsLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
   const [hasError, setHasError] = useState(false);
+  const { toast } = useToast();
 
   const attemptDataFetch = async () => {
     try {
@@ -47,16 +48,23 @@ export function DataRetryLoader<T>({
       } else {
         setIsLoading(false);
         setHasError(true);
-        toast.error(errorMessage, {
+        toast({
+          variant: "destructive",
+          title: errorMessage,
           description: `Impossible de charger les données après ${maxRetries} tentatives.`,
-          action: {
-            label: "Réessayer",
-            onClick: () => {
-              setRetryCount(0);
-              setHasError(false);
-              attemptDataFetch();
-            }
-          }
+          action: (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setRetryCount(0);
+                setHasError(false);
+                attemptDataFetch();
+              }}
+            >
+              Réessayer
+            </Button>
+          )
         });
         onMaxRetriesReached?.();
       }
