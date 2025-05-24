@@ -61,6 +61,7 @@ export interface User {
   codePostal?: string;
   pays?: string;
   telephone?: string;
+  genre?: string;
 }
 
 export interface UpdateProfileData {
@@ -72,6 +73,7 @@ export interface UpdateProfileData {
   codePostal?: string;
   pays?: string;
   telephone?: string;
+  genre?: string;
 }
 
 export interface OrderItem {
@@ -149,6 +151,7 @@ export interface Message {
   userId: string;
   userName: string;
   message: string;
+  content?: string;
   timestamp: string;
   isAdmin: boolean;
 }
@@ -171,6 +174,7 @@ export const productsAPI = {
   getById: async (id: string) => await authApi.get(`/products/${id}`),
   getByCategory: async (categoryId: string) => await authApi.get(`/products/category/${categoryId}`),
   getMostFavorited: async () => await authApi.get('/products/most-favorited'),
+  getNewArrivals: async () => await authApi.get('/products/new-arrivals'),
   search: async (query: string) => await authApi.get(`/products/search?q=${query}`),
   create: async (product: Product) => await authApi.post('/products', product),
   update: async (id: string, product: Product) => await authApi.put(`/products/${id}`, product),
@@ -190,13 +194,15 @@ export const usersAPI = {
   getOne: async (id: string) => await authApi.get(`/users/${id}`),
   update: async (id: string, user: User) => await authApi.put(`/users/${id}`, user),
   remove: async (id: string) => await authApi.delete(`/users/${id}`),
+  getPreferences: async (id: string) => await authApi.get(`/users/${id}/preferences`),
+  updatePreferences: async (id: string, preferences: any) => await authApi.post(`/users/${id}/preferences`, preferences),
 };
 
 export const ordersAPI = {
   getAll: async () => await authApi.get('/orders'),
   getUserOrders: async () => await authApi.get('/orders/user'),
   getOne: async (id: string) => await authApi.get(`/orders/${id}`),
-  create: async (order: Order) => await authApi.post('/orders', order),
+  create: async (order: Partial<Order>) => await authApi.post('/orders', order),
   cancelOrder: async (orderId: string, itemsToCancel: string[]) =>
     await authApi.post(`/orders/${orderId}/cancel`, { itemsToCancel }),
   updateStatus: async (orderId: string, status: string) =>
@@ -214,6 +220,7 @@ export const authAPI = {
   updateProfile: async (data: UpdateProfileData) => await authApi.put('/auth/profile', data),
   updatePassword: async (currentPassword: string, newPassword: string) => await authApi.put('/auth/password', { currentPassword, newPassword }),
   verifyPassword: async (password: string) => await authApi.post('/auth/verify-password', { password }),
+  checkEmail: async (email: string) => await authApi.post('/auth/check-email', { email }),
 };
 
 export const panierAPI = {
@@ -222,12 +229,19 @@ export const panierAPI = {
   updateQuantity: async (productId: string, quantity: number) => await authApi.put('/panier', { productId, quantity }),
   removeFromCart: async (productId: string) => await authApi.delete(`/panier/${productId}`),
   clearCart: async () => await authApi.delete('/panier'),
+  addItem: async (productId: string, quantity: number) => await authApi.post('/panier', { productId, quantity }),
+  removeItem: async (productId: string) => await authApi.delete(`/panier/${productId}`),
+  updateItem: async (productId: string, quantity: number) => await authApi.put('/panier', { productId, quantity }),
+  clear: async () => await authApi.delete('/panier'),
 };
 
 export const favoritesAPI = {
   getFavorites: async () => await authApi.get('/favorites'),
   addToFavorites: async (productId: string) => await authApi.post('/favorites', { productId }),
   removeFromFavorites: async (productId: string) => await authApi.delete(`/favorites/${productId}`),
+  get: async () => await authApi.get('/favorites'),
+  addItem: async (productId: string) => await authApi.post('/favorites', { productId }),
+  removeItem: async (productId: string) => await authApi.delete(`/favorites/${productId}`),
 };
 
 export const reviewsAPI = {
@@ -251,6 +265,8 @@ export const reviewsAPI = {
       },
     });
   },
+  addReview: async (reviewData: any) => await authApi.post('/reviews', reviewData),
+  getReviewDetail: async (reviewId: string) => await authApi.get(`/reviews/${reviewId}`),
   updateReview: async (reviewId: string, reviewData: ReviewFormData) => await authApi.put(`/reviews/${reviewId}`, reviewData),
   deleteReview: async (reviewId: string) => await authApi.delete(`/reviews/${reviewId}`),
 };
@@ -259,15 +275,26 @@ export const clientChatAPI = {
   getMessages: async () => await authApi.get('/client-chat'),
   sendMessage: async (message: string) => await authApi.post('/client-chat', { message }),
   markAsRead: async () => await authApi.put('/client-chat/read'),
+  getServiceChat: async () => await authApi.get('/client-chat'),
+  sendServiceMessage: async (message: string) => await authApi.post('/client-chat', { message }),
+  editMessage: async (messageId: string, content: string) => await authApi.put(`/client-chat/${messageId}`, { content }),
+  deleteMessage: async (messageId: string) => await authApi.delete(`/client-chat/${messageId}`),
+  setOnline: async () => await authApi.post('/client-chat/online'),
+  setOffline: async () => await authApi.post('/client-chat/offline'),
 };
 
 export const codePromosAPI = {
   getAll: async () => await authApi.get('/code-promos'),
   getByCode: async (code: string) => await authApi.get(`/code-promos/code/${code}`),
   validateCode: async (code: string, productId: string) => await authApi.post('/code-promos/validate', { code, productId }),
+  verify: async (code: string) => await authApi.post('/code-promos/verify', { code }),
   create: async (codePromo: CodePromo) => await authApi.post('/code-promos', codePromo),
   update: async (id: string, codePromo: CodePromo) => await authApi.put(`/code-promos/${id}`, codePromo),
   remove: async (id: string) => await authApi.delete(`/code-promos/${id}`),
+};
+
+export const contactAPI = {
+  post: async (data: any) => await authApi.post('/contact', data),
 };
 
 // Default export for compatibility
@@ -282,6 +309,9 @@ const api = {
   reviewsAPI,
   clientChatAPI,
   codePromosAPI,
+  contactAPI,
+  get: async (url: string) => await authApi.get(url),
+  post: async (url: string, data: any) => await authApi.post(url, data),
 };
 
 export default api;

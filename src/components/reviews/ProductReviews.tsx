@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { reviewsAPI, Review, ReviewFormData } from '@/services/api';
@@ -43,7 +44,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
   
   const handleAddReview = async (reviewData: ReviewFormData) => {
     try {
-      await reviewsAPI.addReview(reviewData);
+      await reviewsAPI.createReview(productId, reviewData);
       fetchReviews(); // Recharger les commentaires
       setShowForm(false); // Masquer le formulaire
     } catch (error) {

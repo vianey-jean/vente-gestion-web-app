@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import API from '@/services/api';
+import { usersAPI } from '@/services/api';
 
 interface UserPreferences {
   emailNotifications: boolean;
@@ -32,7 +32,7 @@ const PreferencesForm: React.FC = () => {
       
       try {
         setLoading(true);
-        const response = await API.get(`/users/${user.id}/preferences`);
+        const response = await usersAPI.getPreferences(user.id);
         if (response.data) {
           setPreferences(response.data);
         }
@@ -58,7 +58,7 @@ const PreferencesForm: React.FC = () => {
     
     setLoading(true);
     try {
-      await API.post(`/users/${user.id}/preferences`, preferences);
+      await usersAPI.updatePreferences(user.id, preferences);
       toast.success('Préférences enregistrées avec succès');
     } catch (error) {
       console.error("Erreur lors de l'enregistrement des préférences:", error);
