@@ -90,12 +90,14 @@ const OrdersPage = () => {
       setCancellingOrder(orderId);
       const itemsToCancel = selectedItems[orderId] || [];
       
+      console.log('Annulation des produits:', itemsToCancel);
+      
       const response = await ordersAPI.cancelOrder(orderId, itemsToCancel);
       
       if (response.data.cancelled) {
         toast.success('Commande complètement annulée');
       } else {
-        toast.success('Produits sélectionnés annulés avec succès');
+        toast.success('Produits sélectionnés annulés avec succès. La commande a été mise à jour.');
       }
       
       // Recharger les commandes pour voir les changements
@@ -105,7 +107,7 @@ const OrdersPage = () => {
       setSelectedItems(prev => ({ ...prev, [orderId]: [] }));
     } catch (error) {
       console.error('Erreur lors de l\'annulation:', error);
-      toast.error('Erreur lors de l\'annulation de la commande');
+      toast.error('Erreur lors de l\'annulation des produits');
     } finally {
       setCancellingOrder(null);
     }
@@ -113,6 +115,10 @@ const OrdersPage = () => {
 
   const canCancelOrder = (order: any) => {
     return order.status === 'confirmée' || order.status === 'en préparation';
+  };
+
+  const getSelectedItemsCount = (orderId: string) => {
+    return selectedItems[orderId]?.length || 0;
   };
 
   return (
@@ -131,6 +137,9 @@ const OrdersPage = () => {
                     <CardTitle>Commande #{order.id.split('-')[1]}</CardTitle>
                     <p className="text-sm text-muted-foreground">
                       {formatDate(order.createdAt)}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {order.items.length} produit{order.items.length > 1 ? 's' : ''}
                     </p>
                   </div>
                   <div className="mt-2 sm:mt-0">
@@ -244,21 +253,25 @@ const OrdersPage = () => {
                               disabled={cancellingOrder === order.id}
                             >
                               <X className="h-4 w-4 mr-2" />
-                              Annuler la commande
+                              {order.items.length > 1 ? 'Annuler des produits' : 'Annuler la commande'}
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent className="max-w-md">
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Annuler la commande</AlertDialogTitle>
+                              <AlertDialogTitle>
+                                {order.items.length > 1 ? 'Annuler des produits' : 'Annuler la commande'}
+                              </AlertDialogTitle>
                               <AlertDialogDescription>
                                 {order.items.length > 1 ? (
                                   <div className="space-y-4">
-                                    <p>Sélectionnez les produits à annuler :</p>
+                                    <p className="text-sm">
+                                      Sélectionnez les produits à annuler. Les produits non sélectionnés resteront dans votre commande.
+                                    </p>
                                     <div className="space-y-2">
                                       <div className="flex items-center space-x-2">
                                         <Checkbox
                                           id={`select-all-${order.id}`}
-                                          checked={selectedItems[order.id]?.length === order.items.length}
+                                          checked={getSelectedItemsCount(order.id) === order.items.length}
                                           onCheckedChange={(checked) => 
                                             handleSelectAllItems(order.id, order.items, checked as boolean)
                                           }
@@ -277,11 +290,16 @@ const OrdersPage = () => {
                                             }
                                           />
                                           <label htmlFor={`item-${item.productId}`} className="text-sm">
-                                            {item.name} (x{item.quantity})
+                                            {item.name} (x{item.quantity}) - {item.price.toFixed(2)}€
                                           </label>
                                         </div>
                                       ))}
                                     </div>
+                                    {getSelectedItemsCount(order.id) > 0 && (
+                                      <p className="text-sm text-blue-600">
+                                        {getSelectedItemsCount(order.id)} produit{getSelectedItemsCount(order.id) > 1 ? 's' : ''} sélectionné{getSelectedItemsCount(order.id) > 1 ? 's' : ''}
+                                      </p>
+                                    )}
                                   </div>
                                 ) : (
                                   "Êtes-vous sûr de vouloir annuler cette commande ? Cette action est irréversible."
@@ -300,10 +318,14 @@ const OrdersPage = () => {
                                   }
                                   handleCancelOrder(order.id);
                                 }}
-                                disabled={order.items.length > 1 && (!selectedItems[order.id] || selectedItems[order.id].length === 0)}
+                                disabled={order.items.length > 1 && getSelectedItemsCount(order.id) === 0}
                                 className="bg-red-600 hover:bg-red-700"
                               >
-                                Confirmer l'annulation
+                                {cancellingOrder === order.id ? 'Annulation...' : 
+                                 order.items.length > 1 ? 
+                                   `Annuler ${getSelectedItemsCount(order.id)} produit${getSelectedItemsCount(order.id) > 1 ? 's' : ''}` : 
+                                   'Confirmer l\'annulation'
+                                }
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
