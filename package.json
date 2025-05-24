@@ -49,6 +49,7 @@
     "@types/js-cookie": "^3.0.6",
     "@types/lodash": "^4.17.16",
     "@types/simple-peer": "^9.11.8",
+    "@types/three": "^0.160.0",
     "axios": "^1.6.8",
     "axios-mock-adapter": "^1.22.0",
     "bcrypt": "^5.1.1",
