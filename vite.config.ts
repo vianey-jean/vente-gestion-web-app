@@ -17,7 +17,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'emoji-mart': ['@emoji-mart/data', '@emoji-mart/react'],
+          'emoji-mart': ['@emoji-mart/data', '@emoji-mart/react', 'emoji-mart'],
           'three': ['three']
         }
       },
@@ -25,7 +25,7 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['three']
+    include: ['three', '@emoji-mart/data', '@emoji-mart/react', 'emoji-mart']
   },
   server: {
     port: 8080,
