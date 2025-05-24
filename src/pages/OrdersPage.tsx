@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -234,7 +233,7 @@ const OrdersPage = () => {
                     <div>
                       <p className="text-sm font-medium">Total</p>
                       <p className="text-xl font-bold">{order.totalAmount.toFixed(2)} €</p>
-                      {order.discount > 0 && (
+                      {order.discount && order.discount > 0 && (
                         <p className="text-sm text-green-600">
                           Économie: -{order.discount.toFixed(2)} €
                         </p>
