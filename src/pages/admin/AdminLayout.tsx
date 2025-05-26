@@ -12,7 +12,9 @@ import {
   Percent,
   MessageSquare,
   Megaphone,
-  RefreshCw
+  RefreshCw,
+  Tag,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSecureRoute } from '@/services/secureIds';
@@ -45,10 +47,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     parametres: getSecureRoute('/admin/parametres'),
     pubLayout: getSecureRoute('/admin/pub-layout'),
     remboursements: getSecureRoute('/admin/remboursements'),
+    categories: getSecureRoute('/admin/categories'),
+    flashSales: getSecureRoute('/admin/flash-sales'),
   };
   
   const navItems = [
     { name: 'Produits', path: secureRoutes.produits, realPath: '/admin/produits', icon: Package },
+    { name: 'Catégories', path: secureRoutes.categories, realPath: '/admin/categories', icon: Tag },
+    { name: 'Flash Sales', path: secureRoutes.flashSales, realPath: '/admin/flash-sales', icon: Zap },
     { name: 'Utilisateurs', path: secureRoutes.utilisateurs, realPath: '/admin/utilisateurs', icon: Users },
     { name: 'Messages', path: secureRoutes.messages, realPath: '/admin/messages', icon: MessageCircle },
     { name: 'Commandes', path: secureRoutes.commandes, realPath: '/admin/commandes', icon: Truck },

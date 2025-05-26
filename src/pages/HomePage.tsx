@@ -8,6 +8,7 @@ import DataRetryLoader from '@/components/data-loading/DataRetryLoader';
 import HomeHeader from '@/components/home/HomeHeader';
 import FeaturedProductsCarousel from '@/components/home/FeaturedProductsCarousel';
 import PromotionalProductsGrid from '@/components/home/PromotionalProductsGrid';
+import FlashSaleBannerWidget from '@/components/promotions/FlashSaleBannerWidget';
 import { useHomePageData } from '@/hooks/useHomePageData';
 import { useCarouselAutoplay } from '@/hooks/useCarouselAutoplay';
 
@@ -73,6 +74,9 @@ const HomePage = () => {
               />
             </div>
           )}
+
+          {/* Flash Sale Banner - affiché seulement si pas de recherche */}
+          {!searchParams.get('q') && <FlashSaleBannerWidget />}
 
           {/* Produits vedettes */}
           {!searchParams.get('q') && (

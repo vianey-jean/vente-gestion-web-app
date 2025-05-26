@@ -69,6 +69,8 @@ const AdminClientChatPage = lazy(() => import('./pages/admin/AdminClientChatPage
 const AdminCodePromosPage = lazy(() => import('./pages/admin/AdminCodePromosPage'));
 const AdminPubLayoutPage = lazy(() => import('./pages/admin/AdminPubLayoutPage'));
 const AdminRemboursementsPage = lazy(() => import('./pages/admin/AdminRemboursementsPage'));
+const AdminCategoriesPage = lazy(() => import('./pages/admin/AdminCategoriesPage'));
+const AdminFlashSalesPage = lazy(() => import('./pages/admin/AdminFlashSalesPage'));
 
 // Création d'un nouveau QueryClient avec configuration optimisée
 const queryClient = new QueryClient({
@@ -201,6 +203,24 @@ function AppRoutes() {
           </SecureRoute>
         } />
         <Route path="/admin/produits" element={<Navigate to={secureRoutes.get('/admin/produits') || '/'} replace />} />
+        
+        <Route path={secureRoutes.get('/admin/categories')?.substring(1)} element={
+          <SecureRoute>
+            <ProtectedRoute requireAdmin>
+              <AdminCategoriesPage />
+            </ProtectedRoute>
+          </SecureRoute>
+        } />
+        <Route path="/admin/categories" element={<Navigate to={secureRoutes.get('/admin/categories') || '/'} replace />} />
+        
+        <Route path={secureRoutes.get('/admin/flash-sales')?.substring(1)} element={
+          <SecureRoute>
+            <ProtectedRoute requireAdmin>
+              <AdminFlashSalesPage />
+            </ProtectedRoute>
+          </SecureRoute>
+        } />
+        <Route path="/admin/flash-sales" element={<Navigate to={secureRoutes.get('/admin/flash-sales') || '/'} replace />} />
         
         <Route path={secureRoutes.get('/admin/utilisateurs')?.substring(1)} element={
           <SecureRoute>
