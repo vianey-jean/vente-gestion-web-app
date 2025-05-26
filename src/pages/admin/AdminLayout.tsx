@@ -1,89 +1,128 @@
 
-import React from 'react';
-import { Link, useLocation, Outlet } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { 
+  ShoppingBag,
+  Package,
+  MessageCircle,
+  Users,
+  Truck,
+  Settings,
+  LogOut,
+  Percent,
+  MessageSquare,
+  Megaphone,
+  RefreshCw
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { LogOut, Users, Package, ShoppingCart, MessageSquare, Settings, Gift, Tag, Layout, Percent, Zap } from 'lucide-react';
+import { getSecureRoute } from '@/services/secureIds';
 
 interface AdminLayoutProps {
-  children?: React.ReactNode;
+  children: React.ReactNode;
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
-  const { logout } = useAuth();
   const location = useLocation();
-
-  const navigationItems = [
-    { path: '/admin/users', label: 'Utilisateurs', icon: Users },
-    { path: '/admin/products', label: 'Produits', icon: Package },
-    { path: '/admin/categories', label: 'Catégories', icon: Tag },
-    { path: '/admin/orders', label: 'Commandes', icon: ShoppingCart },
-    { path: '/admin/messages', label: 'Messages', icon: MessageSquare },
-    { path: '/admin/client-chat', label: 'Chat Client', icon: MessageSquare },
-    { path: '/admin/code-promos', label: 'Codes Promo', icon: Gift },
-    { path: '/admin/flash-sales', label: 'Flash Sales', icon: Zap },
-    { path: '/admin/remboursements', label: 'Remboursements', icon: Percent },
-    { path: '/admin/pub-layout', label: 'Mise en page', icon: Layout },
-    { path: '/admin/settings', label: 'Paramètres', icon: Settings },
+  const { user } = useAuth();
+  const [isServiceAdmin, setIsServiceAdmin] = useState(false);
+  
+  useEffect(() => {
+    // Check if the current user is a service client admin
+    if (user && user.email === "service.client@example.com") {
+      setIsServiceAdmin(true);
+    }
+  }, [user]);
+  
+  // Obtenir les routes sécurisées
+  const secureRoutes = {
+    produits: getSecureRoute('/admin/produits'),
+    utilisateurs: getSecureRoute('/admin/utilisateurs'),
+    messages: getSecureRoute('/admin/messages'),
+    commandes: getSecureRoute('/admin/commandes'),
+    chat: getSecureRoute('/admin'),
+    serviceClient: getSecureRoute('/admin/service-client'),
+    codePromo: getSecureRoute('/admin/code-promos'),
+    parametres: getSecureRoute('/admin/parametres'),
+    pubLayout: getSecureRoute('/admin/pub-layout'),
+    remboursements: getSecureRoute('/admin/remboursements'),
+  };
+  
+  const navItems = [
+    { name: 'Produits', path: secureRoutes.produits, realPath: '/admin/produits', icon: Package },
+    { name: 'Utilisateurs', path: secureRoutes.utilisateurs, realPath: '/admin/utilisateurs', icon: Users },
+    { name: 'Messages', path: secureRoutes.messages, realPath: '/admin/messages', icon: MessageCircle },
+    { name: 'Commandes', path: secureRoutes.commandes, realPath: '/admin/commandes', icon: Truck },
+    { name: 'CodePromo', path: secureRoutes.codePromo, realPath: '/admin/code-promos', icon: Percent },
+    { name: 'Publicités', path: secureRoutes.pubLayout, realPath: '/admin/pub-layout', icon: Megaphone },
+    { name: 'Remboursements', path: secureRoutes.remboursements, realPath: '/admin/remboursements', icon: RefreshCw },
+    { name: 'Chat Admin', path: secureRoutes.chat, realPath: '/admin', icon: ShoppingBag },
+    // Conditional item for service client admin
+    ...(isServiceAdmin ? [{ 
+      name: 'Service Client', 
+      path: secureRoutes.serviceClient, 
+      realPath: '/admin/service-client',
+      icon: MessageSquare 
+    }] : []),
+    { name: 'Paramètres', path: secureRoutes.parametres, realPath: '/admin/parametres', icon: Settings },
   ];
 
-  const isActive = (path: string) => location.pathname === path;
+  // Verifier si le chemin actuel correspond à un chemin réel (pour la mise en surbrillance du menu)
+  const isActivePath = (realPath: string) => {
+    return location.pathname === realPath || location.pathname.startsWith(realPath + '/');
+  };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Link to="/" className="text-xl font-bold text-gray-900">
-                Admin Panel
+    <div className="min-h-screen flex flex-col md:flex-row">
+      {/* Sidebar */}
+      <div className="w-full md:w-64 bg-gray-900 text-white md:min-h-screen">
+        {/* Mobile Header */}
+        <div className="md:hidden p-4 bg-gray-900 text-white flex justify-between items-center">
+          <span className="font-bold text-lg">Admin Dashboard</span>
+          <button className="focus:outline-none">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+        
+        {/* Sidebar Content */}
+        <div className="p-4">
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold mb-1">Riziky-Boutic</h1>
+            <p className="text-gray-400 text-sm">Administration</p>
+          </div>
+          
+          <nav className="space-y-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
+                  isActivePath(item.realPath)
+                    ? 'bg-red-800 text-white'
+                    : 'text-gray-300 hover:bg-gray-800'
+                }`}
+              >
+                <item.icon className="h-5 w-5 mr-3" />
+                {item.name}
               </Link>
-            </div>
-            <Button
-              onClick={logout}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Déconnexion
-            </Button>
+            ))}
+          </nav>
+          
+          <div className="mt-auto pt-8 border-t border-gray-700 mt-8">
+            <Link to="/" className="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-800 transition-colors">
+              <LogOut className="h-5 w-5 mr-3" />
+              Quitter
+            </Link>
           </div>
         </div>
-      </header>
-
-      <div className="flex">
-        {/* Sidebar */}
-        <nav className="w-64 bg-white shadow-sm min-h-screen">
-          <div className="p-4">
-            <ul className="space-y-2">
-              {navigationItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <li key={item.path}>
-                    <Link
-                      to={item.path}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        isActive(item.path)
-                          ? 'bg-red-50 text-red-700 border border-red-200'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                      }`}
-                    >
-                      <Icon className="h-5 w-5" />
-                      {item.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </nav>
-
-        {/* Main Content */}
-        <main className="flex-1 p-8">
-          {children || <Outlet />}
-        </main>
+      </div>
+      
+      {/* Main Content */}
+      <div className="flex-1 bg-gray-50">
+        <div className="p-6">
+          {children}
+        </div>
       </div>
     </div>
   );
