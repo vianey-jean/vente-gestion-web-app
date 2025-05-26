@@ -1,128 +1,179 @@
 
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { 
-  ShoppingBag,
-  Package,
-  MessageCircle,
-  Users,
-  Truck,
-  Settings,
-  LogOut,
-  Percent,
-  MessageSquare,
-  Megaphone,
-  RefreshCw
-} from 'lucide-react';
+import React, { useState } from 'react';
+import { Link, Outlet, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { getSecureRoute } from '@/services/secureIds';
+import { Button } from '@/components/ui/button';
+import { 
+  Package, 
+  Users, 
+  MessageSquare, 
+  Settings, 
+  BarChart3, 
+  ShoppingCart, 
+  Star,
+  Menu,
+  X,
+  Ticket,
+  Layout as LayoutIcon,
+  RefreshCw,
+  Zap,
+  FolderOpen
+} from 'lucide-react';
 
-interface AdminLayoutProps {
-  children: React.ReactNode;
-}
-
-const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+const AdminLayout = () => {
+  const { user, logout } = useAuth();
   const location = useLocation();
-  const { user } = useAuth();
-  const [isServiceAdmin, setIsServiceAdmin] = useState(false);
-  
-  useEffect(() => {
-    // Check if the current user is a service client admin
-    if (user && user.email === "service.client@example.com") {
-      setIsServiceAdmin(true);
-    }
-  }, [user]);
-  
-  // Obtenir les routes sécurisées
-  const secureRoutes = {
-    produits: getSecureRoute('/admin/produits'),
-    utilisateurs: getSecureRoute('/admin/utilisateurs'),
-    messages: getSecureRoute('/admin/messages'),
-    commandes: getSecureRoute('/admin/commandes'),
-    chat: getSecureRoute('/admin'),
-    serviceClient: getSecureRoute('/admin/service-client'),
-    codePromo: getSecureRoute('/admin/code-promos'),
-    parametres: getSecureRoute('/admin/parametres'),
-    pubLayout: getSecureRoute('/admin/pub-layout'),
-    remboursements: getSecureRoute('/admin/remboursements'),
-  };
-  
-  const navItems = [
-    { name: 'Produits', path: secureRoutes.produits, realPath: '/admin/produits', icon: Package },
-    { name: 'Utilisateurs', path: secureRoutes.utilisateurs, realPath: '/admin/utilisateurs', icon: Users },
-    { name: 'Messages', path: secureRoutes.messages, realPath: '/admin/messages', icon: MessageCircle },
-    { name: 'Commandes', path: secureRoutes.commandes, realPath: '/admin/commandes', icon: Truck },
-    { name: 'CodePromo', path: secureRoutes.codePromo, realPath: '/admin/code-promos', icon: Percent },
-    { name: 'Publicités', path: secureRoutes.pubLayout, realPath: '/admin/pub-layout', icon: Megaphone },
-    { name: 'Remboursements', path: secureRoutes.remboursements, realPath: '/admin/remboursements', icon: RefreshCw },
-    { name: 'Chat Admin', path: secureRoutes.chat, realPath: '/admin', icon: ShoppingBag },
-    // Conditional item for service client admin
-    ...(isServiceAdmin ? [{ 
-      name: 'Service Client', 
-      path: secureRoutes.serviceClient, 
-      realPath: '/admin/service-client',
-      icon: MessageSquare 
-    }] : []),
-    { name: 'Paramètres', path: secureRoutes.parametres, realPath: '/admin/parametres', icon: Settings },
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Rediriger si pas admin
+  if (!user || user.role !== 'admin') {
+    return <Navigate to="/login" replace />;
+  }
+
+  const menuItems = [
+    { path: '/admin/products', icon: Package, label: 'Produits' },
+    { path: '/admin/categories', icon: FolderOpen, label: 'Catégories' },
+    { path: '/admin/flash-sales', icon: Zap, label: 'Ventes Flash' },
+    { path: '/admin/orders', icon: ShoppingCart, label: 'Commandes' },
+    { path: '/admin/users', icon: Users, label: 'Utilisateurs' },
+    { path: '/admin/messages', icon: MessageSquare, label: 'Messages' },
+    { path: '/admin/client-chat', icon: MessageSquare, label: 'Chat Client' },
+    { path: '/admin/promo-codes', icon: Ticket, label: 'Codes Promo' },
+    { path: '/admin/pub-layout', icon: LayoutIcon, label: 'Publicités' },
+    { path: '/admin/remboursements', icon: RefreshCw, label: 'Remboursements' },
+    { path: '/admin/settings', icon: Settings, label: 'Paramètres' },
   ];
 
-  // Verifier si le chemin actuel correspond à un chemin réel (pour la mise en surbrillance du menu)
-  const isActivePath = (realPath: string) => {
-    return location.pathname === realPath || location.pathname.startsWith(realPath + '/');
+  const handleLogout = () => {
+    logout();
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
-      {/* Sidebar */}
-      <div className="w-full md:w-64 bg-gray-900 text-white md:min-h-screen">
-        {/* Mobile Header */}
-        <div className="md:hidden p-4 bg-gray-900 text-white flex justify-between items-center">
-          <span className="font-bold text-lg">Admin Dashboard</span>
-          <button className="focus:outline-none">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar Desktop */}
+      <aside className="hidden md:flex md:flex-col md:w-64 bg-white border-r border-gray-200">
+        <div className="flex items-center h-16 px-6 border-b border-gray-200">
+          <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
         </div>
         
-        {/* Sidebar Content */}
-        <div className="p-4">
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold mb-1">Riziky-Boutic</h1>
-            <p className="text-gray-400 text-sm">Administration</p>
-          </div>
-          
-          <nav className="space-y-1">
-            {navItems.map((item) => (
+        <nav className="flex-1 px-4 py-6 space-y-2">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            
+            return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
-                  isActivePath(item.realPath)
-                    ? 'bg-red-800 text-white'
-                    : 'text-gray-300 hover:bg-gray-800'
+                className={`flex items-center px-3 py-2 text-sm rounded-lg transition-colors ${
+                  isActive
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                    : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <item.icon className="h-5 w-5 mr-3" />
-                {item.name}
+                <Icon className="h-5 w-5 mr-3" />
+                {item.label}
               </Link>
-            ))}
-          </nav>
-          
-          <div className="mt-auto pt-8 border-t border-gray-700 mt-8">
-            <Link to="/" className="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-800 transition-colors">
-              <LogOut className="h-5 w-5 mr-3" />
-              Quitter
-            </Link>
+            );
+          })}
+        </nav>
+
+        <div className="p-4 border-t border-gray-200">
+          <div className="flex items-center mb-3">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900">{user.nom} {user.prenom}</p>
+              <p className="text-xs text-gray-500">{user.email}</p>
+            </div>
           </div>
+          <Button 
+            onClick={handleLogout} 
+            variant="outline" 
+            className="w-full text-sm"
+          >
+            Déconnexion
+          </Button>
         </div>
-      </div>
-      
+      </aside>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setIsMobileMenuOpen(false)} />
+          <aside className="fixed left-0 top-0 bottom-0 w-64 bg-white">
+            <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
+              <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            
+            <nav className="flex-1 px-4 py-6 space-y-2">
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`flex items-center px-3 py-2 text-sm rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5 mr-3" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="p-4 border-t border-gray-200">
+              <div className="flex items-center mb-3">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">{user.nom} {user.prenom}</p>
+                  <p className="text-xs text-gray-500">{user.email}</p>
+                </div>
+              </div>
+              <Button 
+                onClick={handleLogout} 
+                variant="outline" 
+                className="w-full text-sm"
+              >
+                Déconnexion
+              </Button>
+            </div>
+          </aside>
+        </div>
+      )}
+
       {/* Main Content */}
-      <div className="flex-1 bg-gray-50">
-        <div className="p-6">
-          {children}
-        </div>
+      <div className="flex-1 flex flex-col">
+        {/* Mobile Header */}
+        <header className="md:hidden bg-white border-b border-gray-200 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <h1 className="text-lg font-semibold text-gray-900">Admin Panel</h1>
+            <div className="w-10" /> {/* Spacer for alignment */}
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="flex-1 p-6">
+          <Outlet />
+        </main>
       </div>
     </div>
   );

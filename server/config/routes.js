@@ -12,6 +12,8 @@ const reviewRoutes = require('../routes/reviews');
 const codePromoRoutes = require('../routes/code-promos');
 const pubLayoutRoutes = require('../routes/pub-layout');
 const remboursementRoutes = require('../routes/remboursements');
+const categoryRoutes = require('../routes/categories');
+const flashSalesRoutes = require('../routes/flash-sales');
 
 const setupRoutes = (app) => {
   // Routes de l'API
@@ -28,6 +30,8 @@ const setupRoutes = (app) => {
   app.use('/api/code-promos', codePromoRoutes);
   app.use('/api/pub-layout', pubLayoutRoutes);
   app.use('/api/remboursements', remboursementRoutes);
+  app.use('/api/categories', categoryRoutes);
+  app.use('/api/flash-sales', flashSalesRoutes);
 };
 
 module.exports = setupRoutes;

@@ -1,0 +1,13 @@
+
+[
+  {
+    "id": "1",
+    "name": "Perruques",
+    "createdAt": "2025-01-01T00:00:00.000Z"
+  },
+  {
+    "id": "2", 
+    "name": "Tissages",
+    "createdAt": "2025-01-01T00:00:00.000Z"
+  }
+]
