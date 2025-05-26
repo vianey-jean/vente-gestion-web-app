@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, Truck, Package, ShoppingBag, X } from 'lucide-react';
+import { Check, Truck, Package, ShoppingBag, Trash2, RefreshCw, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useStore } from '@/contexts/StoreContext';
 import { Separator } from '@/components/ui/separator';
@@ -18,21 +18,41 @@ import {
   AlertDialogTitle, 
   AlertDialogTrigger 
 } from '@/components/ui/alert-dialog';
-import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from '@/components/ui/sonner';
-import { ordersAPI } from '@/services/api';
+import { ordersAPI, remboursementsAPI, type Remboursement } from '@/services/api';
+import RefundForm from '@/components/orders/RefundForm';
+import RefundTracking from '@/components/orders/RefundTracking';
 
 const OrdersPage = () => {
   const { orders, loadingOrders, fetchOrders } = useStore();
   const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  const [selectedItems, setSelectedItems] = useState<{[orderId: string]: string[]}>({});
-  const [cancellingOrder, setCancellingOrder] = useState<string | null>(null);
+  const [processingOrder, setProcessingOrder] = useState<string | null>(null);
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [trackingDialogOpen, setTrackingDialogOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string>('');
+  const [userRemboursements, setUserRemboursements] = useState<Remboursement[]>([]);
+  const [selectedRemboursement, setSelectedRemboursement] = useState<Remboursement | null>(null);
 
   useEffect(() => {
-    // Forcer un rechargement des commandes à chaque fois
     fetchOrders();
+    fetchUserRemboursements();
     console.log("Chargement des commandes depuis la page des commandes");
   }, []);
+
+  const fetchUserRemboursements = async () => {
+    try {
+      const response = await remboursementsAPI.getUserRemboursements();
+      setUserRemboursements(response.data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des remboursements:', error);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
@@ -52,73 +72,62 @@ const OrdersPage = () => {
     }
   };
 
-  // Helper function to ensure image URL has correct format
   const getImageUrl = (imagePath: string) => {
     if (!imagePath) return '';
-    
-    // If the image already has the full URL, return it
     if (imagePath.startsWith('http')) return imagePath;
-    
-    // If it's a relative path, add the base URL
     return `${AUTH_BASE_URL}${imagePath}`;
   };
 
-  const handleItemSelection = (orderId: string, itemId: string, checked: boolean) => {
-    setSelectedItems(prev => {
-      const orderItems = prev[orderId] || [];
-      if (checked) {
-        return { ...prev, [orderId]: [...orderItems, itemId] };
-      } else {
-        return { ...prev, [orderId]: orderItems.filter(id => id !== itemId) };
-      }
-    });
-  };
-
-  const handleSelectAllItems = (orderId: string, orderItems: any[], checked: boolean) => {
-    if (checked) {
-      setSelectedItems(prev => ({ 
-        ...prev, 
-        [orderId]: orderItems.map(item => item.productId) 
-      }));
-    } else {
-      setSelectedItems(prev => ({ ...prev, [orderId]: [] }));
-    }
-  };
-
-  const handleCancelOrder = async (orderId: string) => {
+  const handleDeleteOrder = async (orderId: string) => {
     try {
-      setCancellingOrder(orderId);
-      const itemsToCancel = selectedItems[orderId] || [];
+      setProcessingOrder(orderId);
       
-      console.log('Annulation des produits:', itemsToCancel);
+      console.log('Suppression complète de la commande:', orderId);
       
-      const response = await ordersAPI.cancelOrder(orderId, itemsToCancel);
+      const response = await ordersAPI.cancelOrder(orderId, []);
       
-      if (response.data.cancelled) {
-        toast.success('Commande complètement annulée');
-      } else {
-        toast.success('Produits sélectionnés annulés avec succès. La commande a été mise à jour.');
-      }
+      toast.success('Commande supprimée avec succès');
       
-      // Recharger les commandes pour voir les changements
       await fetchOrders();
       
-      // Réinitialiser les sélections
-      setSelectedItems(prev => ({ ...prev, [orderId]: [] }));
     } catch (error) {
-      console.error('Erreur lors de l\'annulation:', error);
-      toast.error('Erreur lors de l\'annulation des produits');
+      console.error('Erreur lors de la suppression:', error);
+      toast.error('Erreur lors de la suppression de la commande');
     } finally {
-      setCancellingOrder(null);
+      setProcessingOrder(null);
     }
   };
 
-  const canCancelOrder = (order: any) => {
-    return order.status === 'confirmée' || order.status === 'en préparation';
+  const canDeleteOrder = (order: any) => {
+    return order.status === 'confirmée';
   };
 
-  const getSelectedItemsCount = (orderId: string) => {
-    return selectedItems[orderId]?.length || 0;
+  const canRequestRefund = (order: any) => {
+    return ['en préparation', 'en livraison', 'livrée'].includes(order.status);
+  };
+
+  const getOrderRemboursement = (orderId: string) => {
+    return userRemboursements.find(r => r.orderId === orderId);
+  };
+
+  const handleRefundRequest = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    setRefundDialogOpen(true);
+  };
+
+  const handleRefundSuccess = () => {
+    setRefundDialogOpen(false);
+    setSelectedOrderId('');
+    fetchUserRemboursements();
+    toast.success('Demande de remboursement envoyée avec succès');
+  };
+
+  const handleTrackRefund = (orderId: string) => {
+    const remboursement = getOrderRemboursement(orderId);
+    if (remboursement) {
+      setSelectedRemboursement(remboursement);
+      setTrackingDialogOpen(true);
+    }
   };
 
   return (
@@ -130,218 +139,197 @@ const OrdersPage = () => {
           <div className="text-center py-10">Chargement des commandes...</div>
         ) : orders.length > 0 ? (
           <div className="space-y-6">
-            {orders.map((order) => (
-              <Card key={order.id}>
-                <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                  <div>
-                    <CardTitle>Commande #{order.id.split('-')[1]}</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDate(order.createdAt)}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {order.items.length} produit{order.items.length > 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  <div className="mt-2 sm:mt-0">
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(order.status)}`}>
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                    </span>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col gap-4 mb-4">
-                    {order.items.slice(0, 3).map((item) => (
-                      <div key={item.productId} className="flex items-center">
-                        <div className="w-12 h-12 rounded overflow-hidden">
-                          {item.image ? (
-                            <img
-                              src={getImageUrl(item.image)}
-                              alt={item.name}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.src = `${AUTH_BASE_URL}/uploads/placeholder.jpg`;
-                              }}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                              <ShoppingBag className="h-6 w-6 text-gray-500" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="ml-3">
-                          <p className="text-sm font-medium">{item.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {item.quantity} × {item.price.toFixed(2)} €
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-
-                    {order.items.length > 3 && (
-                      <div className="flex items-center">
-                        <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center">
-                          <span className="text-sm font-medium">+{order.items.length - 3}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Order Status Steps */}
-                  <div className="bg-white border rounded-lg p-4 mb-4">
-                    <div className="flex justify-between">
-                      <div className="flex flex-col items-center relative">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-brand-blue text-white z-10">
-                          <Check className="h-4 w-4" />
-                        </div>
-                        <span className="text-xs text-center mt-2 max-w-[70px]">Confirmée</span>
-                      </div>
-
-                      <div className="flex flex-col items-center relative">
-                        <div className={`absolute h-1 top-4 transform -translate-x-1/2 -left-1/2 w-full ${
-                          order.status !== 'confirmée' ? 'bg-brand-blue' : 'bg-gray-200'
-                        }`} />
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 ${
-                          order.status !== 'confirmée' ? 'bg-brand-blue text-white' : 'bg-gray-200 text-gray-400'
-                        }`}>
-                          <Package className="h-4 w-4" />
-                        </div>
-                        <span className="text-xs text-center mt-2 max-w-[70px]">En préparation</span>
-                      </div>
-
-                      <div className="flex flex-col items-center relative">
-                        <div className={`absolute h-1 top-4 transform -translate-x-1/2 -left-1/2 w-full ${
-                          order.status === 'en livraison' || order.status === 'livrée' ? 'bg-brand-blue' : 'bg-gray-200'
-                        }`} />
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 ${
-                          order.status === 'en livraison' || order.status === 'livrée' ? 'bg-brand-blue text-white' : 'bg-gray-200 text-gray-400'
-                        }`}>
-                          <Truck className="h-4 w-4" />
-                        </div>
-                        <span className="text-xs text-center mt-2 max-w-[70px]">En livraison</span>
-                      </div>
-
-                      <div className="flex flex-col items-center relative">
-                        <div className={`absolute h-1 top-4 transform -translate-x-1/2 -left-1/2 w-full ${
-                          order.status === 'livrée' ? 'bg-brand-blue' : 'bg-gray-200'
-                        }`} />
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 ${
-                          order.status === 'livrée' ? 'bg-brand-blue text-white' : 'bg-gray-200 text-gray-400'
-                        }`}>
-                          <ShoppingBag className="h-4 w-4" />
-                        </div>
-                        <span className="text-xs text-center mt-2 max-w-[70px]">Livrée</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator className="my-4" />
-
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            {orders.map((order) => {
+              const remboursement = getOrderRemboursement(order.id);
+              
+              return (
+                <Card key={order.id}>
+                  <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
                     <div>
-                      <p className="text-sm font-medium">Total</p>
-                      <p className="text-xl font-bold">{order.totalAmount.toFixed(2)} €</p>
+                      <CardTitle>Commande #{order.id.split('-')[1]}</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {formatDate(order.createdAt)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {order.items.length} produit{order.items.length > 1 ? 's' : ''}
+                      </p>
                     </div>
-                    
-                    <div className="flex gap-3">
-                      {canCancelOrder(order) && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button 
-                              variant="destructive" 
-                              size="sm"
-                              disabled={cancellingOrder === order.id}
-                            >
-                              <X className="h-4 w-4 mr-2" />
-                              {order.items.length > 1 ? 'Annuler des produits' : 'Annuler la commande'}
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="max-w-md">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                {order.items.length > 1 ? 'Annuler des produits' : 'Annuler la commande'}
-                              </AlertDialogTitle>
-                              <AlertDialogDescription>
-                                {order.items.length > 1 ? (
-                                  <div className="space-y-4">
-                                    <p className="text-sm">
-                                      Sélectionnez les produits à annuler. Les produits non sélectionnés resteront dans votre commande.
-                                    </p>
-                                    <div className="space-y-2">
-                                      <div className="flex items-center space-x-2">
-                                        <Checkbox
-                                          id={`select-all-${order.id}`}
-                                          checked={getSelectedItemsCount(order.id) === order.items.length}
-                                          onCheckedChange={(checked) => 
-                                            handleSelectAllItems(order.id, order.items, checked as boolean)
-                                          }
-                                        />
-                                        <label htmlFor={`select-all-${order.id}`} className="text-sm font-medium">
-                                          Tout sélectionner
-                                        </label>
-                                      </div>
-                                      {order.items.map((item) => (
-                                        <div key={item.productId} className="flex items-center space-x-2">
-                                          <Checkbox
-                                            id={`item-${item.productId}`}
-                                            checked={selectedItems[order.id]?.includes(item.productId) || false}
-                                            onCheckedChange={(checked) => 
-                                              handleItemSelection(order.id, item.productId, checked as boolean)
-                                            }
-                                          />
-                                          <label htmlFor={`item-${item.productId}`} className="text-sm">
-                                            {item.name} (x{item.quantity}) - {item.price.toFixed(2)}€
-                                          </label>
-                                        </div>
-                                      ))}
-                                    </div>
-                                    {getSelectedItemsCount(order.id) > 0 && (
-                                      <p className="text-sm text-blue-600">
-                                        {getSelectedItemsCount(order.id)} produit{getSelectedItemsCount(order.id) > 1 ? 's' : ''} sélectionné{getSelectedItemsCount(order.id) > 1 ? 's' : ''}
-                                      </p>
-                                    )}
-                                  </div>
-                                ) : (
-                                  "Êtes-vous sûr de vouloir annuler cette commande ? Cette action est irréversible."
-                                )}
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Annuler</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => {
-                                  if (order.items.length === 1) {
-                                    setSelectedItems(prev => ({ 
-                                      ...prev, 
-                                      [order.id]: [order.items[0].productId] 
-                                    }));
-                                  }
-                                  handleCancelOrder(order.id);
-                                }}
-                                disabled={order.items.length > 1 && getSelectedItemsCount(order.id) === 0}
-                                className="bg-red-600 hover:bg-red-700"
-                              >
-                                {cancellingOrder === order.id ? 'Annulation...' : 
-                                 order.items.length > 1 ? 
-                                   `Annuler ${getSelectedItemsCount(order.id)} produit${getSelectedItemsCount(order.id) > 1 ? 's' : ''}` : 
-                                   'Confirmer l\'annulation'
-                                }
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                    <div className="mt-2 sm:mt-0 flex flex-col items-end gap-2">
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(order.status)}`}>
+                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      </span>
+                      {remboursement && (
+                        <span className="inline-block px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                          Remboursement: {remboursement.status}
+                        </span>
                       )}
-                      
-                      <Button asChild>
-                        <Link to={`/commande/${order.id}`}>
-                          Voir les détails
-                        </Link>
-                      </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col gap-4 mb-4">
+                      {order.items.slice(0, 3).map((item) => (
+                        <div key={item.productId} className="flex items-center">
+                          <div className="w-12 h-12 rounded overflow-hidden">
+                            {item.image ? (
+                              <img
+                                src={getImageUrl(item.image)}
+                                alt={item.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = `${AUTH_BASE_URL}/uploads/placeholder.jpg`;
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                <ShoppingBag className="h-6 w-6 text-gray-500" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm font-medium">{item.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.quantity} × {item.price.toFixed(2)} €
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+
+                      {order.items.length > 3 && (
+                        <div className="flex items-center">
+                          <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center">
+                            <span className="text-sm font-medium">+{order.items.length - 3}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Order Status Steps */}
+                    <div className="bg-white border rounded-lg p-4 mb-4">
+                      <div className="flex justify-between">
+                        <div className="flex flex-col items-center relative">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-brand-blue text-white z-10">
+                            <Check className="h-4 w-4" />
+                          </div>
+                          <span className="text-xs text-center mt-2 max-w-[70px]">Confirmée</span>
+                        </div>
+
+                        <div className="flex flex-col items-center relative">
+                          <div className={`absolute h-1 top-4 transform -translate-x-1/2 -left-1/2 w-full ${
+                            order.status !== 'confirmée' ? 'bg-brand-blue' : 'bg-gray-200'
+                          }`} />
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 ${
+                            order.status !== 'confirmée' ? 'bg-brand-blue text-white' : 'bg-gray-200 text-gray-400'
+                          }`}>
+                            <Package className="h-4 w-4" />
+                          </div>
+                          <span className="text-xs text-center mt-2 max-w-[70px]">En préparation</span>
+                        </div>
+
+                        <div className="flex flex-col items-center relative">
+                          <div className={`absolute h-1 top-4 transform -translate-x-1/2 -left-1/2 w-full ${
+                            order.status === 'en livraison' || order.status === 'livrée' ? 'bg-brand-blue' : 'bg-gray-200'
+                          }`} />
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 ${
+                            order.status === 'en livraison' || order.status === 'livrée' ? 'bg-brand-blue text-white' : 'bg-gray-200 text-gray-400'
+                          }`}>
+                            <Truck className="h-4 w-4" />
+                          </div>
+                          <span className="text-xs text-center mt-2 max-w-[70px]">En livraison</span>
+                        </div>
+
+                        <div className="flex flex-col items-center relative">
+                          <div className={`absolute h-1 top-4 transform -translate-x-1/2 -left-1/2 w-full ${
+                            order.status === 'livrée' ? 'bg-brand-blue' : 'bg-gray-200'
+                          }`} />
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 ${
+                            order.status === 'livrée' ? 'bg-brand-blue text-white' : 'bg-gray-200 text-gray-400'
+                          }`}>
+                            <ShoppingBag className="h-4 w-4" />
+                          </div>
+                          <span className="text-xs text-center mt-2 max-w-[70px]">Livrée</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator className="my-4" />
+
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        <p className="text-sm font-medium">Total</p>
+                        <p className="text-xl font-bold">{order.totalAmount.toFixed(2)} €</p>
+                      </div>
+                      
+                      <div className="flex gap-3 flex-wrap">
+                        {/* Bouton Supprimer - visible seulement si confirmée */}
+                        {canDeleteOrder(order) && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="destructive" 
+                                size="sm"
+                                disabled={processingOrder === order.id}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Supprimer
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="max-w-md">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Supprimer la commande</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Êtes-vous sûr de vouloir supprimer complètement cette commande ? 
+                                  Tous les produits seront remis en stock et la commande sera définitivement supprimée.
+                                  Cette action est irréversible.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteOrder(order.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  {processingOrder === order.id ? 'Suppression...' : 'Confirmer la suppression'}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+
+                        {/* Bouton Remboursement ou Suivi remboursement */}
+                        {canRequestRefund(order) && !remboursement && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleRefundRequest(order.id)}
+                          >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Remboursement
+                          </Button>
+                        )}
+
+                        {remboursement && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleTrackRefund(order.id)}
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Suivre remboursement
+                          </Button>
+                        )}
+                        
+                        <Button asChild>
+                          <Link to={`/commande/${order.id}`}>
+                            Voir les détails
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-12 border rounded-lg bg-gray-50">
@@ -355,6 +343,37 @@ const OrdersPage = () => {
             </Button>
           </div>
         )}
+
+        {/* Dialog pour demande de remboursement */}
+        <Dialog open={refundDialogOpen} onOpenChange={setRefundDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Demande de remboursement</DialogTitle>
+            </DialogHeader>
+            {selectedOrderId && (
+              <RefundForm
+                orderId={selectedOrderId}
+                onSuccess={handleRefundSuccess}
+                onCancel={() => setRefundDialogOpen(false)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog pour suivi de remboursement */}
+        <Dialog open={trackingDialogOpen} onOpenChange={setTrackingDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Suivi de remboursement</DialogTitle>
+            </DialogHeader>
+            {selectedRemboursement && (
+              <RefundTracking
+                remboursement={selectedRemboursement}
+                order={orders.find(o => o.id === selectedRemboursement.orderId)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

@@ -281,7 +281,7 @@ router.post('/:id/cancel', isAuthenticated, async (req, res) => {
     );
     
     if (remainingItems.length === 0) {
-      // Supprimer complètement la commande si tous les items sont annulés
+      // Supprimer complètement la commande seulement si TOUS les items sont annulés
       orders.splice(orderIndex, 1);
       commandes.splice(commandeIndex, 1);
       
@@ -289,10 +289,10 @@ router.post('/:id/cancel', isAuthenticated, async (req, res) => {
       writeJSON(ordersPath, orders);
       writeJSON(commandesPath, commandes);
       
-      console.log(`Commande ${orderId} complètement annulée`);
+      console.log(`Commande ${orderId} complètement annulée - tous les produits ont été supprimés`);
       res.json({ message: 'Commande complètement annulée', cancelled: true });
     } else {
-      // Mettre à jour la commande avec les items restants
+      // Mettre à jour la commande avec les items restants - NE JAMAIS SUPPRIMER LA COMMANDE
       const newOriginalAmount = remainingItems.reduce((sum, item) => sum + (item.originalPrice || item.price) * item.quantity, 0);
       const newTotalAmount = remainingItems.reduce((sum, item) => sum + item.subtotal, 0);
       
@@ -339,11 +339,11 @@ router.post('/:id/cancel', isAuthenticated, async (req, res) => {
       writeJSON(ordersPath, orders);
       writeJSON(commandesPath, commandes);
       
-      console.log(`Commande ${orderId} - Items annulés:`, itemsToRemove);
-      console.log(`Items restants:`, remainingItems.length);
+      console.log(`Commande ${orderId} - Produits annulés:`, itemsToRemove);
+      console.log(`Produits restants dans la commande:`, remainingItems.length);
       
       res.json({ 
-        message: 'Produits sélectionnés annulés avec succès', 
+        message: 'Produits sélectionnés annulés avec succès. La commande a été mise à jour.', 
         cancelled: false,
         updatedOrder: updatedOrder
       });

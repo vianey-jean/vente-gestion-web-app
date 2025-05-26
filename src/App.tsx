@@ -39,6 +39,7 @@ const ProductDetail = lazy(() => import('./pages/ProductDetail'));
 const CategoryPage = lazy(() => import('./pages/CategoryPage'));
 const DeliveryPage = lazy(() => import('./pages/DeliveryPage'));
 const ReturnsPage = lazy(() => import('./pages/ReturnsPage'));
+const AllProductsPage = lazy(() => import('./pages/AllProductsPage'));
 const CustomerServicePage = lazy(() => import('./pages/CustomerServicePage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
 const BlogPage = lazy(() => import('./pages/BlogPage'));
@@ -65,10 +66,9 @@ const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
 const AdminChatPage = lazy(() => import('./pages/admin/AdminChatPage'));
 const AdminOrdersPage = lazy(() => import('./pages/admin/AdminOrdersPage'));
 const AdminClientChatPage = lazy(() => import('./pages/admin/AdminClientChatPage'));
-
 const AdminCodePromosPage = lazy(() => import('./pages/admin/AdminCodePromosPage'));
-
 const AdminPubLayoutPage = lazy(() => import('./pages/admin/AdminPubLayoutPage'));
+const AdminRemboursementsPage = lazy(() => import('./pages/admin/AdminRemboursementsPage'));
 
 // Création d'un nouveau QueryClient avec configuration optimisée
 const queryClient = new QueryClient({
@@ -119,6 +119,11 @@ function AppRoutes() {
         <Route path="/livraison" element={<DeliveryPage />} />
         <Route path="/mentions-legales" element={<ReturnsPage />} />
         <Route path="/retours" element={<ReturnsPage />} />
+        
+        {/* Route sécurisée pour tous les produits */}
+        <Route path={secureRoutes.get('/tous-les-produits')?.substring(1)} element={<AllProductsPage />} />
+        <Route path="/tous-les-produits" element={<Navigate to={secureRoutes.get('/tous-les-produits') || '/'} replace />} />
+        
         <Route path="/service-client" element={<CustomerServicePage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/blog" element={<BlogPage />} />
@@ -262,6 +267,16 @@ function AppRoutes() {
           </SecureRoute>
         } />
         <Route path="/admin/pub-layout" element={<Navigate to={secureRoutes.get('/admin/pub-layout') || '/'} replace />} />
+        
+        {/* Ajout de la route sécurisée pour la page remboursements */}
+        <Route path={secureRoutes.get('/admin/remboursements')?.substring(1)} element={
+          <SecureRoute>
+            <ProtectedRoute requireAdmin>
+              <AdminRemboursementsPage />
+            </ProtectedRoute>
+          </SecureRoute>
+        } />
+        <Route path="/admin/remboursements" element={<Navigate to={secureRoutes.get('/admin/remboursements') || '/'} replace />} />
         
         {/* Route NotFound spécifique */}
         <Route path="/page/notfound" element={<NotFound />} />
