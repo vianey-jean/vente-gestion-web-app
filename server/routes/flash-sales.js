@@ -2,7 +2,8 @@
 const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');
-const { authenticateToken, requireAdmin } = require('../middlewares/auth');
+const { authenticateToken } = require('../config/auth');
+const { isAuthenticated, isAdmin } = require('../middlewares/auth');
 
 const router = express.Router();
 const flashSalesFilePath = path.join(__dirname, '../data/flash-sales.json');
@@ -56,7 +57,7 @@ router.get('/active', async (req, res) => {
 });
 
 // POST /api/flash-sales - Créer une nouvelle flash sale
-router.post('/', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { title, discount, startTime, endTime, productIds } = req.body;
     
@@ -89,7 +90,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // PUT /api/flash-sales/:id - Modifier une flash sale
-router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/:id', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { title, discount, startTime, endTime, productIds, isActive } = req.body;
@@ -121,7 +122,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // DELETE /api/flash-sales/:id - Supprimer une flash sale
-router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/:id', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const flashSales = await readFlashSales();

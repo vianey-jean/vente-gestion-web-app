@@ -2,7 +2,8 @@
 const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');
-const { authenticateToken, requireAdmin } = require('../middlewares/auth');
+const { authenticateToken } = require('../config/auth');
+const { isAuthenticated, isAdmin } = require('../middlewares/auth');
 
 const router = express.Router();
 const categoriesFilePath = path.join(__dirname, '../data/categories.json');
@@ -37,7 +38,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/categories - Créer une nouvelle catégorie
-router.post('/', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { name, description } = req.body;
     
@@ -72,7 +73,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // PUT /api/categories/:id - Modifier une catégorie
-router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/:id', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description } = req.body;
@@ -110,7 +111,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // DELETE /api/categories/:id - Supprimer une catégorie
-router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/:id', isAuthenticated, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const categories = await readCategories();
