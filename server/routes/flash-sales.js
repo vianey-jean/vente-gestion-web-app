@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const fs = require('fs');
@@ -17,6 +16,7 @@ const apiLimiter = rateLimit({
 
 const flashSalesFilePath = path.join(__dirname, '../data/flash-sales.json');
 const productsFilePath = path.join(__dirname, '../data/products.json');
+const banniereFlashSaleFilePath = path.join(__dirname, '../data/banniereflashsale.json');
 
 const sanitizeInput = (input) => {
   if (typeof input === 'string') {
@@ -33,7 +33,94 @@ const checkFileExists = (req, res, next) => {
   if (!fs.existsSync(flashSalesFilePath)) {
     fs.writeFileSync(flashSalesFilePath, JSON.stringify([]));
   }
+  if (!fs.existsSync(banniereFlashSaleFilePath)) {
+    fs.writeFileSync(banniereFlashSaleFilePath, JSON.stringify([]));
+  }
   next();
+};
+
+// Fonction pour générer le fichier banniereflashsale.json
+const generateBanniereFlashSale = () => {
+  try {
+    console.log('Génération du fichier banniereflashsale.json...');
+    
+    // Lire les ventes flash
+    if (!fs.existsSync(flashSalesFilePath)) {
+      console.log('Aucun fichier flash-sales.json trouvé');
+      return;
+    }
+    
+    const flashSales = JSON.parse(fs.readFileSync(flashSalesFilePath));
+    const now = new Date();
+    
+    // Trouver la vente flash active
+    const activeFlashSale = flashSales.find(sale => 
+      sale.isActive && 
+      new Date(sale.startDate) <= now && 
+      new Date(sale.endDate) > now
+    );
+    
+    if (!activeFlashSale) {
+      console.log('Aucune vente flash active trouvée');
+      fs.writeFileSync(banniereFlashSaleFilePath, JSON.stringify([]));
+      return;
+    }
+    
+    console.log('Vente flash active trouvée:', activeFlashSale.title);
+    
+    // Lire les produits
+    if (!fs.existsSync(productsFilePath)) {
+      console.log('Aucun fichier products.json trouvé');
+      return;
+    }
+    
+    const allProducts = JSON.parse(fs.readFileSync(productsFilePath));
+    console.log('Nombre de produits dans la base:', allProducts.length);
+    
+    // Traiter les productIds (enlever les guillemets si nécessaire)
+    const productIds = activeFlashSale.productIds.map(id => id.toString().trim());
+    console.log('IDs des produits à traiter:', productIds);
+    
+    // Trouver les produits correspondants et créer les données de bannière
+    const banniereProducts = [];
+    
+    productIds.forEach(targetId => {
+      console.log(`Recherche du produit avec ID: ${targetId}`);
+      
+      const foundProduct = allProducts.find(product => 
+        product.id.toString().trim() === targetId
+      );
+      
+      if (foundProduct) {
+        console.log(`Produit trouvé: ${foundProduct.name}`);
+        
+        // Créer l'objet pour banniereflashsale.json
+        const banniereProduct = {
+          ...foundProduct,
+          flashSaleDiscount: activeFlashSale.discount,
+          flashSaleStartDate: activeFlashSale.startDate,
+          flashSaleEndDate: activeFlashSale.endDate,
+          flashSaleTitle: activeFlashSale.title,
+          flashSaleDescription: activeFlashSale.description,
+          originalFlashPrice: foundProduct.price,
+          flashSalePrice: +(foundProduct.price * (1 - activeFlashSale.discount / 100)).toFixed(2)
+        };
+        
+        banniereProducts.push(banniereProduct);
+      } else {
+        console.log(`Aucun produit trouvé pour l'ID: ${targetId}`);
+      }
+    });
+    
+    console.log(`${banniereProducts.length} produits ajoutés au fichier banniere`);
+    
+    // Sauvegarder dans banniereflashsale.json
+    fs.writeFileSync(banniereFlashSaleFilePath, JSON.stringify(banniereProducts, null, 2));
+    console.log('Fichier banniereflashsale.json généré avec succès');
+    
+  } catch (error) {
+    console.error('Erreur lors de la génération du fichier banniereflashsale.json:', error);
+  }
 };
 
 // Fonction pour nettoyer les ventes flash expirées
@@ -52,14 +139,34 @@ const cleanExpiredFlashSales = () => {
     if (activeFlashSales.length !== flashSales.length) {
       fs.writeFileSync(flashSalesFilePath, JSON.stringify(activeFlashSales, null, 2));
       console.log(`${flashSales.length - activeFlashSales.length} ventes flash expirées supprimées`);
+      
+      // Régénérer le fichier bannière après nettoyage
+      generateBanniereFlashSale();
     }
   } catch (error) {
     console.error('Erreur lors du nettoyage des ventes flash expirées:', error);
   }
 };
 
-// Nettoyer les ventes flash expirées toutes les heures
-setInterval(cleanExpiredFlashSales, 60 * 60 * 1000);
+// Nettoyer les ventes flash expirées toutes les heures et régénérer la bannière
+setInterval(() => {
+  cleanExpiredFlashSales();
+  generateBanniereFlashSale();
+}, 60 * 60 * 1000);
+
+// Obtenir les produits de la bannière flash sale
+router.get('/banniere-products', apiLimiter, checkFileExists, (req, res) => {
+  try {
+    // Régénérer avant de servir
+    generateBanniereFlashSale();
+    
+    const banniereProducts = JSON.parse(fs.readFileSync(banniereFlashSaleFilePath));
+    res.json(banniereProducts);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des produits bannière:', error);
+    res.status(500).json({ message: 'Erreur lors de la récupération des produits de la bannière' });
+  }
+});
 
 // Obtenir la vente flash active
 router.get('/active', apiLimiter, checkFileExists, (req, res) => {
@@ -262,6 +369,9 @@ router.post('/:id/activate', isAuthenticated, isAdmin, checkFileExists, (req, re
     flashSales[index].isActive = true;
     fs.writeFileSync(flashSalesFilePath, JSON.stringify(flashSales, null, 2));
     
+    // Régénérer le fichier bannière après activation
+    generateBanniereFlashSale();
+    
     res.json(flashSales[index]);
   } catch (error) {
     res.status(500).json({ message: 'Erreur lors de l\'activation de la vente flash' });
@@ -281,6 +391,9 @@ router.post('/:id/deactivate', isAuthenticated, isAdmin, checkFileExists, (req, 
     
     flashSales[index].isActive = false;
     fs.writeFileSync(flashSalesFilePath, JSON.stringify(flashSales, null, 2));
+    
+    // Régénérer le fichier bannière après désactivation
+    generateBanniereFlashSale();
     
     res.json(flashSales[index]);
   } catch (error) {

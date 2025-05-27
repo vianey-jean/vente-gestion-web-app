@@ -5,6 +5,7 @@ import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/products/ProductCard';
 import { Flame, Clock, Timer } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { flashSaleAPI } from '@/services/flashSaleAPI';
 
 interface TimeLeft {
   days: number;
@@ -39,6 +40,13 @@ interface Product {
   promotionEnd?: string | null;
   stock?: number;
   dateAjout?: string;
+  flashSaleDiscount?: number;
+  flashSaleStartDate?: string;
+  flashSaleEndDate?: string;
+  flashSaleTitle?: string;
+  flashSaleDescription?: string;
+  originalFlashPrice?: number;
+  flashSalePrice?: number;
 }
 
 const FlashSalePage: React.FC = () => {
@@ -49,110 +57,47 @@ const FlashSalePage: React.FC = () => {
   const [flashSaleProducts, setFlashSaleProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Récupérer les données de vente flash et produits
+  // Récupérer les données de vente flash et produits depuis banniereflashsale.json
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
         console.log('🔍 Début du chargement des données pour Flash Sale ID:', id);
 
-        // Étape 1: Récupérer les ventes flash
-        const flashSaleResponse = await fetch('/server/data/flash-sales.json');
-        if (!flashSaleResponse.ok) {
-          throw new Error('Impossible de charger les ventes flash');
-        }
-        const flashSales: FlashSale[] = await flashSaleResponse.json();
-        console.log('📦 Toutes les ventes flash récupérées:', flashSales);
+        // Récupérer les produits depuis banniereflashsale.json
+        const banniereResponse = await flashSaleAPI.getBanniereProducts();
+        const banniereProducts = banniereResponse.data;
+        
+        console.log('📦 Produits de bannière récupérés:', banniereProducts);
 
-        // Étape 2: Trouver la vente flash par ID
-        const foundFlashSale = flashSales.find(sale => sale.id === id);
-        console.log('🎯 Vente flash trouvée pour ID', id, ':', foundFlashSale);
-
-        if (!foundFlashSale) {
-          console.error('❌ Aucune vente flash trouvée pour l\'ID:', id);
+        if (banniereProducts.length === 0) {
+          console.log('❌ Aucun produit dans banniereflashsale.json');
           setFlashSale(null);
+          setFlashSaleProducts([]);
           setIsLoading(false);
           return;
         }
 
-        setFlashSale(foundFlashSale);
+        // Utiliser les informations de vente flash du premier produit
+        const firstProduct = banniereProducts[0];
+        const flashSaleInfo: FlashSale = {
+          id: id || '',
+          title: firstProduct.flashSaleTitle || 'Vente Flash',
+          description: firstProduct.flashSaleDescription || '',
+          discount: firstProduct.flashSaleDiscount || 0,
+          startDate: firstProduct.flashSaleStartDate || '',
+          endDate: firstProduct.flashSaleEndDate || '',
+          isActive: true,
+          productIds: banniereProducts.map(p => p.id),
+          createdAt: new Date().toISOString()
+        };
 
-        // Étape 3: Extraire les IDs des produits (enlever les guillemets et nettoyer)
-        const productIds = foundFlashSale.productIds.map(productId => {
-          // Enlever les guillemets et espaces si présents
-          const cleanId = productId.toString().replace(/['"]/g, '').trim();
-          return cleanId;
-        });
-        
-        console.log('🔢 IDs des produits nettoyés:', productIds);
-        console.log('📊 Nombre d\'IDs à rechercher:', productIds.length);
+        console.log('🎯 Informations de vente flash:', flashSaleInfo);
+        setFlashSale(flashSaleInfo);
 
-        // Étape 4: Récupérer tous les produits
-        const productsResponse = await fetch('/server/data/products.json');
-        if (!productsResponse.ok) {
-          throw new Error('Impossible de charger les produits');
-        }
-        const allProducts: Product[] = await productsResponse.json();
-        console.log('📚 Tous les produits récupérés:', allProducts);
-        console.log('📊 Nombre total de produits disponibles:', allProducts.length);
-
-        // Étape 5: Filtrer et récupérer les produits correspondants
-        const matchingProducts: Product[] = [];
-        
-        productIds.forEach(targetId => {
-          console.log(`🔍 Recherche du produit avec ID: "${targetId}"`);
-          
-          const foundProduct = allProducts.find(product => {
-            const productIdClean = product.id.toString().trim();
-            const isMatch = productIdClean === targetId;
-            console.log(`   Comparaison: "${productIdClean}" === "${targetId}" -> ${isMatch}`);
-            return isMatch;
-          });
-          
-          if (foundProduct) {
-            console.log(`✅ Produit trouvé:`, {
-              id: foundProduct.id,
-              name: foundProduct.name,
-              price: foundProduct.price,
-              category: foundProduct.category,
-              image: foundProduct.image
-            });
-            matchingProducts.push(foundProduct);
-          } else {
-            console.log(`❌ Aucun produit trouvé pour l'ID: "${targetId}"`);
-          }
-        });
-
-        console.log('🎯 Produits correspondants trouvés:', matchingProducts);
-        console.log('📊 Nombre de produits trouvés:', matchingProducts.length);
-
-        // Étape 6: Appliquer la réduction et préparer les données finales
-        const discountPercentage = foundFlashSale.discount;
-        console.log(`💰 Réduction à appliquer: ${discountPercentage}%`);
-
-        const productsWithDiscount = matchingProducts.map(product => {
-          const originalPrice = product.price;
-          const discountAmount = (originalPrice * discountPercentage) / 100;
-          const discountedPrice = +(originalPrice - discountAmount).toFixed(2);
-          
-          console.log(`💸 Calcul de réduction pour "${product.name}":`, {
-            prixOriginal: originalPrice,
-            reduction: `${discountPercentage}%`,
-            montantReduction: discountAmount,
-            prixReduit: discountedPrice
-          });
-          
-          return {
-            ...product,
-            originalPrice: originalPrice,
-            price: discountedPrice,
-            promotion: discountPercentage,
-            promotionEnd: foundFlashSale.endDate,
-          };
-        });
-
-        console.log('🎊 Produits finaux avec réductions appliquées:', productsWithDiscount);
-        setFlashSaleProducts(productsWithDiscount);
+        // Utiliser directement les produits de la bannière
+        console.log('🎊 Produits finaux:', banniereProducts);
+        setFlashSaleProducts(banniereProducts);
 
       } catch (error) {
         console.error('💥 Erreur lors du chargement des données:', error);
@@ -308,9 +253,6 @@ const FlashSalePage: React.FC = () => {
               <Flame className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun produit disponible</h3>
               <p className="text-gray-600">Les produits de cette vente flash ne sont plus disponibles.</p>
-              <p className="text-sm text-gray-500 mt-2">
-                IDs recherchés: {flashSale.productIds.join(', ')}
-              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -328,7 +270,7 @@ const FlashSalePage: React.FC = () => {
           )}
         </div>
 
-        {/* Informations de debug détaillées */}
+        {/* Informations de debug */}
         <div className="bg-blue-50 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-blue-900 mb-3">Informations sur la vente flash</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
@@ -346,24 +288,9 @@ const FlashSalePage: React.FC = () => {
             </div>
           </div>
           
-          {/* Informations de debug détaillées */}
           <div className="mt-4 p-4 bg-blue-100 rounded">
-            <p className="font-medium text-blue-900 mb-2">Informations de debug:</p>
-            <p className="text-xs text-blue-700 mb-1">ID de la vente flash: {flashSale.id}</p>
-            <p className="text-xs text-blue-700 mb-1">IDs des produits dans flash-sale: {flashSale.productIds.join(', ')}</p>
-            <p className="text-xs text-blue-700 mb-1">Nombre de produits attendus: {flashSale.productIds.length}</p>
-            <p className="text-xs text-blue-700 mb-1">Nombre de produits trouvés: {flashSaleProducts.length}</p>
-            
-            {flashSaleProducts.length > 0 && (
-              <div className="mt-2">
-                <p className="text-xs text-blue-700 font-medium">Produits récupérés:</p>
-                {flashSaleProducts.map((product, index) => (
-                  <p key={product.id} className="text-xs text-blue-600 ml-2">
-                    {index + 1}. {product.name} - Prix original: {product.originalPrice}€ - Prix réduit: {product.price}€
-                  </p>
-                ))}
-              </div>
-            )}
+            <p className="font-medium text-blue-900 mb-2">Source des données:</p>
+            <p className="text-xs text-blue-700">Données récupérées depuis banniereflashsale.json</p>
           </div>
         </div>
       </div>
