@@ -8,6 +8,7 @@ export const flashSaleAPI = {
   getAll: () => API.get<FlashSale[]>('/flash-sales'),
   getById: (id: string) => API.get<FlashSale>(`/flash-sales/${id}`),
   getProducts: (id: string) => API.get<Product[]>(`/flash-sales/${id}/products`),
+  getBanniereProducts: () => API.get<Product[]>('/flash-sales/banniere-products'),
   create: (data: FlashSaleFormData) => API.post<FlashSale>('/flash-sales', data),
   update: (id: string, data: Partial<FlashSaleFormData>) => API.put<FlashSale>(`/flash-sales/${id}`, data),
   delete: (id: string) => API.delete(`/flash-sales/${id}`),
