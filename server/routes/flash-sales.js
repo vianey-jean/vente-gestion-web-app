@@ -1,144 +1,290 @@
 
 const express = require('express');
-const fs = require('fs').promises;
-const path = require('path');
-const { authenticateToken } = require('../config/auth');
-const { isAuthenticated, isAdmin } = require('../middlewares/auth');
-
 const router = express.Router();
-const flashSalesFilePath = path.join(__dirname, '../data/flash-sales.json');
+const fs = require('fs');
+const path = require('path');
+const { isAuthenticated, isAdmin } = require('../middlewares/auth');
+const sanitizeHtml = require('sanitize-html');
+const rateLimit = require('express-rate-limit');
 
-// Fonction utilitaire pour lire les flash sales
-const readFlashSales = async () => {
-  try {
-    const data = await fs.readFile(flashSalesFilePath, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      return [];
-    }
-    throw error;
-  }
-};
-
-// Fonction utilitaire pour écrire les flash sales
-const writeFlashSales = async (flashSales) => {
-  await fs.writeFile(flashSalesFilePath, JSON.stringify(flashSales, null, 2));
-};
-
-// GET /api/flash-sales - Récupérer toutes les flash sales
-router.get('/', async (req, res) => {
-  try {
-    const flashSales = await readFlashSales();
-    res.json(flashSales);
-  } catch (error) {
-    console.error('Erreur lors de la récupération des flash sales:', error);
-    res.status(500).json({ message: 'Erreur serveur' });
-  }
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { message: 'Trop de requêtes, veuillez réessayer plus tard' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
-// GET /api/flash-sales/active - Récupérer la flash sale active
-router.get('/active', async (req, res) => {
+const flashSalesFilePath = path.join(__dirname, '../data/flash-sales.json');
+const productsFilePath = path.join(__dirname, '../data/products.json');
+
+const sanitizeInput = (input) => {
+  if (typeof input === 'string') {
+    return sanitizeHtml(input, {
+      allowedTags: [], 
+      allowedAttributes: {},
+      disallowedTagsMode: 'recursiveEscape'
+    });
+  }
+  return input;
+};
+
+const checkFileExists = (req, res, next) => {
+  if (!fs.existsSync(flashSalesFilePath)) {
+    fs.writeFileSync(flashSalesFilePath, JSON.stringify([]));
+  }
+  next();
+};
+
+// Fonction pour nettoyer les ventes flash expirées
+const cleanExpiredFlashSales = () => {
   try {
-    const flashSales = await readFlashSales();
+    if (!fs.existsSync(flashSalesFilePath)) return;
+    
+    const flashSales = JSON.parse(fs.readFileSync(flashSalesFilePath));
+    const now = new Date();
+    
+    const activeFlashSales = flashSales.filter(sale => {
+      const endDate = new Date(sale.endDate);
+      return endDate > now;
+    });
+    
+    if (activeFlashSales.length !== flashSales.length) {
+      fs.writeFileSync(flashSalesFilePath, JSON.stringify(activeFlashSales, null, 2));
+      console.log(`${flashSales.length - activeFlashSales.length} ventes flash expirées supprimées`);
+    }
+  } catch (error) {
+    console.error('Erreur lors du nettoyage des ventes flash expirées:', error);
+  }
+};
+
+// Nettoyer les ventes flash expirées toutes les heures
+setInterval(cleanExpiredFlashSales, 60 * 60 * 1000);
+
+// Obtenir la vente flash active
+router.get('/active', apiLimiter, checkFileExists, (req, res) => {
+  try {
+    cleanExpiredFlashSales(); // Nettoyer avant de récupérer
+    
+    const flashSales = JSON.parse(fs.readFileSync(flashSalesFilePath));
     const now = new Date();
     
     const activeFlashSale = flashSales.find(sale => 
       sale.isActive && 
-      new Date(sale.startTime) <= now && 
-      new Date(sale.endTime) > now
+      new Date(sale.startDate) <= now && 
+      new Date(sale.endDate) > now
     );
     
-    res.json(activeFlashSale || null);
+    if (!activeFlashSale) {
+      return res.status(404).json({ message: 'Aucune vente flash active' });
+    }
+    
+    res.json(activeFlashSale);
   } catch (error) {
-    console.error('Erreur lors de la récupération de la flash sale active:', error);
-    res.status(500).json({ message: 'Erreur serveur' });
+    res.status(500).json({ message: 'Erreur lors de la récupération de la vente flash active' });
   }
 });
 
-// POST /api/flash-sales - Créer une nouvelle flash sale
-router.post('/', isAuthenticated, isAdmin, async (req, res) => {
+// Obtenir toutes les ventes flash
+router.get('/', isAuthenticated, isAdmin, checkFileExists, (req, res) => {
   try {
-    const { title, discount, startTime, endTime, productIds } = req.body;
-    
-    if (!title || !discount || !startTime || !endTime) {
-      return res.status(400).json({ message: 'Tous les champs sont requis' });
-    }
+    const flashSales = JSON.parse(fs.readFileSync(flashSalesFilePath));
+    res.json(flashSales);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la récupération des ventes flash' });
+  }
+});
 
-    const flashSales = await readFlashSales();
+// Obtenir une vente flash par ID
+router.get('/:id', apiLimiter, checkFileExists, (req, res) => {
+  try {
+    const sanitizedId = sanitizeInput(req.params.id);
+    const flashSales = JSON.parse(fs.readFileSync(flashSalesFilePath));
+    const flashSale = flashSales.find(sale => sale.id === sanitizedId);
+    
+    if (!flashSale) {
+      return res.status(404).json({ message: 'Vente flash non trouvée' });
+    }
+    
+    res.json(flashSale);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la récupération de la vente flash' });
+  }
+});
+
+// Obtenir les produits d'une vente flash
+router.get('/:id/products', apiLimiter, checkFileExists, (req, res) => {
+  try {
+    const sanitizedId = sanitizeInput(req.params.id);
+    const flashSales = JSON.parse(fs.readFileSync(flashSalesFilePath));
+    const flashSale = flashSales.find(sale => sale.id === sanitizedId);
+    
+    if (!flashSale) {
+      return res.status(404).json({ message: 'Vente flash non trouvée' });
+    }
+    
+    if (!fs.existsSync(productsFilePath)) {
+      return res.json([]);
+    }
+    
+    const products = JSON.parse(fs.readFileSync(productsFilePath));
+    const flashSaleProducts = products.filter(product => 
+      flashSale.productIds && flashSale.productIds.includes(product.id)
+    );
+    
+    res.json(flashSaleProducts);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la récupération des produits de la vente flash' });
+  }
+});
+
+// Créer une nouvelle vente flash
+router.post('/', isAuthenticated, isAdmin, checkFileExists, (req, res) => {
+  try {
+    const { title, description, discount, startDate, endDate, productIds } = req.body;
+    
+    console.log('Données reçues pour la création:', { title, description, discount, startDate, endDate, productIds });
+    
+    const sanitizedTitle = sanitizeInput(title);
+    const sanitizedDescription = sanitizeInput(description);
+    
+    if (!sanitizedTitle || !discount || !startDate || !endDate) {
+      return res.status(400).json({ message: 'Tous les champs requis doivent être remplis' });
+    }
+    
+    const flashSales = JSON.parse(fs.readFileSync(flashSalesFilePath));
+    
+    // S'assurer que productIds est un array de strings
+    let processedProductIds = [];
+    if (Array.isArray(productIds)) {
+      processedProductIds = productIds.map(id => String(id));
+    } else if (productIds && typeof productIds === 'object') {
+      // Convertir l'objet en array si nécessaire
+      processedProductIds = Object.values(productIds).map(id => String(id));
+    }
     
     const newFlashSale = {
       id: Date.now().toString(),
-      title,
-      discount: Number(discount),
-      startTime,
-      endTime,
-      productIds: productIds || [],
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      title: sanitizedTitle,
+      description: sanitizedDescription,
+      discount: parseInt(discount),
+      startDate,
+      endDate,
+      productIds: processedProductIds,
+      isActive: false,
+      createdAt: new Date().toISOString()
     };
-
+    
+    console.log('Nouvelle vente flash créée:', newFlashSale);
+    
     flashSales.push(newFlashSale);
-    await writeFlashSales(flashSales);
-
+    fs.writeFileSync(flashSalesFilePath, JSON.stringify(flashSales, null, 2));
+    
     res.status(201).json(newFlashSale);
   } catch (error) {
-    console.error('Erreur lors de la création de la flash sale:', error);
-    res.status(500).json({ message: 'Erreur serveur' });
+    console.error('Erreur lors de la création de la vente flash:', error);
+    res.status(500).json({ message: 'Erreur lors de la création de la vente flash' });
   }
 });
 
-// PUT /api/flash-sales/:id - Modifier une flash sale
-router.put('/:id', isAuthenticated, isAdmin, async (req, res) => {
+// Mettre à jour une vente flash
+router.put('/:id', isAuthenticated, isAdmin, checkFileExists, (req, res) => {
   try {
-    const { id } = req.params;
-    const { title, discount, startTime, endTime, productIds, isActive } = req.body;
+    const sanitizedId = sanitizeInput(req.params.id);
+    const flashSales = JSON.parse(fs.readFileSync(flashSalesFilePath));
+    const index = flashSales.findIndex(sale => sale.id === sanitizedId);
     
-    const flashSales = await readFlashSales();
-    const flashSaleIndex = flashSales.findIndex(sale => sale.id === id);
-    
-    if (flashSaleIndex === -1) {
-      return res.status(404).json({ message: 'Flash sale non trouvée' });
+    if (index === -1) {
+      return res.status(404).json({ message: 'Vente flash non trouvée' });
     }
-
-    flashSales[flashSaleIndex] = {
-      ...flashSales[flashSaleIndex],
-      title: title || flashSales[flashSaleIndex].title,
-      discount: discount !== undefined ? Number(discount) : flashSales[flashSaleIndex].discount,
-      startTime: startTime || flashSales[flashSaleIndex].startTime,
-      endTime: endTime || flashSales[flashSaleIndex].endTime,
-      productIds: productIds || flashSales[flashSaleIndex].productIds,
-      isActive: isActive !== undefined ? isActive : flashSales[flashSaleIndex].isActive,
-      updatedAt: new Date().toISOString()
-    };
-
-    await writeFlashSales(flashSales);
-    res.json(flashSales[flashSaleIndex]);
+    
+    const updatedData = { ...req.body };
+    if (updatedData.title) updatedData.title = sanitizeInput(updatedData.title);
+    if (updatedData.description) updatedData.description = sanitizeInput(updatedData.description);
+    
+    // S'assurer que productIds est un array de strings
+    if (updatedData.productIds) {
+      if (Array.isArray(updatedData.productIds)) {
+        updatedData.productIds = updatedData.productIds.map(id => String(id));
+      } else if (typeof updatedData.productIds === 'object') {
+        updatedData.productIds = Object.values(updatedData.productIds).map(id => String(id));
+      }
+    }
+    
+    console.log('Données de mise à jour reçues:', updatedData);
+    
+    flashSales[index] = { ...flashSales[index], ...updatedData };
+    
+    console.log('Vente flash mise à jour:', flashSales[index]);
+    
+    fs.writeFileSync(flashSalesFilePath, JSON.stringify(flashSales, null, 2));
+    
+    res.json(flashSales[index]);
   } catch (error) {
-    console.error('Erreur lors de la modification de la flash sale:', error);
-    res.status(500).json({ message: 'Erreur serveur' });
+    console.error('Erreur lors de la mise à jour de la vente flash:', error);
+    res.status(500).json({ message: 'Erreur lors de la mise à jour de la vente flash' });
   }
 });
 
-// DELETE /api/flash-sales/:id - Supprimer une flash sale
-router.delete('/:id', isAuthenticated, isAdmin, async (req, res) => {
+// Supprimer une vente flash
+router.delete('/:id', isAuthenticated, isAdmin, checkFileExists, (req, res) => {
   try {
-    const { id } = req.params;
-    const flashSales = await readFlashSales();
-    const flashSaleIndex = flashSales.findIndex(sale => sale.id === id);
+    const sanitizedId = sanitizeInput(req.params.id);
+    const flashSales = JSON.parse(fs.readFileSync(flashSalesFilePath));
+    const filteredFlashSales = flashSales.filter(sale => sale.id !== sanitizedId);
     
-    if (flashSaleIndex === -1) {
-      return res.status(404).json({ message: 'Flash sale non trouvée' });
+    if (filteredFlashSales.length === flashSales.length) {
+      return res.status(404).json({ message: 'Vente flash non trouvée' });
     }
-
-    flashSales.splice(flashSaleIndex, 1);
-    await writeFlashSales(flashSales);
     
-    res.json({ message: 'Flash sale supprimée avec succès' });
+    fs.writeFileSync(flashSalesFilePath, JSON.stringify(filteredFlashSales, null, 2));
+    res.json({ message: 'Vente flash supprimée avec succès' });
   } catch (error) {
-    console.error('Erreur lors de la suppression de la flash sale:', error);
-    res.status(500).json({ message: 'Erreur serveur' });
+    res.status(500).json({ message: 'Erreur lors de la suppression de la vente flash' });
+  }
+});
+
+// Activer une vente flash
+router.post('/:id/activate', isAuthenticated, isAdmin, checkFileExists, (req, res) => {
+  try {
+    const sanitizedId = sanitizeInput(req.params.id);
+    const flashSales = JSON.parse(fs.readFileSync(flashSalesFilePath));
+    
+    // Désactiver toutes les autres ventes flash
+    flashSales.forEach(sale => sale.isActive = false);
+    
+    // Activer la vente flash sélectionnée
+    const index = flashSales.findIndex(sale => sale.id === sanitizedId);
+    if (index === -1) {
+      return res.status(404).json({ message: 'Vente flash non trouvée' });
+    }
+    
+    flashSales[index].isActive = true;
+    fs.writeFileSync(flashSalesFilePath, JSON.stringify(flashSales, null, 2));
+    
+    res.json(flashSales[index]);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de l\'activation de la vente flash' });
+  }
+});
+
+// Désactiver une vente flash
+router.post('/:id/deactivate', isAuthenticated, isAdmin, checkFileExists, (req, res) => {
+  try {
+    const sanitizedId = sanitizeInput(req.params.id);
+    const flashSales = JSON.parse(fs.readFileSync(flashSalesFilePath));
+    const index = flashSales.findIndex(sale => sale.id === sanitizedId);
+    
+    if (index === -1) {
+      return res.status(404).json({ message: 'Vente flash non trouvée' });
+    }
+    
+    flashSales[index].isActive = false;
+    fs.writeFileSync(flashSalesFilePath, JSON.stringify(flashSales, null, 2));
+    
+    res.json(flashSales[index]);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la désactivation de la vente flash' });
   }
 });
 

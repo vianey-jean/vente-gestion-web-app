@@ -1,169 +1,115 @@
 
-import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Clock, Percent, Package } from 'lucide-react';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import AdminLayout from './AdminLayout';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { toast } from '@/components/ui/sonner';
-import { flashSalesAPI, FlashSale } from '@/services/flashSalesAPI';
+import { flashSaleAPI } from '@/services/flashSaleAPI';
 import { productsAPI } from '@/services/productsAPI';
-import { Product } from '@/types/product';
+import { FlashSaleForm } from '@/components/admin/FlashSaleForm';
+import { Plus, Clock, Play, Pause, Trash2, Edit, Flame } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
-const AdminFlashSalesPage = () => {
-  const [flashSales, setFlashSales] = useState<FlashSale[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingFlashSale, setEditingFlashSale] = useState<FlashSale | null>(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    discount: '',
-    startTime: '',
-    endTime: '',
-    productIds: [] as string[],
-    isActive: true
+const AdminFlashSalesPage: React.FC = () => {
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingFlashSale, setEditingFlashSale] = useState(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: flashSales = [], isLoading } = useQuery({
+    queryKey: ['admin-flash-sales'],
+    queryFn: async () => {
+      const response = await flashSaleAPI.getAll();
+      return response.data;
+    },
   });
 
-  const fetchFlashSales = async () => {
-    try {
-      const response = await flashSalesAPI.getAll();
-      setFlashSales(response.data);
-    } catch (error) {
-      console.error('Erreur lors du chargement des flash sales:', error);
-      toast.error('Erreur lors du chargement des flash sales');
-    }
-  };
-
-  const fetchProducts = async () => {
-    try {
+  const { data: products = [] } = useQuery({
+    queryKey: ['admin-products'],
+    queryFn: async () => {
       const response = await productsAPI.getAll();
-      setProducts(response.data);
-    } catch (error) {
-      console.error('Erreur lors du chargement des produits:', error);
-      toast.error('Erreur lors du chargement des produits');
-    }
-  };
+      return response.data;
+    },
+  });
 
-  useEffect(() => {
-    const loadData = async () => {
-      await Promise.all([fetchFlashSales(), fetchProducts()]);
-      setLoading(false);
-    };
-    loadData();
-  }, []);
+  const deleteMutation = useMutation({
+    mutationFn: flashSaleAPI.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-flash-sales'] });
+      toast({ title: 'Vente flash supprimée avec succès' });
+    },
+    onError: () => {
+      toast({ title: 'Erreur lors de la suppression', variant: 'destructive' });
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const activateMutation = useMutation({
+    mutationFn: flashSaleAPI.activate,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-flash-sales'] });
+      queryClient.invalidateQueries({ queryKey: ['active-flash-sale'] });
+      toast({ title: 'Vente flash activée avec succès' });
+    },
+    onError: () => {
+      toast({ title: 'Erreur lors de l\'activation', variant: 'destructive' });
+    },
+  });
+
+  const deactivateMutation = useMutation({
+    mutationFn: flashSaleAPI.deactivate,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-flash-sales'] });
+      queryClient.invalidateQueries({ queryKey: ['active-flash-sale'] });
+      toast({ title: 'Vente flash désactivée avec succès' });
+    },
+    onError: () => {
+      toast({ title: 'Erreur lors de la désactivation', variant: 'destructive' });
+    },
+  });
+
+  const getTimeRemaining = (endDate: string) => {
+    const end = new Date(endDate);
+    const now = new Date();
+    const diff = end.getTime() - now.getTime();
     
-    try {
-      const flashSaleData = {
-        ...formData,
-        discount: Number(formData.discount)
-      };
-
-      if (editingFlashSale) {
-        await flashSalesAPI.update(editingFlashSale.id, flashSaleData);
-        toast.success('Flash sale modifiée avec succès');
-      } else {
-        await flashSalesAPI.create(flashSaleData);
-        toast.success('Flash sale créée avec succès');
-      }
-      
-      fetchFlashSales();
-      setDialogOpen(false);
-      resetForm();
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
-      toast.error('Erreur lors de la sauvegarde');
-    }
+    if (diff <= 0) return 'Expiré';
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (days > 0) return `${days}j ${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
   };
 
-  const handleEdit = (flashSale: FlashSale) => {
+  const getProductNames = (productIds: string[]) => {
+    if (!productIds || productIds.length === 0) return 'Aucun produit';
+    
+    const selectedProducts = products.filter(product => productIds.includes(product.id));
+    if (selectedProducts.length === 0) return 'Produits non trouvés';
+    
+    return selectedProducts.map(product => product.name).join(', ');
+  };
+
+  const handleEdit = (flashSale: any) => {
     setEditingFlashSale(flashSale);
-    setFormData({
-      title: flashSale.title,
-      discount: flashSale.discount.toString(),
-      startTime: new Date(flashSale.startTime).toISOString().slice(0, 16),
-      endTime: new Date(flashSale.endTime).toISOString().slice(0, 16),
-      productIds: flashSale.productIds,
-      isActive: flashSale.isActive
-    });
-    setDialogOpen(true);
+    setIsFormOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette flash sale ?')) {
-      return;
-    }
-
-    try {
-      await flashSalesAPI.delete(id);
-      toast.success('Flash sale supprimée avec succès');
-      fetchFlashSales();
-    } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
-      toast.error('Erreur lors de la suppression');
-    }
-  };
-
-  const toggleActive = async (flashSale: FlashSale) => {
-    try {
-      await flashSalesAPI.update(flashSale.id, { isActive: !flashSale.isActive });
-      toast.success('Statut mis à jour avec succès');
-      fetchFlashSales();
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour:', error);
-      toast.error('Erreur lors de la mise à jour');
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      discount: '',
-      startTime: '',
-      endTime: '',
-      productIds: [],
-      isActive: true
-    });
+  const handleFormClose = () => {
+    setIsFormOpen(false);
     setEditingFlashSale(null);
   };
 
-  const openCreateDialog = () => {
-    resetForm();
-    setDialogOpen(true);
-  };
-
-  const isFlashSaleActive = (flashSale: FlashSale) => {
-    const now = new Date();
-    return flashSale.isActive && 
-           new Date(flashSale.startTime) <= now && 
-           new Date(flashSale.endTime) > now;
-  };
-
-  const getTimeLeft = (endTime: string) => {
-    const now = new Date();
-    const end = new Date(endTime);
-    const diff = end.getTime() - now.getTime();
-    
-    if (diff <= 0) return 'Terminée';
-    
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return `${hours}h ${minutes}m restantes`;
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <AdminLayout>
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+        <div className="text-center py-20">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-600 mx-auto mb-6"></div>
+          <h2 className="text-xl font-semibold">Chargement des ventes flash...</h2>
         </div>
       </AdminLayout>
     );
@@ -173,181 +119,123 @@ const AdminFlashSalesPage = () => {
     <AdminLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Gestion des Flash Sales</h1>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={openCreateDialog}>
-                <Plus className="h-4 w-4 mr-2" />
-                Créer une Flash Sale
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingFlashSale ? 'Modifier la Flash Sale' : 'Créer une nouvelle Flash Sale'}
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Titre</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="Titre de la Flash Sale"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="discount">Pourcentage de réduction (%)</Label>
-                  <Input
-                    id="discount"
-                    type="number"
-                    min="1"
-                    max="99"
-                    value={formData.discount}
-                    onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
-                    placeholder="50"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="startTime">Date et heure de début</Label>
-                    <Input
-                      id="startTime"
-                      type="datetime-local"
-                      value={formData.startTime}
-                      onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="endTime">Date et heure de fin</Label>
-                    <Input
-                      id="endTime"
-                      type="datetime-local"
-                      value={formData.endTime}
-                      onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label>Produits inclus</Label>
-                  <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-2">
-                    {products.map((product) => (
-                      <label key={product.id} className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={formData.productIds.includes(product.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setFormData({
-                                ...formData,
-                                productIds: [...formData.productIds, product.id]
-                              });
-                            } else {
-                              setFormData({
-                                ...formData,
-                                productIds: formData.productIds.filter(id => id !== product.id)
-                              });
-                            }
-                          }}
-                        />
-                        <span className="text-sm">{product.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="isActive"
-                    checked={formData.isActive}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-                  />
-                  <Label htmlFor="isActive">Activer la Flash Sale</Label>
-                </div>
-                <div className="flex justify-end space-x-2">
-                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                    Annuler
-                  </Button>
-                  <Button type="submit">
-                    {editingFlashSale ? 'Modifier' : 'Créer'}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Gestion des Ventes Flash</h1>
+            <p className="text-gray-600 mt-1">Créez et gérez vos ventes flash avec compte à rebours</p>
+          </div>
+          <Button onClick={() => setIsFormOpen(true)} className="bg-red-600 hover:bg-red-700">
+            <Plus className="h-4 w-4 mr-2" />
+            Nouvelle Vente Flash
+          </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {flashSales.map((flashSale) => (
-            <Card key={flashSale.id} className={isFlashSaleActive(flashSale) ? 'border-red-500' : ''}>
-              <CardHeader>
-                <CardTitle className="flex justify-between items-start">
-                  <div>
-                    <span className="block">{flashSale.title}</span>
-                    <div className="flex items-center space-x-2 mt-2">
-                      <Badge variant={isFlashSaleActive(flashSale) ? 'default' : 'secondary'}>
-                        <Percent className="h-3 w-3 mr-1" />
-                        -{flashSale.discount}%
-                      </Badge>
-                      {isFlashSaleActive(flashSale) && (
-                        <Badge variant="destructive">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {getTimeLeft(flashSale.endTime)}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleEdit(flashSale)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDelete(flashSale.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Statut:</span>
-                    <Switch
-                      checked={flashSale.isActive}
-                      onCheckedChange={() => toggleActive(flashSale)}
-                    />
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Package className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm text-gray-600">
-                      {flashSale.productIds.length} produit(s)
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-400">
-                    Du {new Date(flashSale.startTime).toLocaleDateString('fr-FR')} au {new Date(flashSale.endTime).toLocaleDateString('fr-FR')}
-                  </p>
-                </div>
+        <div className="grid gap-6">
+          {flashSales.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <Flame className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucune vente flash</h3>
+                <p className="text-gray-600 mb-4">Créez votre première vente flash pour commencer</p>
+                <Button onClick={() => setIsFormOpen(true)} className="bg-red-600 hover:bg-red-700">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Créer une vente flash
+                </Button>
               </CardContent>
             </Card>
-          ))}
+          ) : (
+            flashSales.map((flashSale: any) => (
+              <Card key={flashSale.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <CardTitle className="text-xl">{flashSale.title}</CardTitle>
+                        <Badge variant={flashSale.isActive ? 'default' : 'secondary'}>
+                          {flashSale.isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                        <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">
+                          -{flashSale.discount}%
+                        </Badge>
+                      </div>
+                      <p className="text-gray-600 mb-3">{flashSale.description}</p>
+                      
+                      {/* Affichage des produits sélectionnés */}
+                      <div className="bg-blue-50 p-3 rounded-lg mb-3">
+                        <p className="text-sm font-medium text-blue-800 mb-1">
+                          Produits inclus ({flashSale.productIds?.length || 0}):
+                        </p>
+                        <p className="text-xs text-blue-600">
+                          {getProductNames(flashSale.productIds || [])}
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                        <div className="flex items-center">
+                          <Clock className="h-4 w-4 mr-1" />
+                          Temps restant: {getTimeRemaining(flashSale.endDate)}
+                        </div>
+                        <div>
+                          Du {new Date(flashSale.startDate).toLocaleDateString()} au {new Date(flashSale.endDate).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(flashSale)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => flashSale.isActive 
+                          ? deactivateMutation.mutate(flashSale.id)
+                          : activateMutation.mutate(flashSale.id)
+                        }
+                        disabled={activateMutation.isPending || deactivateMutation.isPending}
+                      >
+                        {flashSale.isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Supprimer la vente flash</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Êtes-vous sûr de vouloir supprimer cette vente flash ? Cette action est irréversible.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteMutation.mutate(flashSale.id)}
+                              className="bg-red-600 hover:bg-red-700"
+                            >
+                              Supprimer
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            ))
+          )}
         </div>
 
-        {flashSales.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">Aucune Flash Sale trouvée</p>
-            <p className="text-gray-400">Commencez par créer votre première Flash Sale</p>
-          </div>
+        {isFormOpen && (
+          <FlashSaleForm
+            flashSale={editingFlashSale}
+            products={products}
+            onClose={handleFormClose}
+          />
         )}
       </div>
     </AdminLayout>
