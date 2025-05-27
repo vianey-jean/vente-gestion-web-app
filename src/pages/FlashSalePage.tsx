@@ -53,72 +53,76 @@ const FlashSalePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [isExpired, setIsExpired] = useState(false);
-  const [flashSale, setFlashSale] = useState<FlashSale | null>(null);
   const [flashSaleProducts, setFlashSaleProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [flashSaleInfo, setFlashSaleInfo] = useState<{
+    title: string;
+    description: string;
+    discount: number;
+    startDate: string;
+    endDate: string;
+  } | null>(null);
 
-  // Récupérer les données de vente flash et produits depuis banniereflashsale.json
+  // Récupérer les produits de vente flash depuis banniereflashsale.json
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchFlashSaleProducts = async () => {
       try {
         setIsLoading(true);
-        console.log('🔍 Début du chargement des données pour Flash Sale ID:', id);
+        console.log('🔍 Chargement des produits de vente flash depuis banniereflashsale.json');
 
-        // Récupérer les produits depuis banniereflashsale.json
-        const banniereResponse = await flashSaleAPI.getBanniereProducts();
-        const banniereProducts = banniereResponse.data;
+        // Récupérer tous les produits de la vente flash
+        const response = await flashSaleAPI.getBanniereProducts();
+        const products = response.data;
         
-        console.log('📦 Produits de bannière récupérés:', banniereProducts);
+        console.log('📦 Produits de vente flash récupérés:', products);
 
-        if (banniereProducts.length === 0) {
+        if (products.length === 0) {
           console.log('❌ Aucun produit dans banniereflashsale.json');
-          setFlashSale(null);
           setFlashSaleProducts([]);
+          setFlashSaleInfo(null);
           setIsLoading(false);
           return;
         }
 
-        // Utiliser les informations de vente flash du premier produit
-        const firstProduct = banniereProducts[0];
-        const flashSaleInfo: FlashSale = {
-          id: id || '',
+        // Utiliser les informations du premier produit pour la vente flash
+        const firstProduct = products[0];
+        setFlashSaleInfo({
           title: firstProduct.flashSaleTitle || 'Vente Flash',
-          description: firstProduct.flashSaleDescription || '',
+          description: firstProduct.flashSaleDescription || 'Profitez de nos offres exceptionnelles !',
           discount: firstProduct.flashSaleDiscount || 0,
           startDate: firstProduct.flashSaleStartDate || '',
-          endDate: firstProduct.flashSaleEndDate || '',
-          isActive: true,
-          productIds: banniereProducts.map(p => p.id),
-          createdAt: new Date().toISOString()
-        };
+          endDate: firstProduct.flashSaleEndDate || ''
+        });
 
-        console.log('🎯 Informations de vente flash:', flashSaleInfo);
-        setFlashSale(flashSaleInfo);
+        // Traiter les produits pour s'assurer que le prix affiché est le prix de vente flash
+        const processedProducts = products.map(product => ({
+          ...product,
+          // Utiliser flashSalePrice comme prix principal si disponible
+          price: product.flashSalePrice || product.price,
+          // Conserver le prix original pour l'affichage de la réduction
+          originalPrice: product.originalFlashPrice || product.originalPrice || product.price
+        }));
 
-        // Utiliser directement les produits de la bannière
-        console.log('🎊 Produits finaux:', banniereProducts);
-        setFlashSaleProducts(banniereProducts);
+        setFlashSaleProducts(processedProducts);
 
       } catch (error) {
-        console.error('💥 Erreur lors du chargement des données:', error);
-        setFlashSale(null);
+        console.error('💥 Erreur lors du chargement des produits de vente flash:', error);
         setFlashSaleProducts([]);
+        setFlashSaleInfo(null);
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (id) {
-      fetchData();
-    }
+    fetchFlashSaleProducts();
   }, [id]);
 
   // Calculer le temps restant
   useEffect(() => {
-    if (!flashSale) return;
+    if (!flashSaleInfo || !flashSaleInfo.endDate) return;
 
     const calculateTimeLeft = () => {
-      const endTime = new Date(flashSale.endDate).getTime();
+      const endTime = new Date(flashSaleInfo.endDate).getTime();
       const difference = endTime - new Date().getTime();
       
       if (difference > 0) {
@@ -139,7 +143,7 @@ const FlashSalePage: React.FC = () => {
     const timer = setInterval(calculateTimeLeft, 1000);
 
     return () => clearInterval(timer);
-  }, [flashSale]);
+  }, [flashSaleInfo]);
 
   if (isLoading) {
     return (
@@ -154,15 +158,14 @@ const FlashSalePage: React.FC = () => {
     );
   }
 
-  if (!flashSale) {
+  if (!flashSaleInfo || flashSaleProducts.length === 0) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-20">
             <Flame className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Vente flash non trouvée</h2>
-            <p className="text-gray-600">Cette vente flash n'existe pas ou a été supprimée.</p>
-            <p className="text-sm text-gray-500 mt-2">ID recherché: {id}</p>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Aucune vente flash active</h2>
+            <p className="text-gray-600">Il n'y a actuellement aucune vente flash disponible.</p>
           </div>
         </div>
       </Layout>
@@ -202,13 +205,13 @@ const FlashSalePage: React.FC = () => {
           <div className="text-center">
             <div className="flex items-center justify-center space-x-2 mb-4">
               <Flame className="h-8 w-8 text-yellow-300 animate-pulse" />
-              <h1 className="text-3xl font-bold">{flashSale.title}</h1>
+              <h1 className="text-3xl font-bold">{flashSaleInfo.title}</h1>
               <span className="bg-yellow-400 text-black px-4 py-2 rounded-full text-lg font-bold">
-                -{flashSale.discount}%
+                -{flashSaleInfo.discount}%
               </span>
             </div>
             
-            <p className="text-xl mb-6 opacity-90">{flashSale.description}</p>
+            <p className="text-xl mb-6 opacity-90">{flashSaleInfo.description}</p>
             
             <div className="flex justify-center items-center space-x-2 mb-4">
               <Clock className="h-5 w-5" />
@@ -248,49 +251,52 @@ const FlashSalePage: React.FC = () => {
             Produits en vente flash ({flashSaleProducts.length})
           </h2>
           
-          {flashSaleProducts.length === 0 ? (
-            <div className="text-center py-12">
-              <Flame className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucun produit disponible</h3>
-              <p className="text-gray-600">Les produits de cette vente flash ne sont plus disponibles.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {flashSaleProducts.map((product) => (
-                <motion.div
-                  key={product.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <ProductCard product={product} />
-                </motion.div>
-              ))}
-            </div>
-          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {flashSaleProducts.map((product) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <ProductCard 
+                  product={{
+                    ...product,
+                    // S'assurer que la promotion est affichée
+                    promotion: product.flashSaleDiscount || product.promotion
+                  }} 
+                />
+              </motion.div>
+            ))}
+          </div>
         </div>
 
-        {/* Informations de debug */}
+        {/* Informations sur la vente flash */}
         <div className="bg-blue-50 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-blue-900 mb-3">Informations sur la vente flash</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
             <div>
-              <span className="font-medium">Début:</span> {new Date(flashSale.startDate).toLocaleString()}
+              <span className="font-medium">Début:</span> {flashSaleInfo.startDate ? new Date(flashSaleInfo.startDate).toLocaleString() : 'Non défini'}
             </div>
             <div>
-              <span className="font-medium">Fin:</span> {new Date(flashSale.endDate).toLocaleString()}
+              <span className="font-medium">Fin:</span> {flashSaleInfo.endDate ? new Date(flashSaleInfo.endDate).toLocaleString() : 'Non défini'}
             </div>
             <div>
-              <span className="font-medium">Réduction:</span> {flashSale.discount}%
+              <span className="font-medium">Réduction:</span> {flashSaleInfo.discount}%
             </div>
             <div>
-              <span className="font-medium">Produits trouvés:</span> {flashSaleProducts.length}
+              <span className="font-medium">Produits disponibles:</span> {flashSaleProducts.length}
             </div>
           </div>
           
           <div className="mt-4 p-4 bg-blue-100 rounded">
-            <p className="font-medium text-blue-900 mb-2">Source des données:</p>
-            <p className="text-xs text-blue-700">Données récupérées depuis banniereflashsale.json</p>
+            <p className="font-medium text-blue-900 mb-2">Données récupérées:</p>
+            <div className="text-xs text-blue-700 space-y-1">
+              <p>• ID, nom, description, prix, catégorie, images, stock</p>
+              <p>• Prix de vente flash (prix après promotion)</p>
+              <p>• Réduction: {flashSaleInfo.discount}%</p>
+              <p>• Dates de début et fin de la vente flash</p>
+            </div>
           </div>
         </div>
       </div>
