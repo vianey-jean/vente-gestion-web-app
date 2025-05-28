@@ -1,19 +1,15 @@
 [
   {
-    "id": "1748373211642",
+    "id": "1748376200842",
     "title": "Ventes pour les admirateur tissages",
     "description": "perruque bouclé blonde miel 16 pouces",
-    "discount": 25,
-    "startDate": "2025-05-27T00:00",
-    "endDate": "2025-05-27T23:59",
+    "discount": 10,
+    "startDate": "2025-05-28T00:00",
+    "endDate": "2025-05-28T23:59",
     "productIds": [
-      "1746726531059",
-      "1746726428072",
-      "1746760831010",
-      "1746760545081",
-      "1746726301725"
+      "1746726531059"
     ],
     "isActive": true,
-    "createdAt": "2025-05-27T19:13:31.642Z"
+    "createdAt": "2025-05-27T20:03:20.842Z"
   }
 ]
