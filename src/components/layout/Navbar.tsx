@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -11,9 +10,12 @@ import { useStore } from '@/contexts/StoreContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ShoppingCart, Heart, Search, User, LogOut, Settings, Package, Menu } from 'lucide-react';
 import { productsAPI, Product } from '@/services/api';
+import { categoriesAPI } from '@/services/categoriesAPI';
+import { Category } from '@/types/category';
 import { debounce } from 'lodash';
 import { useIsMobile } from '@/hooks/use-mobile';
 import logo from "@/assets/logo.png"; 
+import CategoriesDropdown from './CategoriesDropdown';
 
 // Fonction améliorée pour normaliser les chaînes de caractères (supprime les accents et met en minuscule)
 const normalizeString = (str: string) => {
@@ -45,6 +47,7 @@ const Navbar = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -52,8 +55,26 @@ const Navbar = () => {
   const isMobile = useIsMobile();
   const cartItemsCount = cart.reduce((count, item) => count + item.quantity, 0);
 
-  // Liste des catégories
-  const categories = ["perruques", "tissages", "queue de cheval", "peigne chauffante", "colle - dissolvant"];
+  // Charger les catégories depuis la base de données
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const response = await categoriesAPI.getActive();
+        setCategories(response.data || []);
+      } catch (error) {
+        console.error('Erreur lors du chargement des catégories:', error);
+        // Fallback vers les catégories par défaut si l'API échoue
+        setCategories([
+          { id: '1', name: 'perruques', description: '', order: 1, isActive: true, createdAt: '' },
+          { id: '2', name: 'tissages', description: '', order: 2, isActive: true, createdAt: '' },
+          { id: '3', name: 'queue de cheval', description: '', order: 3, isActive: true, createdAt: '' },
+          { id: '4', name: 'peigne chauffante', description: '', order: 4, isActive: true, createdAt: '' },
+          { id: '5', name: 'colle - dissolvant', description: '', order: 5, isActive: true, createdAt: '' }
+        ]);
+      }
+    };
+    loadCategories();
+  }, []);
 
   // Ferme les résultats si clic en dehors
   useEffect(() => {
@@ -211,12 +232,13 @@ const Navbar = () => {
                   });
                 }} 
                 aria-label="Rechercher des produits" 
-                className="w-full pl-10 rounded-xl border-neutral-300 dark:border-neutral-700 shadow-sm focus:ring-2 focus:ring-red-500 focus:border-transparent pr-10 bg-white dark:bg-neutral-800" 
+                className="w-full pl-10 rounded-xl border-neutral-300 dark:border-neutral-700 shadow-sm focus:ring-2 focus:ring-red-500 focus:border-transparent pr-12 bg-white dark:bg-neutral-800" 
               />
               {isSearching ? 
-                <div className="absolute right-3 top-2.5 h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-red-600"></div> : 
+                <div className="absolute right-10 top-2.5 h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-red-600"></div> : 
                 <Search className="absolute left-3 top-2.5 h-5 w-5 text-neutral-400" aria-hidden="true" />
               }
+              
               {renderSearchResults()}
             </div>
           </div>
@@ -319,7 +341,7 @@ const Navbar = () => {
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
                 <nav className="flex flex-col h-full">
                   <div className="flex-1 py-4">
-                    <div className="mb-6">
+                    <div className="mb-6 relative">
                       <Input 
                         type="text" 
                         placeholder="Rechercher des produits..." 
@@ -420,41 +442,31 @@ const Navbar = () => {
             <div className="absolute right-3 top-2.5 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-red-600"></div> : 
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           }
+          
           {renderSearchResults()}
         </div>
 
-        {/* Liens catégories - Desktop */}
-        <div className="hidden md:flex mt-4 space-x-6 overflow-x-auto py-2 justify-center" role="navigation" aria-label="Catégories">
-          <ul className="flex space-x-6 ">
-            {categories.map(cat => (
-              <li  key={cat}>
-                <Link 
-                  to={`/categorie/${cat}`} 
-                  className=" text-red-800  text-sm font-medium whitespace-nowrap text-neutral-700 hover:text-red-600 dark:text-neutral-200 dark:hover:text-red-400 capitalize transition-colors"
-                >
-                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                </Link>
-              </li>
-            ))}
-          </ul>
+        {/* Menu "Toutes les catégories" - Desktop */}
+        <div className="hidden md:flex mt-4 justify-center" role="navigation" aria-label="Catégories">
+          <CategoriesDropdown categories={categories} />
         </div>
 
         {/* Catégories - Mobile (collapsed by default) */}
         <div className="md:hidden mt-4">
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="categories">
-              <AccordionTrigger className="py-2 justify-center">
-                Catégories
+              <AccordionTrigger className="py-2 justify-center text-red-800 font-bold">
+                Catégories :
               </AccordionTrigger>
               <AccordionContent>
-                <div className="grid grid-cols-2 gap-2 pt-2">
+                <div className="grid grid-cols-2 gap-2 pt-2 text-red-800 font-bold">
                   {categories.map(cat => (
                     <Link 
-                      key={cat} 
-                      to={`/categorie/${cat}`} 
+                      key={cat.id} 
+                      to={`/categorie/${cat.name}`} 
                       className="text-sm py-2 px-3 rounded-md bg-neutral-50 hover:bg-neutral-100 dark:bg-neutral-800 dark:hover:bg-neutral-700 capitalize text-center transition-colors"
                     >
-                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                      {cat.name.charAt(0).toUpperCase() + cat.name.slice(1)}
                     </Link>
                   ))}
                 </div>

@@ -9,6 +9,7 @@ import SecurityInfo from './SecurityInfo';
 import LayoutPrompts from './LayoutPrompts';
 import ClientServiceChatWidget from '@/components/chat/ClientServiceChatWidget';
 import AdminServiceChatWidget from '@/components/chat/AdminServiceChatWidget';
+import ScrollToTop from '@/components/ui/ScrollToTop';
 import { useQuery } from '@tanstack/react-query';
 import { Product } from '@/contexts/StoreContext';
 import { productsAPI } from '@/services/api';
@@ -21,8 +22,7 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, hidePrompts = false }) => {
-  // Charger les produits populaires pour le prompt avec optimisation et gestion d'erreur
-  const { data: trendingProducts, error: trendingError } = useQuery({
+  const { data: trendingProducts } = useQuery({
     queryKey: ['trending-products'],
     queryFn: async (): Promise<Product[]> => {
       try {
@@ -39,7 +39,6 @@ const Layout: React.FC<LayoutProps> = ({ children, hidePrompts = false }) => {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 
-  // Charger les publicités depuis l'API avec refetch interval pour avoir les données en temps réel
   const { data: pubLayoutItems = [], isLoading: isLoadingPubLayout } = useQuery({
     queryKey: ['pub-layout'],
     queryFn: async (): Promise<PubLayout[]> => {
@@ -83,9 +82,9 @@ const Layout: React.FC<LayoutProps> = ({ children, hidePrompts = false }) => {
         hasScrolled={hasScrolled}
       />
 
-      {/* Widgets de chat */}
       <ClientServiceChatWidget />
       <AdminServiceChatWidget />
+      <ScrollToTop />
     </div>
   );
 };

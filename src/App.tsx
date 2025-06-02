@@ -1,4 +1,3 @@
-
 import React, { useEffect, lazy, Suspense } from 'react';
 import './App.css';
 import { Toaster } from './components/ui/sonner';
@@ -40,6 +39,9 @@ const CategoryPage = lazy(() => import('./pages/CategoryPage'));
 const DeliveryPage = lazy(() => import('./pages/DeliveryPage'));
 const ReturnsPage = lazy(() => import('./pages/ReturnsPage'));
 const AllProductsPage = lazy(() => import('./pages/AllProductsPage'));
+const Promotions = lazy(() => import('./pages/PromotionalProductsPage'));
+const Nouveautes = lazy(() => import('./pages/NewArrivalsPage'));
+const Populaires = lazy(() => import('./pages/PopularityPage'));
 const CustomerServicePage = lazy(() => import('./pages/CustomerServicePage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
 const BlogPage = lazy(() => import('./pages/BlogPage'));
@@ -71,6 +73,7 @@ const AdminCodePromosPage = lazy(() => import('./pages/admin/AdminCodePromosPage
 const AdminPubLayoutPage = lazy(() => import('./pages/admin/AdminPubLayoutPage'));
 const AdminRemboursementsPage = lazy(() => import('./pages/admin/AdminRemboursementsPage'));
 const AdminFlashSalesPage = lazy(() => import('./pages/admin/AdminFlashSalesPage'));
+const AdminCategoriesPage = lazy(() => import('./pages/admin/AdminCategoriesPage'));
 
 // Création d'un nouveau QueryClient avec configuration optimisée
 const queryClient = new QueryClient({
@@ -121,10 +124,21 @@ function AppRoutes() {
         <Route path="/livraison" element={<DeliveryPage />} />
         <Route path="/mentions-legales" element={<ReturnsPage />} />
         <Route path="/retours" element={<ReturnsPage />} />
-        
-        {/* Route sécurisée pour tous les produits */}
+
         <Route path={secureRoutes.get('/tous-les-produits')?.substring(1)} element={<AllProductsPage />} />
         <Route path="/tous-les-produits" element={<Navigate to={secureRoutes.get('/tous-les-produits') || '/'} replace />} />
+        
+
+        {/* Routes sécurisées pour les promotions et nouveautés */}
+        <Route path={secureRoutes.get('/promotions')?.substring(1)} element={<Promotions />} />
+        <Route path="/promotions" element={<Navigate to={secureRoutes.get('/promotions') || '/'} replace />} />
+
+        <Route path={secureRoutes.get('/nouveautes')?.substring(1)} element={<Nouveautes />} />
+        <Route path="/nouveautes" element={<Navigate to={secureRoutes.get('/nouveautes') || '/'} replace />} />
+
+         <Route path={secureRoutes.get('/populaires')?.substring(1)} element={<Populaires />} />
+        <Route path="/populaires" element={<Navigate to={secureRoutes.get('/populaires') || '/'} replace />} />
+
         
         {/* Route sécurisée pour la page vente flash */}
         <Route path={secureRoutes.get('/flash-sale/:id')?.substring(1)} element={<FlashSalePage />} />
@@ -207,6 +221,15 @@ function AppRoutes() {
           </SecureRoute>
         } />
         <Route path="/admin/produits" element={<Navigate to={secureRoutes.get('/admin/produits') || '/'} replace />} />
+        
+        <Route path={secureRoutes.get('/admin/categories')?.substring(1)} element={
+          <SecureRoute>
+            <ProtectedRoute requireAdmin>
+              <AdminCategoriesPage />
+            </ProtectedRoute>
+          </SecureRoute>
+        } />
+        <Route path="/admin/categories" element={<Navigate to={secureRoutes.get('/admin/categories') || '/'} replace />} />
         
         <Route path={secureRoutes.get('/admin/utilisateurs')?.substring(1)} element={
           <SecureRoute>

@@ -11,6 +11,8 @@ import PromotionalProductsGrid from '@/components/home/PromotionalProductsGrid';
 import FlashSaleBanner from '@/components/flash-sale/FlashSaleBanner';
 import { useHomePageData } from '@/hooks/useHomePageData';
 import { useCarouselAutoplay } from '@/hooks/useCarouselAutoplay';
+import SalesNotification from '@/components/engagement/SalesNotification';
+import LiveVisitorCounter from '@/components/engagement/LiveVisitorCounter';
 
 const HomePage = () => {
   const [searchParams] = useSearchParams();
@@ -29,9 +31,9 @@ const HomePage = () => {
 
   useCarouselAutoplay(!searchParams.get('q'), dataLoadingComplete, featuredProductCatalog.length);
 
-  // Filtrage des produits selon la recherche (conformité RGPD)
   React.useEffect(() => {
     const searchQuery = searchParams.get('q');
+    
     if (searchQuery && searchQuery.length >= 3) {
       const filteredResults = completeProductCatalog.filter(
         product =>
@@ -65,7 +67,6 @@ const HomePage = () => {
             </div>
           }
         >
-          {/* Résultats de recherche */}
           {searchParams.get('q') && (
             <div className="mb-12">
               <ProductCatalogGrid
@@ -75,28 +76,25 @@ const HomePage = () => {
             </div>
           )}
 
-          {/* Bannière Flash Sale - seulement si pas de recherche */}
           {!searchParams.get('q') && (
             <FlashSaleBanner />
           )}
 
-          {/* Produits vedettes */}
           {!searchParams.get('q') && (
             <FeaturedProductsCarousel products={featuredProductCatalog} />
           )}
 
-          {/* Produits en promotion */}
           {!searchParams.get('q') && (
-            <PromotionalProductsGrid products={promotionalProducts} />
+            <div className="mb-12" data-section="promotional">
+              <PromotionalProductsGrid products={promotionalProducts} />
+            </div>
           )}
 
-          {/* Nouveautés */}
-          <div className="mb-12">
+          <div className="mb-12" data-section="new-arrivals">
             <ProductCatalogGrid products={newArrivalProducts} title="Dernières Nouveautés" />
           </div>
 
-          {/* Catalogue complet - Avec bouton "Voir tous produits" */}
-          <div className="mb-12">
+          <div className="mb-12" data-section="complete-catalog">
             <ProductCatalogGrid 
               products={completeProductCatalog} 
               title="Notre Catalogue Complet" 
@@ -104,10 +102,13 @@ const HomePage = () => {
             />
           </div>
 
-          {/* Témoignages clients */}
           <CustomerTestimonialSection />
         </DataRetryLoader>
       </div>
+
+      {/* Composants pour les administrateurs uniquement - SalesNotification au-dessus */}
+      <SalesNotification />
+      <LiveVisitorCounter />
     </Layout>
   );
 };
