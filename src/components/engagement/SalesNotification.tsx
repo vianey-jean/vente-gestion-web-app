@@ -92,8 +92,12 @@ const SalesNotification: React.FC = () => {
   return (
     <>
       {/* Statistiques de commandes - repositionnées pour mobile */}
-      <div className="fixed top-4 right-4 z-40 bg-white dark:bg-neutral-900 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-800 p-3 max-w-xs lg:top-20">
+      <div
+  className="fixed right-4 z-40 bg-white dark:bg-neutral-900 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-800 p-3 max-w-xs lg:top-20"
+  style={{ marginTop: '100px' }}
+>
         <div className="space-y-2">
+
           <div className="flex items-center space-x-2 text-center">
             <TrendingUp className="h-4 w-4 text-blue-600" />
             <span className="text-xs font-semibold text-blue-600">Statistiques</span>
@@ -140,7 +144,7 @@ const SalesNotification: React.FC = () => {
               damping: 20,
               duration: 0.6
             }}
-            className="fixed bottom-4 left-4 z-50 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl shadow-xl p-4 max-w-xs sm:max-w-sm border-2 border-green-300 mt-16 sm:mt-0"
+            className="fixed mt-100px bottom-4  left-4 z-50 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl shadow-xl p-4 max-w-xs sm:max-w-sm border-2 border-green-300 mt-16 sm:mt-0"
           >
             <div className="flex items-start space-x-3">
               <div className="bg-white/20 rounded-full p-2 animate-pulse flex-shrink-0">
