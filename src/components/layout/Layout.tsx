@@ -16,7 +16,6 @@ import { productsAPI } from '@/services/api';
 import pubLayoutAPI, { PubLayout } from '@/services/pubLayoutAPI';
 import { useScrollDetection } from '@/hooks/useScrollDetection';
 import { useSettings } from '@/hooks/useSettings';
-import SettingsAwareLayout from './SettingsAwareLayout';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -25,9 +24,6 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, hidePrompts = false }) => {
   const { generalSettings } = useSettings();
-
-  // Si le mode maintenance est activé, le SettingsAwareLayout s'en occupera
-  // Ce composant ne sera rendu que si le mode maintenance est désactivé
 
   const { data: trendingProducts } = useQuery({
     queryKey: ['trending-products'],
@@ -98,9 +94,4 @@ const Layout: React.FC<LayoutProps> = ({ children, hidePrompts = false }) => {
   );
 };
 
-// Wrapper pour utiliser automatiquement SettingsAwareLayout
-const LayoutWrapper: React.FC<LayoutProps> = (props) => {
-  return <SettingsAwareLayout {...props} />;
-};
-
-export default LayoutWrapper;
+export default Layout;
