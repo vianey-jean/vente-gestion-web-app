@@ -1,9 +1,11 @@
+
 import React, { useEffect, lazy, Suspense } from 'react';
 import './App.css';
 import { Toaster } from './components/ui/sonner';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { StoreProvider } from './contexts/StoreContext';
+import { SettingsProvider } from './hooks/useSettings';
 import ProtectedRoute from './components/ProtectedRoute';
 import SecureRoute from './components/SecureRoute';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -81,8 +83,8 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 60000, // 1 minute (données considérées fraiches pendant 1 min)
-      gcTime: 5 * 60 * 1000, // 5 minutes (conserver les données en cache 5 min)
+      staleTime: 60000,
+      gcTime: 5 * 60 * 1000,
     },
   },
 });
@@ -336,12 +338,14 @@ function AppRoutes() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <StoreProvider>
-          <AppRoutes />
-          <Toaster closeButton richColors position="top-center" />
-        </StoreProvider>
-      </AuthProvider>
+      <SettingsProvider>
+        <AuthProvider>
+          <StoreProvider>
+            <AppRoutes />
+            <Toaster closeButton richColors position="top-center" />
+          </StoreProvider>
+        </AuthProvider>
+      </SettingsProvider>
     </QueryClientProvider>
   );
 }

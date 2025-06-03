@@ -15,6 +15,8 @@ import { Product } from '@/contexts/StoreContext';
 import { productsAPI } from '@/services/api';
 import pubLayoutAPI, { PubLayout } from '@/services/pubLayoutAPI';
 import { useScrollDetection } from '@/hooks/useScrollDetection';
+import { useSettings } from '@/hooks/useSettings';
+import SettingsAwareLayout from './SettingsAwareLayout';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,6 +24,11 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, hidePrompts = false }) => {
+  const { generalSettings } = useSettings();
+
+  // Si le mode maintenance est activé, le SettingsAwareLayout s'en occupera
+  // Ce composant ne sera rendu que si le mode maintenance est désactivé
+
   const { data: trendingProducts } = useQuery({
     queryKey: ['trending-products'],
     queryFn: async (): Promise<Product[]> => {
@@ -33,7 +40,7 @@ const Layout: React.FC<LayoutProps> = ({ children, hidePrompts = false }) => {
         return [];
       }
     },
-    enabled: !hidePrompts,
+    enabled: !hidePrompts && generalSettings?.enableWishlist,
     staleTime: 10 * 60 * 1000,
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
@@ -76,11 +83,13 @@ const Layout: React.FC<LayoutProps> = ({ children, hidePrompts = false }) => {
       <SecurityInfo />
       <Footer />
       
-      <LayoutPrompts 
-        hidePrompts={hidePrompts}
-        trendingProducts={trendingProducts}
-        hasScrolled={hasScrolled}
-      />
+      {generalSettings?.enableWishlist && (
+        <LayoutPrompts 
+          hidePrompts={hidePrompts}
+          trendingProducts={trendingProducts}
+          hasScrolled={hasScrolled}
+        />
+      )}
 
       <ClientServiceChatWidget />
       <AdminServiceChatWidget />
@@ -89,4 +98,9 @@ const Layout: React.FC<LayoutProps> = ({ children, hidePrompts = false }) => {
   );
 };
 
-export default Layout;
+// Wrapper pour utiliser automatiquement SettingsAwareLayout
+const LayoutWrapper: React.FC<LayoutProps> = (props) => {
+  return <SettingsAwareLayout {...props} />;
+};
+
+export default LayoutWrapper;

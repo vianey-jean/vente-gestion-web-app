@@ -10,13 +10,15 @@ import GeneralSettingsForm from '@/components/admin/GeneralSettingsForm';
 import NotificationSettingsForm from '@/components/admin/NotificationSettingsForm';
 import { settingsAPI } from '@/services/settingsAPI';
 import { GeneralSettings, NotificationSettings } from '@/types/settings';
+import { useSettings } from '@/hooks/useSettings';
 
 const AdminSettingsPage = () => {
   const { toast } = useToast();
+  const { settings, refetchSettings } = useSettings();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Paramètres par défaut
+  // Utiliser les paramètres du contexte ou les valeurs par défaut
   const [generalSettings, setGeneralSettings] = useState<GeneralSettings>({
     siteName: 'Riziky-Boutic',
     siteDescription: 'Votre boutique en ligne de confiance pour tous vos besoins',
@@ -101,36 +103,38 @@ const AdminSettingsPage = () => {
     },
   });
 
+  // Mettre à jour les états locaux quand les paramètres sont chargés
   useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
-    setIsLoading(true);
-    try {
-      const response = await settingsAPI.getSettings();
-      if (response.data.general) {
-        setGeneralSettings(response.data.general);
-      }
-      if (response.data.notifications) {
-        setNotificationSettings(response.data.notifications);
-      }
-    } catch (error) {
-      console.log('Paramètres par défaut utilisés - premier démarrage');
-    } finally {
-      setIsLoading(false);
+    if (settings?.general) {
+      setGeneralSettings(settings.general);
     }
-  };
+    if (settings?.notifications) {
+      setNotificationSettings(settings.notifications);
+    }
+  }, [settings]);
 
-  const handleSaveGeneralSettings = async (settings: Partial<GeneralSettings>) => {
+  const handleSaveGeneralSettings = async (newSettings: Partial<GeneralSettings>) => {
     setIsSaving(true);
     try {
-      await settingsAPI.updateGeneralSettings(settings);
-      setGeneralSettings(prev => ({ ...prev, ...settings }));
+      await settingsAPI.updateGeneralSettings(newSettings);
+      setGeneralSettings(prev => ({ ...prev, ...newSettings }));
+      
+      // Forcer le rechargement des paramètres dans le contexte
+      await refetchSettings();
+      
       toast({
         title: "Paramètres sauvegardés",
-        description: "Les paramètres généraux ont été mis à jour avec succès.",
+        description: "Les paramètres généraux ont été mis à jour avec succès. Le site reflète maintenant ces changements.",
       });
+
+      // Si le mode maintenance est activé, avertir l'utilisateur
+      if (newSettings.maintenanceMode) {
+        toast({
+          title: "Mode Maintenance Activé",
+          description: "Le site est maintenant en mode maintenance. Seule la page de maintenance est accessible.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       toast({
         title: "Erreur",
@@ -142,14 +146,18 @@ const AdminSettingsPage = () => {
     }
   };
 
-  const handleSaveNotificationSettings = async (settings: Partial<NotificationSettings>) => {
+  const handleSaveNotificationSettings = async (newSettings: Partial<NotificationSettings>) => {
     setIsSaving(true);
     try {
-      await settingsAPI.updateNotificationSettings(settings);
-      setNotificationSettings(prev => ({ ...prev, ...settings }));
+      await settingsAPI.updateNotificationSettings(newSettings);
+      setNotificationSettings(prev => ({ ...prev, ...newSettings }));
+      
+      // Forcer le rechargement des paramètres dans le contexte
+      await refetchSettings();
+      
       toast({
         title: "Notifications sauvegardées",
-        description: "Les paramètres de notification ont été mis à jour avec succès.",
+        description: "Les paramètres de notification ont été mis à jour avec succès et sont maintenant actifs.",
       });
     } catch (error) {
       toast({
@@ -166,10 +174,13 @@ const AdminSettingsPage = () => {
     setIsLoading(true);
     try {
       await settingsAPI.resetToDefaults();
-      await loadSettings();
+      
+      // Forcer le rechargement des paramètres dans le contexte
+      await refetchSettings();
+      
       toast({
         title: "Paramètres réinitialisés",
-        description: "Tous les paramètres ont été remis aux valeurs par défaut.",
+        description: "Tous les paramètres ont été remis aux valeurs par défaut et appliqués au site.",
       });
     } catch (error) {
       toast({
@@ -212,6 +223,20 @@ const AdminSettingsPage = () => {
             <Settings className="h-6 w-6" />
           </div>
         </div>
+
+        {generalSettings.maintenanceMode && (
+          <Card className="border-orange-200 bg-orange-50">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2 text-orange-800">
+                <Settings className="h-5 w-5" />
+                <span className="font-medium">Mode Maintenance Activé</span>
+              </div>
+              <p className="text-sm text-orange-700 mt-1">
+                Le site est actuellement en mode maintenance. Seuls les administrateurs peuvent accéder au panneau d'administration.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs defaultValue="general" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">

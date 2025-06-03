@@ -9,6 +9,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { Toaster } from "./components/ui/toaster";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from './components/theme-provider'
+import { SettingsProvider } from './hooks/useSettings'
 import CookieManager from './components/prompts/CookieManager'
 
 const queryClient = new QueryClient({
@@ -22,13 +23,15 @@ const queryClient = new QueryClient({
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-          <App />
-          <CookieManager position="fixed" />
-          <Toaster />
-        </ThemeProvider>
-      </BrowserRouter>
+      <SettingsProvider>
+        <BrowserRouter>
+          <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+            <App />
+            <CookieManager position="fixed" />
+            <Toaster />
+          </ThemeProvider>
+        </BrowserRouter>
+      </SettingsProvider>
     </QueryClientProvider>
   </React.StrictMode>,
 )
