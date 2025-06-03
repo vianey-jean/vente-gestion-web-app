@@ -37,7 +37,7 @@ const ForgotPasswordPage = () => {
   const onSubmit = async (data: ForgotPasswordFormData) => {
     try {
       setIsLoading(true);
-      await authAPI.forgotPassword({ email: data.email.trim().toLowerCase() });
+      await authAPI.forgotPassword(data.email.trim().toLowerCase());
       setEmailSent(true);
       toast.success('Email de réinitialisation envoyé', {
         style: { backgroundColor: 'green', color: 'white' },

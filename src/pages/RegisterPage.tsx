@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -48,11 +47,7 @@ const RegisterPage = () => {
   const onSubmit = async (data: RegisterFormData) => {
     try {
       setIsLoading(true);
-      await register({
-        nom: data.nom,
-        email: data.email.trim().toLowerCase(),
-        password: data.password,
-      });
+      await register(data.nom, data.email.trim().toLowerCase(), data.password);
     } catch (error) {
       console.error('Erreur inscription:', error);
     } finally {
