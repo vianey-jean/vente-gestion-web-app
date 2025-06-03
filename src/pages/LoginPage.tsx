@@ -14,7 +14,6 @@ import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage
 } from '@/components/ui/form';
 import { useAuth } from '@/contexts/AuthContext';
-import Layout from '@/components/layout/Layout';
 import { authAPI } from '@/services/api';
 import { toast } from '@/components/ui/sonner';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
@@ -93,114 +92,112 @@ const LoginPage = () => {
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   return (
-    <Layout>
-      <div className="flex justify-center items-center min-h-[70vh]">
-        <Card className="w-[400px]">
-          <CardHeader>
-            <CardTitle>Connexion</CardTitle>
-            <CardDescription>Accédez à votre compte</CardDescription>
-          </CardHeader>
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex justify-center items-center">
+      <Card className="w-[400px]">
+        <CardHeader>
+          <CardTitle>Connexion</CardTitle>
+          <CardDescription>Accédez à votre compte</CardDescription>
+        </CardHeader>
 
-          <CardContent>
-            {step === 'email' ? (
-              <Form {...emailForm}>
-                <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
-                  <FormField
-                    control={emailForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Input
-                              {...field}
-                              placeholder="email@example.com"
-                              onChange={(e) => field.onChange(e.target.value.trim())}
-                            />
-                            <Mail className="absolute right-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Chargement..." : "Continuer"}
-                  </Button>
-                </form>
-              </Form>
-            ) : (
-              <Form {...passwordForm}>
-                <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
-                <p className="text-sm text-green-600 mb-4">
-                    Connecté en tant que : <strong>{userEmail}</strong>
-                </p>
+        <CardContent>
+          {step === 'email' ? (
+            <Form {...emailForm}>
+              <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
+                <FormField
+                  control={emailForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            {...field}
+                            placeholder="email@example.com"
+                            onChange={(e) => field.onChange(e.target.value.trim())}
+                          />
+                          <Mail className="absolute right-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Chargement..." : "Continuer"}
+                </Button>
+              </form>
+            </Form>
+          ) : (
+            <Form {...passwordForm}>
+              <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+              <p className="text-sm text-green-600 mb-4">
+                  Connecté en tant que : <strong>{userEmail}</strong>
+              </p>
 
-                  <FormField
-                    control={passwordForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Mot de passe</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Input
-                              {...field}
-                              type={showPassword ? 'text' : 'password'}
-                              placeholder="********"
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="absolute right-0 top-0"
-                              onClick={togglePasswordVisibility}
-                            >
-                              {showPassword ? (
-                                <EyeOff className="h-5 w-5 text-muted-foreground" />
-                              ) : (
-                                <Eye className="h-5 w-5 text-muted-foreground" />
-                              )}
-                            </Button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                        <PasswordStrengthIndicator password={field.value} />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Connexion..." : "Se connecter"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full mt-2"
-                    onClick={() => setStep('email')}
-                    disabled={isLoading}
-                  >
-                    Modifier l'email
-                  </Button>
-                </form>
-              </Form>
-            )}
-          </CardContent>
+                <FormField
+                  control={passwordForm.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mot de passe</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            {...field}
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="********"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-0 top-0"
+                            onClick={togglePasswordVisibility}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-5 w-5 text-muted-foreground" />
+                            ) : (
+                              <Eye className="h-5 w-5 text-muted-foreground" />
+                            )}
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                      <PasswordStrengthIndicator password={field.value} />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? "Connexion..." : "Se connecter"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={() => setStep('email')}
+                  disabled={isLoading}
+                >
+                  Modifier l'email
+                </Button>
+              </form>
+            </Form>
+          )}
+        </CardContent>
 
-          <CardFooter className="flex flex-col gap-2">
-            <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
-              Mot de passe oublié ?
+        <CardFooter className="flex flex-col gap-2">
+          <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
+            Mot de passe oublié ?
+          </Link>
+          <div className="text-sm text-muted-foreground">
+            Pas encore de compte ?{" "}
+            <Link to="/register" className="text-blue-600 hover:underline">
+              S'inscrire
             </Link>
-            <div className="text-sm text-muted-foreground">
-              Pas encore de compte ?{" "}
-              <Link to="/register" className="text-blue-600 hover:underline">
-                S'inscrire
-              </Link>
-            </div>
-          </CardFooter>
-        </Card>
-      </div>
-    </Layout>
+          </div>
+        </CardFooter>
+      </Card>
+    </div>
   );
 };
 
