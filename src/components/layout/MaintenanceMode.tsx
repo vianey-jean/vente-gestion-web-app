@@ -15,8 +15,8 @@ const MaintenanceMode: React.FC<{ children: React.ReactNode }> = ({ children }) 
   const { data: settings } = useQuery({
     queryKey: ['settings'],
     queryFn: settingsAPI.getSettings,
-    staleTime: 30000,
-    refetchInterval: 60000, // Vérifier toutes les minutes
+    staleTime: 10000, // Vérifier plus fréquemment (10 secondes)
+    refetchInterval: 30000, // Actualiser toutes les 30 secondes
     retry: false,
   });
 

@@ -20,6 +20,13 @@ export const useSettings = () => {
     onSuccess: (data) => {
       queryClient.setQueryData(['settings'], data);
       toast.success('Paramètres généraux mis à jour avec succès');
+      
+      // Recharger la page si le mode maintenance a changé
+      if (data.general?.maintenanceMode !== settings?.general?.maintenanceMode) {
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
     },
     onError: (error) => {
       console.error('Erreur lors de la mise à jour des paramètres généraux:', error);
