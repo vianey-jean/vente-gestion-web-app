@@ -15,7 +15,6 @@ import { Product } from '@/contexts/StoreContext';
 import { productsAPI } from '@/services/api';
 import pubLayoutAPI, { PubLayout } from '@/services/pubLayoutAPI';
 import { useScrollDetection } from '@/hooks/useScrollDetection';
-import { useSettings } from '@/hooks/useSettings';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -23,8 +22,6 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, hidePrompts = false }) => {
-  const { generalSettings } = useSettings();
-
   const { data: trendingProducts } = useQuery({
     queryKey: ['trending-products'],
     queryFn: async (): Promise<Product[]> => {
@@ -36,7 +33,7 @@ const Layout: React.FC<LayoutProps> = ({ children, hidePrompts = false }) => {
         return [];
       }
     },
-    enabled: !hidePrompts && generalSettings?.enableWishlist,
+    enabled: !hidePrompts,
     staleTime: 10 * 60 * 1000,
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
@@ -79,13 +76,11 @@ const Layout: React.FC<LayoutProps> = ({ children, hidePrompts = false }) => {
       <SecurityInfo />
       <Footer />
       
-      {generalSettings?.enableWishlist && (
-        <LayoutPrompts 
-          hidePrompts={hidePrompts}
-          trendingProducts={trendingProducts}
-          hasScrolled={hasScrolled}
-        />
-      )}
+      <LayoutPrompts 
+        hidePrompts={hidePrompts}
+        trendingProducts={trendingProducts}
+        hasScrolled={hasScrolled}
+      />
 
       <ClientServiceChatWidget />
       <AdminServiceChatWidget />

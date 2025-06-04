@@ -1,31 +1,4 @@
 
 [
-  {
-    "daily": {
-      "date": "2025-06-02",
-      "count": 127,
-      "uniqueVisitors": [
-        "192.168.1.1_ZGVmYXVsdF91c2Vy",
-        "10.0.0.1_bW9iaWxlX3VzZXI=",
-        "172.16.0.1_ZGVza3RvcF91c2Vy"
-      ]
-    },
-    "weekly": {
-      "week": 23,
-      "year": 2025,
-      "count": 847
-    },
-    "monthly": {
-      "month": 5,
-      "year": 2025,
-      "count": 3521
-    },
-    "yearly": {
-      "year": 2025,
-      "count": 18456
-    },
-    "currentViewing": 0,
-    "lastVisit": "2025-06-02T14:30:30.000Z",
-    "onlineUsers": []
-  }
+
 ]

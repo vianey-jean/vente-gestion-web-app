@@ -11,7 +11,6 @@ export { codePromosAPI, codePromoAPI } from './codePromosAPI';
 export { remboursementsAPI } from './remboursementsAPI';
 export { flashSaleAPI } from './flashSaleAPI';
 export { categoriesAPI } from './categoriesAPI';
-export { settingsAPI } from './settingsAPI';
 
 // Export API configuration
 export { API } from './apiConfig';
@@ -29,7 +28,6 @@ export type { Remboursement, RemboursementFormData } from '@/types/remboursement
 export type { Message, Conversation, ServiceConversation } from '@/types/chat';
 export type { FlashSale, FlashSaleFormData } from '@/types/flashSale';
 export type { Category, CategoryFormData } from '@/types/category';
-export type { Settings, GeneralSettings, NotificationSettings } from '@/types/settings';
 
 // Legacy compatibility - keep the old api.ts exports working
 import { cartAPI } from './cartAPI';
