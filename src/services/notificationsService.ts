@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 
 interface NotificationData {
@@ -6,6 +5,7 @@ interface NotificationData {
   title: string;
   message: string;
   data?: any;
+  timestamp?: string;
 }
 
 class NotificationsService {

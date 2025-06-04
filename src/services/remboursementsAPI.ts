@@ -14,8 +14,37 @@ export const remboursementsAPI = {
     return response.data;
   },
 
-  create: async (formData: FormData): Promise<Remboursement> => {
-    const response = await API.post('/remboursements', formData, {
+  getUserRemboursements: async (userId: string): Promise<Remboursement[]> => {
+    const response = await API.get('/remboursements');
+    const allRemboursements = response.data;
+    return allRemboursements.filter((r: Remboursement) => r.userId === userId);
+  },
+
+  create: async (formData: RemboursementFormData): Promise<Remboursement> => {
+    // Convertir RemboursementFormData en FormData
+    const multipartFormData = new FormData();
+    multipartFormData.append('orderId', formData.orderId);
+    multipartFormData.append('reason', formData.reason);
+    
+    if (formData.customReason) {
+      multipartFormData.append('customReason', formData.customReason);
+    }
+    
+    if (formData.reasonDetails) {
+      multipartFormData.append('reasonDetails', formData.reasonDetails);
+    }
+    
+    if (formData.photo) {
+      multipartFormData.append('photo', formData.photo);
+    }
+
+    if (formData.photos) {
+      formData.photos.forEach((photo, index) => {
+        multipartFormData.append('photos', photo);
+      });
+    }
+
+    const response = await API.post('/remboursements', multipartFormData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
