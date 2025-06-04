@@ -131,50 +131,6 @@ const AdminRefundsPage = () => {
     });
   };
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'dd MMMM yyyy à HH:mm', { locale: fr });
-  };
-
-  const getImageUrl = (imagePath: string) => {
-    if (!imagePath) return '';
-    if (imagePath.startsWith('http')) return imagePath;
-    return `${AUTH_BASE_URL}${imagePath}`;
-  };
-
-  const getStatusBadge = (status: string, decision?: string) => {
-    if (status === 'traité') {
-      if (decision === 'accepté') {
-        return <Badge className="bg-green-500 text-white">Accepté</Badge>;
-      } else if (decision === 'refusé') {
-        return <Badge className="bg-red-500 text-white">Refusé</Badge>;
-      }
-    }
-    
-    switch (status) {
-      case 'vérification':
-        return <Badge className="bg-blue-500 text-white">En vérification</Badge>;
-      case 'en étude':
-        return <Badge className="bg-yellow-500 text-white">En étude</Badge>;
-      case 'traité':
-        return <Badge className="bg-green-500 text-white">Traité</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'vérification':
-        return <Search className="h-4 w-4" />;
-      case 'en étude':
-        return <Clock className="h-4 w-4" />;
-      case 'traité':
-        return <CheckCircle className="h-4 w-4" />;
-      default:
-        return <Search className="h-4 w-4" />;
-    }
-  };
-
   if (isLoading) {
     return (
       <AdminLayout>
@@ -216,6 +172,7 @@ const AdminRefundsPage = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Détails de la demande */}
                     <div>
