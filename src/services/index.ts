@@ -44,3 +44,6 @@ export const panierAPI = {
     cartAPI.removeItem(userId, productId),
   clear: (userId: string) => cartAPI.clear(userId),
 };
+
+// Export notification service
+export { default as notificationsService } from './notificationsService';

@@ -1,30 +1,47 @@
 
 import { API } from './apiConfig';
 import { Remboursement, RemboursementFormData } from '@/types/remboursement';
+import notificationsService from './notificationsService';
 
 export const remboursementsAPI = {
-  getAll: () => API.get<Remboursement[]>('/remboursements'),
-  getUserRemboursements: () => API.get<Remboursement[]>('/remboursements/user'),
-  getById: (id: string) => API.get<Remboursement>(`/remboursements/${id}`),
-  create: (remboursementData: RemboursementFormData) => {
-    const formData = new FormData();
-    formData.append('orderId', remboursementData.orderId);
-    formData.append('reason', remboursementData.reason);
-    
-    if (remboursementData.customReason) {
-      formData.append('customReason', remboursementData.customReason);
-    }
-    
-    if (remboursementData.photo) {
-      formData.append('photo', remboursementData.photo);
-    }
-    
-    return API.post<Remboursement>('/remboursements', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+  getAll: async (): Promise<Remboursement[]> => {
+    const response = await API.get('/remboursements');
+    return response.data;
   },
-  updateStatus: (id: string, status: string, comment?: string, decision?: string) => 
-    API.put(`/remboursements/${id}/status`, { status, comment, decision }),
+
+  getById: async (id: string): Promise<Remboursement> => {
+    const response = await API.get(`/remboursements/${id}`);
+    return response.data;
+  },
+
+  create: async (formData: FormData): Promise<Remboursement> => {
+    const response = await API.post('/remboursements', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    // Envoyer notification admin pour nouvelle demande de remboursement
+    const refund = response.data;
+    if (refund) {
+      notificationsService.notifyRefundRequest(
+        refund.orderId || 'N/A',
+        refund.amount || 0
+      );
+    }
+
+    return response.data;
+  },
+
+  updateStatus: async (id: string, status: string, adminComment?: string): Promise<Remboursement> => {
+    const response = await API.put(`/remboursements/${id}/status`, {
+      status,
+      adminComment,
+    });
+    return response.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await API.delete(`/remboursements/${id}`);
+  },
 };

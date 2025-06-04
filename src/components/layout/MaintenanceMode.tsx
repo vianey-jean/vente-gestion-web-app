@@ -1,10 +1,17 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { settingsAPI } from '@/services/settingsAPI';
-import { Wrench, Clock, Mail, Phone } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Wrench, Clock, Mail, Phone, LogIn } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 const MaintenanceMode: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [showAdminAccess, setShowAdminAccess] = useState(false);
+
   const { data: settings } = useQuery({
     queryKey: ['settings'],
     queryFn: settingsAPI.getSettings,
@@ -12,6 +19,11 @@ const MaintenanceMode: React.FC<{ children: React.ReactNode }> = ({ children }) 
     refetchInterval: 60000, // Vérifier toutes les minutes
     retry: false,
   });
+
+  // Si l'utilisateur est admin, laisser passer
+  if (user && user.role === 'admin') {
+    return <>{children}</>;
+  }
 
   // Si le mode maintenance est activé, afficher la page de maintenance
   if (settings?.general?.maintenanceMode) {
@@ -43,6 +55,31 @@ const MaintenanceMode: React.FC<{ children: React.ReactNode }> = ({ children }) 
               <Clock className="h-4 w-4 mr-2" />
               Nous reviendrons très prochainement
             </div>
+          </div>
+
+          {/* Accès administrateur */}
+          <div className="mb-6">
+            {!showAdminAccess ? (
+              <Button 
+                variant="outline" 
+                onClick={() => setShowAdminAccess(true)}
+                className="text-sm"
+              >
+                <LogIn className="h-4 w-4 mr-2" />
+                Accès administrateur
+              </Button>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600">Connexion administrateur disponible</p>
+                <Button 
+                  onClick={() => navigate('/login')}
+                  className="w-full"
+                >
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Se connecter en tant qu'admin
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="border-t pt-6 space-y-3">

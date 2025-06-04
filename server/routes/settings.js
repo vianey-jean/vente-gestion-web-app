@@ -178,8 +178,11 @@ async function createBackup() {
     fs.mkdirSync(backupDir, { recursive: true });
   }
   
+  // Récupérer toutes les données de la base de données
   const backupData = {
     timestamp,
+    siteName: 'Riziky-Boutic',
+    backupVersion: '1.0',
     data: {
       users: database.read('users.json'),
       products: database.read('products.json'),
@@ -190,18 +193,34 @@ async function createBackup() {
       settings: database.read('settings.json'),
       favorites: database.read('favorites.json'),
       panier: database.read('panier.json'),
-      'code-promos': database.read('code-promos.json'),
+      codePromos: database.read('code-promos.json'),
       remboursements: database.read('remboursements.json'),
-      'flash-sales': database.read('flash-sales.json'),
+      flashSales: database.read('banniereflashsale.json'),
       publayout: database.read('publayout.json'),
-      'client-chat': database.read('client-chat.json'),
-      'admin-chat': database.read('admin-chat.json'),
+      clientChat: database.read('client-chat.json'),
+      adminChat: database.read('admin-chat.json'),
       visitors: database.read('visitors.json'),
-      'sales-notifications': database.read('sales-notifications.json')
+      salesNotifications: database.read('sales-notifications.json')
+    },
+    stats: {
+      totalUsers: 0,
+      totalProducts: 0,
+      totalOrders: 0,
+      totalContacts: 0
     }
   };
   
-  const backupFilename = `backup-${timestamp}.json`;
+  // Calculer les statistiques
+  try {
+    backupData.stats.totalUsers = Array.isArray(backupData.data.users) ? backupData.data.users.length : 0;
+    backupData.stats.totalProducts = Array.isArray(backupData.data.products) ? backupData.data.products.length : 0;
+    backupData.stats.totalOrders = Array.isArray(backupData.data.orders) ? backupData.data.orders.length : 0;
+    backupData.stats.totalContacts = Array.isArray(backupData.data.contacts) ? backupData.data.contacts.length : 0;
+  } catch (error) {
+    console.log('Erreur lors du calcul des statistiques:', error);
+  }
+  
+  const backupFilename = `riziky-boutic-backup-${timestamp}.json`;
   const backupPath = path.join(backupDir, backupFilename);
   
   fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2));
@@ -212,7 +231,13 @@ async function createBackup() {
     await sendBackupEmail(backupPath, settings.backup.backupEmail, settings.general.emailSettings);
   }
   
-  return { filename: backupFilename, path: backupPath, size: fs.statSync(backupPath).size };
+  console.log('Sauvegarde créée:', backupFilename);
+  return { 
+    filename: backupFilename, 
+    path: backupPath, 
+    size: fs.statSync(backupPath).size,
+    stats: backupData.stats
+  };
 }
 
 // Fonction pour envoyer la sauvegarde par email
@@ -233,20 +258,67 @@ async function sendBackupEmail(backupPath, emailAddress, emailSettings) {
       }
     });
 
+    const fileStats = fs.statSync(backupPath);
+    const backupData = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
+
     const mailOptions = {
       from: `${emailSettings.fromName} <${emailSettings.fromEmail}>`,
       to: emailAddress,
       subject: `Sauvegarde automatique Riziky-Boutic - ${new Date().toLocaleDateString('fr-FR')}`,
       html: `
-        <h2>Sauvegarde automatique Riziky-Boutic</h2>
-        <p>Voici la sauvegarde automatique de votre site Riziky-Boutic.</p>
-        <p><strong>Date:</strong> ${new Date().toLocaleString('fr-FR')}</p>
-        <p><strong>Taille du fichier:</strong> ${(fs.statSync(backupPath).size / 1024 / 1024).toFixed(2)} MB</p>
-        <p>Cette sauvegarde contient toutes les données de votre site.</p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">🔒 Sauvegarde automatique Riziky-Boutic</h2>
+          <p>Voici la sauvegarde automatique de votre site Riziky-Boutic.</p>
+          
+          <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">📊 Informations de sauvegarde</h3>
+            <p><strong>Date:</strong> ${new Date().toLocaleString('fr-FR')}</p>
+            <p><strong>Taille du fichier:</strong> ${(fileStats.size / 1024 / 1024).toFixed(2)} MB</p>
+            <p><strong>Format:</strong> JSON</p>
+          </div>
+
+          <div style="background: #ecfdf5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">📈 Statistiques des données</h3>
+            <ul style="list-style: none; padding: 0;">
+              <li>👥 Utilisateurs: ${backupData.stats?.totalUsers || 0}</li>
+              <li>📦 Produits: ${backupData.stats?.totalProducts || 0}</li>
+              <li>🛒 Commandes: ${backupData.stats?.totalOrders || 0}</li>
+              <li>📧 Messages: ${backupData.stats?.totalContacts || 0}</li>
+            </ul>
+          </div>
+
+          <div style="background: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">🗃️ Données sauvegardées</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div>• Utilisateurs</div>
+              <div>• Produits</div>
+              <div>• Commandes</div>
+              <div>• Catégories</div>
+              <div>• Messages de contact</div>
+              <div>• Avis clients</div>
+              <div>• Paramètres du site</div>
+              <div>• Favoris</div>
+              <div>• Paniers</div>
+              <div>• Codes promo</div>
+              <div>• Remboursements</div>
+              <div>• Ventes flash</div>
+              <div>• Publicités</div>
+              <div>• Conversations chat</div>
+              <div>• Visiteurs</div>
+              <div>• Notifications de vente</div>
+            </div>
+          </div>
+
+          <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+            Cette sauvegarde contient toutes les données de votre site au format JSON. 
+            En cas de panne, vous pourrez récupérer toutes vos données grâce à ce fichier.
+          </p>
+        </div>
       `,
       attachments: [{
         filename: path.basename(backupPath),
-        path: backupPath
+        path: backupPath,
+        contentType: 'application/json'
       }]
     };
 
