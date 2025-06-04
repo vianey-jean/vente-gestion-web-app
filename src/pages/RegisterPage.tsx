@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -63,10 +62,9 @@ const RegisterPage = () => {
     setError('');
 
     try {
-      await register(formData.email, formData.password, {
-        firstName: formData.firstName,
-        lastName: formData.lastName
-      });
+      // Combiner prénom et nom pour créer le nom complet
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+      await register(fullName, formData.email, formData.password);
       navigate('/');
     } catch (err: any) {
       setError(err.message || 'Erreur lors de l\'inscription');
