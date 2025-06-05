@@ -208,7 +208,7 @@ const CarouselContent = React.forwardRef<
 >(({ className, ...props }, ref) => {
   const { carouselRef, orientation } = useCarousel()
 
-  // Filter out drag-related props that conflict with Framer Motion
+  // Filter out props that conflict with Framer Motion
   const {
     onDrag,
     onDragCapture,
@@ -226,6 +226,10 @@ const CarouselContent = React.forwardRef<
     onDragStartCapture,
     onDrop,
     onDropCapture,
+    onAnimationStart,
+    onAnimationEnd,
+    onAnimationIteration,
+    onTransitionEnd,
     ...filteredProps
   } = props
 
@@ -252,7 +256,7 @@ const CarouselItem = React.forwardRef<
 >(({ className, ...props }, ref) => {
   const { orientation } = useCarousel()
 
-  // Filter out drag-related props that conflict with Framer Motion
+  // Filter out props that conflict with Framer Motion
   const {
     onDrag,
     onDragCapture,
@@ -270,6 +274,10 @@ const CarouselItem = React.forwardRef<
     onDragStartCapture,
     onDrop,
     onDropCapture,
+    onAnimationStart,
+    onAnimationEnd,
+    onAnimationIteration,
+    onTransitionEnd,
     ...filteredProps
   } = props
 
