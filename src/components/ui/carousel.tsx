@@ -170,19 +170,6 @@ const Carousel = React.forwardRef<
       };
     }, [api, autoPlay, interval]);
 
-    const handleKeyDown = React.useCallback(
-      (event: React.KeyboardEvent<HTMLDivElement>) => {
-        if (event.key === "ArrowLeft") {
-          event.preventDefault()
-          scrollPrev()
-        } else if (event.key === "ArrowRight") {
-          event.preventDefault()
-          scrollNext()
-        }
-      },
-      [scrollPrev, scrollNext]
-    )
-
     return (
       <CarouselContext.Provider
         value={{
@@ -221,6 +208,27 @@ const CarouselContent = React.forwardRef<
 >(({ className, ...props }, ref) => {
   const { carouselRef, orientation } = useCarousel()
 
+  // Filter out drag-related props that conflict with Framer Motion
+  const {
+    onDrag,
+    onDragCapture,
+    onDragEnd,
+    onDragEndCapture,
+    onDragEnter,
+    onDragEnterCapture,
+    onDragExit,
+    onDragExitCapture,
+    onDragLeave,
+    onDragLeaveCapture,
+    onDragOver,
+    onDragOverCapture,
+    onDragStart,
+    onDragStartCapture,
+    onDrop,
+    onDropCapture,
+    ...filteredProps
+  } = props
+
   return (
     <div ref={carouselRef} className="overflow-hidden">
       <motion.div
@@ -231,7 +239,7 @@ const CarouselContent = React.forwardRef<
           className
         )}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        {...props}
+        {...filteredProps}
       />
     </div>
   )
@@ -244,6 +252,27 @@ const CarouselItem = React.forwardRef<
 >(({ className, ...props }, ref) => {
   const { orientation } = useCarousel()
 
+  // Filter out drag-related props that conflict with Framer Motion
+  const {
+    onDrag,
+    onDragCapture,
+    onDragEnd,
+    onDragEndCapture,
+    onDragEnter,
+    onDragEnterCapture,
+    onDragExit,
+    onDragExitCapture,
+    onDragLeave,
+    onDragLeaveCapture,
+    onDragOver,
+    onDragOverCapture,
+    onDragStart,
+    onDragStartCapture,
+    onDrop,
+    onDropCapture,
+    ...filteredProps
+  } = props
+
   return (
     <motion.div
       ref={ref}
@@ -255,7 +284,7 @@ const CarouselItem = React.forwardRef<
         className
       )}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      {...props}
+      {...filteredProps}
     />
   )
 })
