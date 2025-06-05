@@ -1,3 +1,4 @@
+
 // Export all API services
 export { authAPI } from './authAPI';
 export { productsAPI } from './productsAPI';
@@ -29,7 +30,6 @@ export type { Remboursement, RemboursementFormData } from '@/types/remboursement
 export type { Message, Conversation, ServiceConversation } from '@/types/chat';
 export type { FlashSale, FlashSaleFormData } from '@/types/flashSale';
 export type { Category, CategoryFormData } from '@/types/category';
-export type { Settings, GeneralSettings, NotificationSettings, BackupSettings } from '@/types/settings';
 
 // Legacy compatibility - keep the old api.ts exports working
 import { cartAPI } from './cartAPI';
@@ -44,6 +44,3 @@ export const panierAPI = {
     cartAPI.removeItem(userId, productId),
   clear: (userId: string) => cartAPI.clear(userId),
 };
-
-// Export notification service
-export { default as notificationsService } from './notificationsService';

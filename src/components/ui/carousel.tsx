@@ -4,6 +4,7 @@ import useEmblaCarousel, {
   type UseEmblaCarouselType,
 } from "embla-carousel-react"
 import { ArrowLeft, ArrowRight } from "lucide-react"
+import { motion } from "framer-motion"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -18,7 +19,6 @@ type CarouselProps = {
   plugins?: CarouselPlugin
   orientation?: "horizontal" | "vertical"
   setApi?: (api: CarouselApi) => void
-  // Add autoPlay and interval props
   autoPlay?: boolean
   interval?: number
 }
@@ -89,28 +89,50 @@ const Carousel = React.forwardRef<
       api?.scrollNext()
     }, [api])
 
-    // Add autoplay functionality - fixed TypeScript errors with setTimeout
+    // Enhanced autoplay functionality
     React.useEffect(() => {
       if (!api || !autoPlay) return
 
       let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      let isHovered = false;
       
       const autoPlayFunction = () => {
-        if (api.canScrollNext()) {
-          api.scrollNext();
-        } else {
-          api.scrollTo(0);
+        if (!isHovered) {
+          if (api.canScrollNext()) {
+            api.scrollNext();
+          } else {
+            api.scrollTo(0);
+          }
         }
-        
         timeoutId = setTimeout(autoPlayFunction, interval);
       };
+      
+      const handleMouseEnter = () => {
+        isHovered = true;
+        if (timeoutId) clearTimeout(timeoutId);
+      };
+      
+      const handleMouseLeave = () => {
+        isHovered = false;
+        timeoutId = setTimeout(autoPlayFunction, interval);
+      };
+      
+      const carouselElement = carouselRef.current;
+      if (carouselElement) {
+        carouselElement.addEventListener('mouseenter', handleMouseEnter);
+        carouselElement.addEventListener('mouseleave', handleMouseLeave);
+      }
       
       timeoutId = setTimeout(autoPlayFunction, interval);
       
       return () => {
         if (timeoutId) clearTimeout(timeoutId);
+        if (carouselElement) {
+          carouselElement.removeEventListener('mouseenter', handleMouseEnter);
+          carouselElement.removeEventListener('mouseleave', handleMouseLeave);
+        }
       };
-    }, [api, autoPlay, interval]);
+    }, [api, autoPlay, interval, carouselRef]);
 
     const handleKeyDown = React.useCallback(
       (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -163,16 +185,19 @@ const Carousel = React.forwardRef<
           interval,
         }}
       >
-        <div
+        <motion.div
           ref={ref}
           onKeyDownCapture={handleKeyDown}
-          className={cn("relative", className)}
+          className={cn("relative group", className)}
           role="region"
           aria-roledescription="carousel"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
           {...props}
         >
           {children}
-        </div>
+        </motion.div>
       </CarouselContext.Provider>
     )
   }
@@ -186,14 +211,17 @@ const CarouselContent = React.forwardRef<
   const { carouselRef, orientation } = useCarousel()
 
   return (
-    <div ref={carouselRef} className="overflow-hidden">
-      <div
+    <div ref={carouselRef} className="overflow-hidden rounded-2xl">
+      <motion.div
         ref={ref}
         className={cn(
           "flex",
           orientation === "horizontal" ? "-ml-4" : "-mt-4 flex-col",
           className
         )}
+        initial={{ x: orientation === "horizontal" ? 20 : 0, y: orientation === "vertical" ? 20 : 0 }}
+        animate={{ x: 0, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
         {...props}
       />
     </div>
@@ -208,7 +236,7 @@ const CarouselItem = React.forwardRef<
   const { orientation } = useCarousel()
 
   return (
-    <div
+    <motion.div
       ref={ref}
       role="group"
       aria-roledescription="slide"
@@ -217,6 +245,8 @@ const CarouselItem = React.forwardRef<
         orientation === "horizontal" ? "pl-4" : "pt-4",
         className
       )}
+      whileHover={{ scale: 1.02 }}
+      transition={{ duration: 0.3 }}
       {...props}
     />
   )
@@ -230,24 +260,33 @@ const CarouselPrevious = React.forwardRef<
   const { orientation, scrollPrev, canScrollPrev } = useCarousel()
 
   return (
-    <Button
-      ref={ref}
-      variant={variant}
-      size={size}
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: canScrollPrev ? 1 : 0, x: canScrollPrev ? 0 : -20 }}
+      transition={{ duration: 0.3 }}
       className={cn(
-        "absolute  h-8 w-8 rounded-full",
+        "absolute z-20",
         orientation === "horizontal"
-          ? "-left-12 top-1/2 -translate-y-1/2"
-          : "-top-12 left-1/2 -translate-x-1/2 rotate-90",
-        className
+          ? "-left-14 top-1/2 -translate-y-1/2"
+          : "-top-14 left-1/2 -translate-x-1/2 rotate-90"
       )}
-      disabled={!canScrollPrev}
-      onClick={scrollPrev}
-      {...props}
     >
-      <ArrowLeft className="h-4 w-4" />
-      <span className="sr-only">Previous slide</span>
-    </Button>
+      <Button
+        ref={ref}
+        variant={variant}
+        size={size}
+        className={cn(
+          "h-12 w-12 rounded-full bg-white/90 hover:bg-white dark:bg-black/90 dark:hover:bg-black shadow-2xl border-2 border-red-200 hover:border-red-300 transition-all duration-300 hover:scale-110",
+          className
+        )}
+        disabled={!canScrollPrev}
+        onClick={scrollPrev}
+        {...props}
+      >
+        <ArrowLeft className="h-5 w-5 text-red-600" />
+        <span className="sr-only">Previous slide</span>
+      </Button>
+    </motion.div>
   )
 })
 CarouselPrevious.displayName = "CarouselPrevious"
@@ -259,24 +298,33 @@ const CarouselNext = React.forwardRef<
   const { orientation, scrollNext, canScrollNext } = useCarousel()
 
   return (
-    <Button
-      ref={ref}
-      variant={variant}
-      size={size}
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: canScrollNext ? 1 : 0, x: canScrollNext ? 0 : 20 }}
+      transition={{ duration: 0.3 }}
       className={cn(
-        "absolute h-8 w-8 rounded-full",
+        "absolute z-20",
         orientation === "horizontal"
-          ? "-right-12 top-1/2 -translate-y-1/2"
-          : "-bottom-12 left-1/2 -translate-x-1/2 rotate-90",
-        className
+          ? "-right-14 top-1/2 -translate-y-1/2"
+          : "-bottom-14 left-1/2 -translate-x-1/2 rotate-90"
       )}
-      disabled={!canScrollNext}
-      onClick={scrollNext}
-      {...props}
     >
-      <ArrowRight className="h-4 w-4" />
-      <span className="sr-only">Next slide</span>
-    </Button>
+      <Button
+        ref={ref}
+        variant={variant}
+        size={size}
+        className={cn(
+          "h-12 w-12 rounded-full bg-white/90 hover:bg-white dark:bg-black/90 dark:hover:bg-black shadow-2xl border-2 border-red-200 hover:border-red-300 transition-all duration-300 hover:scale-110",
+          className
+        )}
+        disabled={!canScrollNext}
+        onClick={scrollNext}
+        {...props}
+      >
+        <ArrowRight className="h-5 w-5 text-red-600" />
+        <span className="sr-only">Next slide</span>
+      </Button>
+    </motion.div>
   )
 })
 CarouselNext.displayName = "CarouselNext"
