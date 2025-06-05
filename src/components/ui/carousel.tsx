@@ -117,7 +117,8 @@ const Carousel = React.forwardRef<
         timeoutId = setTimeout(autoPlayFunction, interval);
       };
       
-      const carouselElement = carouselRef.current;
+      // Get the carousel element through the API
+      const carouselElement = api.containerNode();
       if (carouselElement) {
         carouselElement.addEventListener('mouseenter', handleMouseEnter);
         carouselElement.addEventListener('mouseleave', handleMouseLeave);
@@ -132,7 +133,7 @@ const Carousel = React.forwardRef<
           carouselElement.removeEventListener('mouseleave', handleMouseLeave);
         }
       };
-    }, [api, autoPlay, interval, carouselRef]);
+    }, [api, autoPlay, interval]);
 
     const handleKeyDown = React.useCallback(
       (event: React.KeyboardEvent<HTMLDivElement>) => {
