@@ -10,6 +10,15 @@ const EnhancedInput = React.forwardRef<HTMLInputElement, EnhancedInputProps>(
   ({ className, type, ...props }, ref) => {
     const [isFocused, setIsFocused] = React.useState(false)
 
+    // Filter out conflicting animation properties
+    const {
+      onAnimationStart,
+      onAnimationEnd,
+      onAnimationIteration,
+      onTransitionEnd,
+      ...motionProps
+    } = props;
+
     return (
       <div className="relative">
         <motion.input
@@ -22,14 +31,14 @@ const EnhancedInput = React.forwardRef<HTMLInputElement, EnhancedInputProps>(
           ref={ref}
           onFocus={(e) => {
             setIsFocused(true)
-            props.onFocus?.(e)
+            motionProps.onFocus?.(e)
           }}
           onBlur={(e) => {
             setIsFocused(false)
-            props.onBlur?.(e)
+            motionProps.onBlur?.(e)
           }}
           whileFocus={{ scale: 1.02 }}
-          {...props}
+          {...motionProps}
         />
         {isFocused && (
           <motion.div
