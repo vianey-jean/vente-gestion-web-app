@@ -9,29 +9,29 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Package, Search, Eye, Download, Truck, Clock, CheckCircle, AlertCircle, Calendar, CreditCard } from 'lucide-react';
-import { formatCurrency } from '@/lib/ecommerce-utils';
+import { formatEuropeanPrice } from '@/lib/ecommerce-utils';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 
 const OrdersPage = () => {
   const { user } = useAuth();
-  const { orders, isLoading } = useOrders();
+  const { orders, loading } = useOrders();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
   const filteredOrders = orders?.filter(order => 
-    order.numero?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    order.statut?.toLowerCase().includes(searchQuery.toLowerCase())
+    order.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    order.status?.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
   const getStatusIcon = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'en_preparation':
+      case 'en préparation':
         return <Clock className="w-4 h-4" />;
-      case 'expedie':
+      case 'en livraison':
         return <Truck className="w-4 h-4" />;
-      case 'livre':
+      case 'livrée':
         return <CheckCircle className="w-4 h-4" />;
-      case 'annule':
+      case 'annulée':
         return <AlertCircle className="w-4 h-4" />;
       default:
         return <Package className="w-4 h-4" />;
@@ -40,13 +40,13 @@ const OrdersPage = () => {
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'en_preparation':
+      case 'en préparation':
         return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'expedie':
+      case 'en livraison':
         return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'livre':
+      case 'livrée':
         return 'bg-green-100 text-green-800 border-green-200';
-      case 'annule':
+      case 'annulée':
         return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -55,14 +55,16 @@ const OrdersPage = () => {
 
   const getStatusText = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'en_preparation':
+      case 'confirmée':
+        return 'Confirmée';
+      case 'en préparation':
         return 'En préparation';
-      case 'expedie':
-        return 'Expédié';
-      case 'livre':
-        return 'Livré';
-      case 'annule':
-        return 'Annulé';
+      case 'en livraison':
+        return 'En livraison';
+      case 'livrée':
+        return 'Livrée';
+      case 'annulée':
+        return 'Annulée';
       default:
         return 'En attente';
     }
@@ -91,7 +93,7 @@ const OrdersPage = () => {
     }
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-8">
@@ -203,29 +205,29 @@ const OrdersPage = () => {
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
                               <div className="flex items-center space-x-4 mb-4 md:mb-0">
                                 <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl">
-                                  {getStatusIcon(order.statut)}
+                                  {getStatusIcon(order.status)}
                                   <span className="text-white"></span>
                                 </div>
                                 <div>
                                   <h3 className="text-lg font-semibold text-gray-900">
-                                    Commande #{order.numero}
+                                    Commande #{order.id.split('-')[1] || order.id}
                                   </h3>
                                   <div className="flex items-center space-x-4 text-sm text-gray-500">
                                     <div className="flex items-center space-x-1">
                                       <Calendar className="w-4 h-4" />
-                                      <span>{new Date(order.dateCommande).toLocaleDateString('fr-FR')}</span>
+                                      <span>{new Date(order.createdAt).toLocaleDateString('fr-FR')}</span>
                                     </div>
                                     <div className="flex items-center space-x-1">
                                       <CreditCard className="w-4 h-4" />
-                                      <span>{formatCurrency(order.total)}</span>
+                                      <span>{formatEuropeanPrice(order.totalAmount)}</span>
                                     </div>
                                   </div>
                                 </div>
                               </div>
                               
                               <div className="flex items-center space-x-3">
-                                <Badge className={`${getStatusColor(order.statut)} border`}>
-                                  {getStatusText(order.statut)}
+                                <Badge className={`${getStatusColor(order.status)} border`}>
+                                  {getStatusText(order.status)}
                                 </Badge>
                                 <Button 
                                   variant="outline" 
@@ -243,7 +245,7 @@ const OrdersPage = () => {
                             <div className="flex -space-x-2 mb-4">
                               {order.items?.slice(0, 3).map((item: any, idx: number) => (
                                 <div key={idx} className="w-12 h-12 rounded-lg bg-gray-100 border-2 border-white flex items-center justify-center text-xs font-medium text-gray-600 shadow-sm">
-                                  {item.product?.nom?.charAt(0)}
+                                  {item.name?.charAt(0)}
                                 </div>
                               ))}
                               {order.items?.length > 3 && (
@@ -272,15 +274,15 @@ const OrdersPage = () => {
                                           <div key={idx} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                                             <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm">
                                               <span className="text-sm font-medium text-gray-600">
-                                                {item.product?.nom?.charAt(0)}
+                                                {item.name?.charAt(0)}
                                               </span>
                                             </div>
                                             <div className="flex-1">
-                                              <p className="font-medium text-gray-900 text-sm">{item.product?.nom}</p>
-                                              <p className="text-xs text-gray-500">Quantité: {item.quantite}</p>
+                                              <p className="font-medium text-gray-900 text-sm">{item.name}</p>
+                                              <p className="text-xs text-gray-500">Quantité: {item.quantity}</p>
                                             </div>
                                             <div className="text-sm font-medium text-gray-900">
-                                              {formatCurrency(item.product?.prix * item.quantite)}
+                                              {formatEuropeanPrice(item.price * item.quantity)}
                                             </div>
                                           </div>
                                         ))}
@@ -294,16 +296,16 @@ const OrdersPage = () => {
                                         <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
                                           <div className="flex justify-between">
                                             <span>Sous-total</span>
-                                            <span>{formatCurrency(order.sousTotal || order.total)}</span>
+                                            <span>{formatEuropeanPrice(order.originalAmount || order.totalAmount)}</span>
                                           </div>
                                           <div className="flex justify-between">
                                             <span>Livraison</span>
-                                            <span>{formatCurrency(order.fraisLivraison || 0)}</span>
+                                            <span>{formatEuropeanPrice(0)}</span>
                                           </div>
                                           <div className="border-t border-gray-200 pt-2 font-semibold">
                                             <div className="flex justify-between">
                                               <span>Total</span>
-                                              <span>{formatCurrency(order.total)}</span>
+                                              <span>{formatEuropeanPrice(order.totalAmount)}</span>
                                             </div>
                                           </div>
                                         </div>
@@ -317,7 +319,7 @@ const OrdersPage = () => {
                                           <Download className="w-4 h-4 mr-2" />
                                           Télécharger la facture
                                         </Button>
-                                        {order.statut !== 'livre' && order.statut !== 'annule' && (
+                                        {order.status !== 'livrée' && order.status !== 'annulée' && (
                                           <Button 
                                             variant="outline" 
                                             className="w-full justify-start border-blue-200 hover:bg-blue-50"
