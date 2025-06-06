@@ -10,12 +10,15 @@ const EnhancedInput = React.forwardRef<HTMLInputElement, EnhancedInputProps>(
   ({ className, type, ...props }, ref) => {
     const [isFocused, setIsFocused] = React.useState(false)
 
-    // Filter out conflicting animation properties
+    // Filter out conflicting animation and drag properties
     const {
       onAnimationStart,
       onAnimationEnd,
       onAnimationIteration,
       onTransitionEnd,
+      onDrag,
+      onDragEnd,
+      onDragStart,
       ...motionProps
     } = props;
 

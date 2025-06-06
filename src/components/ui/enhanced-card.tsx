@@ -7,12 +7,15 @@ const EnhancedCard = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, children, ...props }, ref) => {
-  // Filter out conflicting animation properties
+  // Filter out conflicting animation and drag properties
   const {
     onAnimationStart,
     onAnimationEnd,
     onAnimationIteration,
     onTransitionEnd,
+    onDrag,
+    onDragEnd,
+    onDragStart,
     ...motionProps
   } = props;
 
@@ -54,12 +57,15 @@ const EnhancedCardTitle = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLHeadingElement>
 >(({ className, children, ...props }, ref) => {
-  // Filter out conflicting animation properties
+  // Filter out conflicting animation and drag properties
   const {
     onAnimationStart,
     onAnimationEnd,
     onAnimationIteration,
     onTransitionEnd,
+    onDrag,
+    onDragEnd,
+    onDragStart,
     ...motionProps
   } = props;
 
@@ -85,12 +91,15 @@ const EnhancedCardDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, children, ...props }, ref) => {
-  // Filter out conflicting animation properties
+  // Filter out conflicting animation and drag properties
   const {
     onAnimationStart,
     onAnimationEnd,
     onAnimationIteration,
     onTransitionEnd,
+    onDrag,
+    onDragEnd,
+    onDragStart,
     ...motionProps
   } = props;
 
@@ -113,12 +122,15 @@ const EnhancedCardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => {
-  // Filter out conflicting animation properties
+  // Filter out conflicting animation and drag properties
   const {
     onAnimationStart,
     onAnimationEnd,
     onAnimationIteration,
     onTransitionEnd,
+    onDrag,
+    onDragEnd,
+    onDragStart,
     ...motionProps
   } = props;
 
@@ -139,12 +151,15 @@ const EnhancedCardFooter = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => {
-  // Filter out conflicting animation properties
+  // Filter out conflicting animation and drag properties
   const {
     onAnimationStart,
     onAnimationEnd,
     onAnimationIteration,
     onTransitionEnd,
+    onDrag,
+    onDragEnd,
+    onDragStart,
     ...motionProps
   } = props;
 
