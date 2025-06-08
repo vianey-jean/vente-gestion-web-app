@@ -7,7 +7,6 @@ import ProductCatalogGrid from '@/components/products/ProductGrid';
 import CustomerTestimonialSection from '@/components/reviews/TestimonialSection';
 import DataRetryLoader from '@/components/data-loading/DataRetryLoader';
 import HeroSection from '@/components/home/hero-section';
-import FeaturesGrid from '@/components/home/features-grid';
 import FeaturedProductsCarousel from '@/components/home/FeaturedProductsCarousel';
 import PromotionalProductsGrid from '@/components/home/PromotionalProductsGrid';
 import FlashSaleBanner from '@/components/flash-sale/FlashSaleBanner';
@@ -66,7 +65,7 @@ const HomePage = () => {
         <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
           <HeroSection />
           
-          <div className="container mx-auto px-4 py-6 space-y-8">
+          <div className="container mx-auto px-4 py-4 space-y-6">
             <DataRetryLoader
               fetchFunction={loadEcommerceProductData}
               onSuccess={handleDataLoadingSuccess}
@@ -75,9 +74,9 @@ const HomePage = () => {
               retryInterval={5000}
               errorMessage="Erreur de chargement des produits"
               loadingComponent={
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
-                  <h2 className="text-lg text-blue-700 font-bold mb-2">
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent mx-auto mb-3"></div>
+                  <h2 className="text-base text-blue-700 font-bold mb-2">
                     <strong>Chargement de votre boutique...</strong>
                   </h2>
                   <p className="text-red-900 font-bold text-sm">Connexion au serveur en cours...</p>
@@ -85,7 +84,7 @@ const HomePage = () => {
               }
             >
               {searchParams.get('q') && (
-                <LuxuryCard className="p-6" gradient>
+                <LuxuryCard className="p-4" gradient>
                   <ProductCatalogGrid
                     products={filteredProductCatalog}
                     title={`Résultats de recherche : "${searchParams.get('q')}"`}
@@ -108,7 +107,7 @@ const HomePage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
                   >
-                    <LuxuryCard className="p-6" gradient shadow="xl">
+                    <LuxuryCard className="p-4" gradient shadow="xl">
                       <FeaturedProductsCarousel products={featuredProductCatalog} />
                     </LuxuryCard>
                   </motion.div>
@@ -118,14 +117,14 @@ const HomePage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
                   >
-                    <LuxuryCard className="p-6" gradient shadow="xl">
-                      <div className="text-center mb-6">
-                        <div className="flex items-center justify-center mb-3">
-                          <div className="bg-gradient-to-r from-orange-500 to-red-500 p-2.5 rounded-xl shadow-lg">
-                            <TrendingUp className="h-6 w-6 text-white" />
+                    <LuxuryCard className="p-4" gradient shadow="xl">
+                      <div className="text-center mb-4">
+                        <div className="flex items-center justify-center mb-2">
+                          <div className="bg-gradient-to-r from-orange-500 to-red-500 p-2 rounded-xl shadow-lg">
+                            <TrendingUp className="h-5 w-5 text-white" />
                           </div>
                         </div>
-                        <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                        <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
                           Promotions Exceptionnelles
                         </h2>
                       </div>
@@ -133,21 +132,19 @@ const HomePage = () => {
                     </LuxuryCard>
                   </motion.div>
 
-                  <FeaturesGrid />
-
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
                   >
-                    <LuxuryCard className="p-6" gradient shadow="xl">
-                      <div className="text-center mb-6">
-                        <div className="flex items-center justify-center mb-3">
-                          <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-2.5 rounded-xl shadow-lg">
-                            <Star className="h-6 w-6 text-white" />
+                    <LuxuryCard className="p-4" gradient shadow="xl">
+                      <div className="text-center mb-4">
+                        <div className="flex items-center justify-center mb-2">
+                          <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-2 rounded-xl shadow-lg">
+                            <Star className="h-5 w-5 text-white" />
                           </div>
                         </div>
-                        <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                        <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                           Dernières Nouveautés
                         </h2>
                       </div>
@@ -160,14 +157,14 @@ const HomePage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.6 }}
                   >
-                    <LuxuryCard className="p-6" gradient shadow="xl">
-                      <div className="text-center mb-6">
-                        <div className="flex items-center justify-center mb-3">
-                          <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-2.5 rounded-xl shadow-lg">
-                            <ShoppingBag className="h-6 w-6 text-white" />
+                    <LuxuryCard className="p-4" gradient shadow="xl">
+                      <div className="text-center mb-4">
+                        <div className="flex items-center justify-center mb-2">
+                          <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-2 rounded-xl shadow-lg">
+                            <ShoppingBag className="h-5 w-5 text-white" />
                           </div>
                         </div>
-                        <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                        <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                           Notre Catalogue Complet
                         </h2>
                       </div>
@@ -179,7 +176,7 @@ const HomePage = () => {
                     </LuxuryCard>
                   </motion.div>
 
-                  <LuxuryCard className="p-6" gradient shadow="xl">
+                  <LuxuryCard className="p-4" gradient shadow="xl">
                     <CustomerTestimonialSection />
                   </LuxuryCard>
                 </>
