@@ -1,7 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { useStore } from '@/contexts/StoreContext';
@@ -10,7 +9,7 @@ import LoadingSpinner from '@/components/ui/loading-spinner';
 import CartSummary from '@/components/cart/CartSummary';
 import CartItemCard from '@/components/cart/CartItemCard';
 import EmptyCartMessage from '@/components/cart/EmptyCartMessage';
-import { ShoppingCart, Package, Info } from 'lucide-react';
+import { ShoppingCart, Sparkles, Shield, TrendingUp } from 'lucide-react';
 
 const CartPage = () => {
   const { 
@@ -53,52 +52,23 @@ const CartPage = () => {
     navigate('/paiement');
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        ease: "easeOut"
-      }
-    }
-  };
-
   if (loadingCart) {
     return (
       <Layout>
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-          <div className="container mx-auto px-4 py-16">
-            <motion.div 
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              className="max-w-4xl mx-auto"
-            >
-              <div className="flex items-center justify-center mb-8">
-                <div className="p-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl shadow-lg">
-                  <ShoppingCart className="w-12 h-12 text-white" />
+        <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
+          <div className="container mx-auto px-4 py-8">
+            <h1 className="text-3xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Votre Panier
+            </h1>
+            <div className="flex justify-center py-16">
+              <div className="text-center">
+                <div className="relative mb-6">
+                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-gradient-to-r from-blue-500 to-indigo-500 border-t-transparent mx-auto"></div>
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500/20 to-indigo-500/20 animate-pulse"></div>
                 </div>
-              </div>
-              <h1 className="text-4xl font-bold text-center mb-12 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Votre Panier
-              </h1>
-              <div className="flex justify-center py-16">
                 <LoadingSpinner text="Chargement de votre panier..." />
               </div>
-            </motion.div>
+            </div>
           </div>
         </div>
       </Layout>
@@ -107,131 +77,126 @@ const CartPage = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
         {/* Hero Section */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white py-24">
-          <div className="absolute inset-0 bg-black/20"></div>
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="container mx-auto px-4 relative z-10"
-          >
-            <div className="max-w-4xl mx-auto text-center">
-              <div className="flex justify-center mb-6">
-                <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm">
-                  <ShoppingCart className="w-12 h-12 text-white" />
+        <div className="relative overflow-hidden bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 dark:from-blue-500/5 dark:via-indigo-500/5 dark:to-purple-500/5">
+          <div className="absolute inset-0 bg-grid-neutral-100/50 dark:bg-grid-neutral-800/50" />
+          <div className="container mx-auto px-4 py-12 relative">
+            <div className="text-center max-w-4xl mx-auto">
+              <div className="flex items-center justify-center mb-6">
+                <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-3 rounded-2xl shadow-lg">
+                  <ShoppingCart className="h-8 w-8 text-white" />
                 </div>
               </div>
-              <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
+              
+              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-6">
                 Votre Panier
               </h1>
-              <p className="text-xl text-blue-100 leading-relaxed max-w-2xl mx-auto">
-                Finalisez votre sélection et procédez au paiement en toute sécurité
-              </p>
+              
+              {cart && cart.length > 0 && (
+                <div className="flex items-center justify-center space-x-8 text-sm text-neutral-500 dark:text-neutral-400">
+                  <div className="flex items-center space-x-2">
+                    <Sparkles className="h-5 w-5 text-blue-500" />
+                    <span>Livraison offerte dès 50€</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Shield className="h-5 w-5 text-green-500" />
+                    <span>Paiement sécurisé</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <TrendingUp className="h-5 w-5 text-purple-500" />
+                    <span>Retour gratuit 30j</span>
+                  </div>
+                </div>
+              )}
             </div>
-          </motion.div>
+          </div>
         </div>
 
-        <div className="container mx-auto px-4 py-16">
-          <motion.div 
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="max-w-6xl mx-auto"
-          >
-            {!isAuthenticated || !cart || cart.length === 0 ? (
-              <motion.div variants={itemVariants}>
-                <EmptyCartMessage isAuthenticated={isAuthenticated} />
-              </motion.div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <motion.div variants={itemVariants} className="lg:col-span-2">
-                  <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 mb-8">
-                    <div className="flex items-center space-x-3 mb-6">
-                      <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl">
-                        <Package className="w-6 h-6 text-white" />
-                      </div>
-                      <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                        Articles dans votre panier
-                      </h2>
+        <div className="container mx-auto px-4 py-8">
+          {!isAuthenticated || !cart || cart.length === 0 ? (
+            <EmptyCartMessage isAuthenticated={isAuthenticated} />
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2">
+                <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 p-6 mb-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+                      Articles dans votre panier
+                    </h2>
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 px-4 py-2 rounded-full">
+                      <span className="text-blue-700 dark:text-blue-400 font-medium">
+                        {cart.length} article{cart.length > 1 ? 's' : ''}
+                      </span>
                     </div>
-                    
-                    <div className="space-y-6">
-                      {cart.map((item, index) => (
-                        <motion.div
-                          key={item.product.id}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.1, duration: 0.5 }}
-                          className="relative"
-                        >
-                          <div className="bg-gradient-to-r from-white to-gray-50/50 rounded-xl p-6 border border-gray-200/50 shadow-sm hover:shadow-lg transition-all duration-300">
-                            <CartItemCard
-                              item={item}
-                              isSelected={selectedItems[item.product.id] || false}
-                              onSelectItem={handleSelectItem}
-                              onQuantityChange={handleQuantityChange}
-                              onRemove={removeFromCart}
-                            />
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-
-                    <motion.div 
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.5, duration: 0.5 }}
-                      className="mt-8 flex justify-end"
-                    >
-                      <Button 
-                        variant="outline" 
-                        className="text-sm bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 hover:from-blue-100 hover:to-purple-100 transition-all duration-300"
-                        onClick={() => {
-                          const allSelected = cart.every(item => selectedItems[item.product.id]);
-                          const newSelection = cart.reduce((acc, item) => {
-                            acc[item.product.id] = !allSelected;
-                            return acc;
-                          }, {} as Record<string, boolean>);
-                          setSelectedItems(newSelection);
-                        }}
-                      >
-                        {cart.every(item => selectedItems[item.product.id]) 
-                          ? "Désélectionner tout" 
-                          : "Sélectionner tout"}
-                      </Button>
-                    </motion.div>
                   </div>
                   
-                  <motion.div 
-                    variants={itemVariants}
-                    className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-2xl border border-blue-200/50 shadow-sm"
-                  >
-                    <div className="flex items-start space-x-4">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <Info className="w-5 h-5 text-blue-600" />
+                  <div className="space-y-6">
+                    {cart.map((item) => (
+                      <div 
+                        key={item.product.id}
+                        className="bg-gradient-to-r from-neutral-50 to-neutral-100 dark:from-neutral-800 dark:to-neutral-700 rounded-xl p-4 border border-neutral-200 dark:border-neutral-600"
+                      >
+                        <CartItemCard
+                          item={item}
+                          isSelected={selectedItems[item.product.id] || false}
+                          onSelectItem={handleSelectItem}
+                          onQuantityChange={handleQuantityChange}
+                          onRemove={removeFromCart}
+                        />
                       </div>
-                      <div>
-                        <p className="mb-2 text-blue-800 font-medium">Informations de livraison</p>
-                        <p className="text-sm text-blue-700 mb-1">Livraison offerte à partir de 50€ d'achat.</p>
-                        <p className="text-sm text-blue-700">Les frais de livraison sont calculés à l'étape suivante.</p>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 pt-6 border-t border-neutral-200 dark:border-neutral-700 flex justify-end">
+                    <Button 
+                      variant="outline" 
+                      className="text-sm hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:text-blue-700 hover:border-blue-300 dark:hover:from-blue-950/20 dark:hover:to-indigo-950/20 dark:hover:text-blue-400"
+                      onClick={() => {
+                        const allSelected = cart.every(item => selectedItems[item.product.id]);
+                        const newSelection = cart.reduce((acc, item) => {
+                          acc[item.product.id] = !allSelected;
+                          return acc;
+                        }, {} as Record<string, boolean>);
+                        setSelectedItems(newSelection);
+                      }}
+                    >
+                      {cart.every(item => selectedItems[item.product.id]) 
+                        ? "Désélectionner tout" 
+                        : "Sélectionner tout"}
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-start">
+                    <div className="mr-3 mt-0.5">
+                      <div className="bg-blue-500 rounded-full p-1">
+                        <Sparkles className="h-4 w-4 text-white" />
                       </div>
                     </div>
-                  </motion.div>
-                </motion.div>
-                
-                <motion.div variants={itemVariants} className="lg:col-span-1">
-                  <div className="sticky top-24">
-                    <CartSummary 
-                      onCheckout={handleCheckout}
-                      selectedItems={selectedItems}
-                    />
+                    <div>
+                      <p className="text-blue-800 dark:text-blue-300 font-medium mb-1">
+                        Livraison offerte à partir de 50€ d'achat.
+                      </p>
+                      <p className="text-blue-700 dark:text-blue-400 text-sm">
+                        Les frais de livraison sont calculés à l'étape suivante.
+                      </p>
+                    </div>
                   </div>
-                </motion.div>
+                </div>
               </div>
-            )}
-          </motion.div>
+              
+              <div className="lg:col-span-1">
+                <div className="sticky top-8">
+                  <CartSummary 
+                    onCheckout={handleCheckout}
+                    selectedItems={selectedItems}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Layout>

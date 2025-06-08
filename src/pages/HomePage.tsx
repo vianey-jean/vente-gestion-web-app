@@ -13,8 +13,7 @@ import { useHomePageData } from '@/hooks/useHomePageData';
 import { useCarouselAutoplay } from '@/hooks/useCarouselAutoplay';
 import SalesNotification from '@/components/engagement/SalesNotification';
 import LiveVisitorCounter from '@/components/engagement/LiveVisitorCounter';
-import { motion } from 'framer-motion';
-import { Sparkles, TrendingUp, Award, Star } from 'lucide-react';
+import { Sparkles, TrendingUp, Star, ShoppingBag } from 'lucide-react';
 
 const HomePage = () => {
   const [searchParams] = useSearchParams();
@@ -49,190 +48,161 @@ const HomePage = () => {
     }
   }, [searchParams, completeProductCatalog, setFilteredProductCatalog]);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        ease: "easeOut"
-      }
-    }
-  };
-
   return (
     <Layout>
-      <motion.div 
-        className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-red-50/30 dark:from-neutral-950 dark:via-neutral-900 dark:to-red-950/20"
-        initial="hidden"
-        animate="visible"
-        variants={containerVariants}
-      >
-        {/* Hero Section Enhancement */}
-        <motion.div 
-          className="relative overflow-hidden bg-gradient-to-br from-red-500 via-pink-500 to-purple-600 text-white"
-          variants={itemVariants}
-        >
-          <div className="absolute inset-0 bg-black/20"></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent transform -skew-x-12"></div>
-          
-          <div className="relative container mx-auto px-4 py-16">
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
+        {/* Hero Section moderne */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-red-500/10 via-rose-500/10 to-pink-500/10 dark:from-red-500/5 dark:via-rose-500/5 dark:to-pink-500/5">
+          <div className="absolute inset-0 bg-grid-neutral-100/50 dark:bg-grid-neutral-800/50" />
+          <div className="container mx-auto px-4 py-6 relative">
             <HomeHeader />
+            
+            {/* Section de bienvenue avec animation */}
+<div className="text-center max-w-4xl mx-auto mb-8 h-[100px]">
+  {/* <div className="flex items-center justify-center mb-3">
+    <div className="bg-gradient-to-r from-red-500 to-rose-500 p-2 rounded-2xl shadow-lg animate-pulse">
+      <Sparkles className="h-6 w-6 text-white" />
+    </div>
+  </div> */}
+
+  <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 bg-clip-text text-transparent mb-3 animate-fade-in">
+    Découvrez l'Excellence
+  </h1>
+
+  <p className="text-md md:text-lg text-neutral-600 dark:text-neutral-300 mb-4 leading-relaxed animate-fade-in">
+    Votre destination beauté pour des produits de qualité premium qui subliment votre style naturel.
+  </p>
+
+  <div className="flex items-center justify-center space-x-6 text-sm text-neutral-500 dark:text-neutral-400">
+    <div className="flex items-center space-x-1 animate-fade-in">
+      <Star className="h-4 w-4 text-yellow-500" />
+      <span>Qualité Premium</span>
+    </div>
+    <div className="flex items-center space-x-1 animate-fade-in">
+      <TrendingUp className="h-4 w-4 text-green-500" />
+      <span>Tendances 2025</span>
+    </div>
+    <div className="flex items-center space-x-1 animate-fade-in">
+      <ShoppingBag className="h-4 w-4 text-blue-500" />
+      <span>Livraison Offerte</span>
+    </div>
+  </div>
+</div>
+
           </div>
-          
-          {/* Floating Elements */}
-          <div className="absolute top-10 left-10 w-20 h-20 bg-white/10 rounded-full blur-xl animate-pulse"></div>
-          <div className="absolute bottom-10 right-10 w-32 h-32 bg-pink-300/20 rounded-full blur-2xl float-animation"></div>
-          <div className="absolute top-1/2 left-1/3 w-16 h-16 bg-yellow-300/20 rounded-full blur-lg float-animation" style={{ animationDelay: '2s' }}></div>
-        </motion.div>
+        </div>
 
-        <div className="container mx-auto px-4 py-8 space-y-16">
-          <DataRetryLoader
-            fetchFunction={loadEcommerceProductData}
-            onSuccess={handleDataLoadingSuccess}
-            onMaxRetriesReached={handleMaxRetriesReached}
-            maxRetries={6}
-            retryInterval={5000}
-            errorMessage="Erreur de chargement des produits"
-            loadingComponent={
-              <motion.div 
-                className="text-center py-20"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <div className="relative">
-                  <div className="animate-spin rounded-full h-20 w-20 border-4 border-red-200 border-t-red-600 mx-auto mb-8"></div>
-                  <div className="absolute inset-0 rounded-full h-20 w-20 border-4 border-transparent border-r-pink-500 mx-auto animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
-                </div>
-                <h2 className="text-2xl font-bold mb-4 text-gradient">Chargement de votre boutique...</h2>
-                <p className="text-gray-600 dark:text-gray-400 animate-pulse">Connexion au serveur en cours...</p>
-                <div className="mt-6 flex justify-center gap-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                </div>
-              </motion.div>
-            }
-          >
-            {/* Search Results Section */}
+        <div className="container mx-auto px-4 py-8">
+
+
+
+             <DataRetryLoader
+  fetchFunction={loadEcommerceProductData}
+  onSuccess={handleDataLoadingSuccess}
+  onMaxRetriesReached={handleMaxRetriesReached}
+  maxRetries={6}
+  retryInterval={5000}
+  errorMessage="Erreur de chargement des produits"
+  loadingComponent={
+    <div className="text-center py-20">
+      {/* Spinner bleu stylisé */}
+      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent mx-auto mb-6"></div>
+
+      {/* Titre en gras avec style */}
+      <h2 className="text-xl text-blue-700 font-bold mb-2">
+        <strong>Chargement de votre boutique...</strong>
+      </h2>
+
+      {/* Texte complémentaire */}
+      <p className="text-red-900 font-bold">Connexion au serveur en cours...</p>
+    </div>
+  }
+>
+
+
+
+
+
+
             {searchParams.get('q') && (
-              <motion.div variants={itemVariants} className="mb-16">
-                <div className="bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl p-8 border border-red-100 dark:border-red-900/20">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-3 bg-gradient-to-br from-red-500 to-pink-500 rounded-full">
-                      <Sparkles className="h-6 w-6 text-white" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-gradient">
-                      Résultats pour "{searchParams.get('q')}"
-                    </h2>
-                  </div>
-                  <ProductCatalogGrid
-                    products={filteredProductCatalog}
-                    title=""
-                  />
-                </div>
-              </motion.div>
-            )}
-
-            {/* Flash Sale Banner */}
-            {!searchParams.get('q') && (
-              <motion.div variants={itemVariants}>
-                <FlashSaleBanner />
-              </motion.div>
-            )}
-
-            {/* Featured Products Section */}
-            {!searchParams.get('q') && featuredProductCatalog.length > 0 && (
-              <motion.div variants={itemVariants}>
-                <FeaturedProductsCarousel products={featuredProductCatalog} />
-              </motion.div>
-            )}
-
-            {/* Promotional Products Section */}
-            {!searchParams.get('q') && (
-              <motion.div variants={itemVariants} className="mb-16">
-                <div className="text-center mb-12">
-                  <div className="flex items-center justify-center gap-3 mb-4">
-                    <Award className="h-8 w-8 text-red-500" />
-                    <h2 className="text-4xl font-bold text-gradient">Offres Exceptionnelles</h2>
-                    <Award className="h-8 w-8 text-red-500" />
-                  </div>
-                  <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                    Découvrez nos promotions exclusives et économisez jusqu'à 70%
-                  </p>
-                </div>
-                <PromotionalProductsGrid products={promotionalProducts} />
-              </motion.div>
-            )}
-
-            {/* New Arrivals Section */}
-            <motion.div variants={itemVariants} className="mb-16">
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-3xl p-8 shadow-xl border border-blue-100 dark:border-blue-900/20">
-                <div className="text-center mb-12">
-                  <div className="flex items-center justify-center gap-3 mb-4">
-                    <TrendingUp className="h-8 w-8 text-blue-500 animate-bounce" />
-                    <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                      Dernières Nouveautés
-                    </h2>
-                    <Star className="h-8 w-8 text-blue-500 animate-pulse" />
-                  </div>
-                  <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                    Les derniers produits ajoutés à notre collection
-                  </p>
-                </div>
-                <ProductCatalogGrid products={newArrivalProducts} title="" />
-              </div>
-            </motion.div>
-
-            {/* Complete Catalog Section */}
-            <motion.div variants={itemVariants} className="mb-16">
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-3xl p-8 shadow-xl border border-purple-100 dark:border-purple-900/20">
-                <div className="text-center mb-12">
-                  <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
-                    Notre Catalogue Complet
-                  </h2>
-                  <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                    Explorez toute notre gamme de produits soigneusement sélectionnés
-                  </p>
-                </div>
-                <ProductCatalogGrid 
-                  products={completeProductCatalog} 
-                  title="" 
-                  showViewAllButton={true}
+              <div className="mb-12 bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 p-8">
+                <ProductCatalogGrid
+                  products={filteredProductCatalog}
+                  title={`Résultats de recherche : "${searchParams.get('q')}"`}
                 />
               </div>
-            </motion.div>
+            )}
 
-            {/* Testimonials Section */}
-            <motion.div variants={itemVariants}>
+            {!searchParams.get('q') && (
+              <div className="mb-12 animate-fade-in">
+                <FlashSaleBanner />
+              </div>
+            )}
+
+            {!searchParams.get('q') && (
+              <div className="mb-12 bg-gradient-to-r from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800 rounded-xl p-8 shadow-sm border border-neutral-200 dark:border-neutral-700 animate-fade-in">
+                <FeaturedProductsCarousel products={featuredProductCatalog} />
+              </div>
+            )}
+
+            {!searchParams.get('q') && (
+              <div className="mb-12 bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 p-8 animate-fade-in" data-section="promotional">
+                <div className="text-center mb-8">
+                  <div className="flex items-center justify-center mb-4">
+                    <div className="bg-gradient-to-r from-orange-500 to-red-500 p-2 rounded-xl">
+                      <TrendingUp className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                  <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+                    Promotions Exceptionnelles
+                  </h2>
+                </div>
+                <PromotionalProductsGrid products={promotionalProducts} />
+              </div>
+            )}
+
+            <div className="mb-12 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 p-8 animate-fade-in" data-section="new-arrivals">
+              <div className="text-center mb-8">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-2 rounded-xl">
+                    <Star className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  Dernières Nouveautés
+                </h2>
+              </div>
+              <ProductCatalogGrid products={newArrivalProducts} title="" />
+            </div>
+
+            <div className="mb-12 bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 p-8 animate-fade-in" data-section="complete-catalog">
+              <div className="text-center mb-8">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-2 rounded-xl">
+                    <ShoppingBag className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  Notre Catalogue Complet
+                </h2>
+              </div>
+              <ProductCatalogGrid 
+                products={completeProductCatalog} 
+                title="" 
+                showViewAllButton={true}
+              />
+            </div>
+
+            <div className="bg-gradient-to-r from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-8 animate-fade-in">
               <CustomerTestimonialSection />
-            </motion.div>
+            </div>
           </DataRetryLoader>
         </div>
 
-        {/* Enhanced Background Elements */}
-        <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-red-200/20 to-pink-200/20 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-purple-200/20 to-blue-200/20 rounded-full blur-3xl"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-yellow-200/10 to-orange-200/10 rounded-full blur-3xl"></div>
-        </div>
-
-        {/* Admin Components */}
+        {/* Composants pour les administrateurs uniquement */}
         <SalesNotification />
         <LiveVisitorCounter />
-      </motion.div>
+      </div>
     </Layout>
   );
 };

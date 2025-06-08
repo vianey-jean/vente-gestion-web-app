@@ -1,268 +1,371 @@
-
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import Layout from '@/components/layout/Layout';
-import { EnhancedCard, EnhancedCardContent, EnhancedCardDescription, EnhancedCardHeader, EnhancedCardTitle } from '@/components/ui/enhanced-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { MapPin, Mail, Phone, Clock, Send, MessageCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from '@/components/ui/sonner';
+import { useMutation } from '@tanstack/react-query';
+import { API } from '@/services/api';
+import { Mail, Phone, MapPin, Clock, Send, MessageSquare, Sparkles, CheckCircle2, ArrowRight, Globe } from 'lucide-react';
+import LoadingSpinner from '@/components/ui/loading-spinner';
+
+const formSchema = z.object({
+  nom: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
+  prenom: z.string().min(2, 'Le prénom doit contenir au moins 2 caractères'),
+  email: z.string().email('Email invalide'),
+  telephone: z.string().min(8, 'Numéro de téléphone invalide'),
+  adresse: z.string().min(5, 'Adresse requise'),
+  objet: z.string().min(3, 'Objet requis'),
+  message: z.string().min(10, 'Le message doit contenir au moins 10 caractères'),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 const ContactPage = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: ''
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      nom: '',
+      prenom: '',
+      email: '',
+      telephone: '',
+      adresse: '',
+      objet: '',
+      message: '',
+    },
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    toast.success('Message envoyé avec succès !');
-    setFormData({ name: '', email: '', subject: '', message: '' });
-    setIsSubmitting(false);
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2
-      }
+  const contactMutation = useMutation({
+    mutationFn: async (data: FormValues) => {
+      return API.post('/contacts', data);
+    },
+    onSuccess: () => {
+      toast.success("Votre message a été envoyé avec succès");
+      form.reset();
+    },
+    onError: () => {
+      toast.error("Une erreur est survenue lors de l'envoi de votre message");
     }
-  };
+  });
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        ease: "easeOut"
-      }
-    }
+  const onSubmit = (data: FormValues) => {
+    contactMutation.mutate(data);
   };
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-purple-50">
-        {/* Hero Section */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-red-600 via-pink-600 to-purple-600 text-white py-24">
-          <div className="absolute inset-0 bg-black/20"></div>
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="container mx-auto px-4 relative z-10"
-          >
-            <div className="max-w-3xl mx-auto text-center">
-              <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-white to-red-100 bg-clip-text text-transparent">
-                Contactez-nous
-              </h1>
-              <p className="text-xl text-red-100 leading-relaxed">
-                Notre équipe dédiée est là pour répondre à toutes vos questions et vous accompagner dans votre expérience beauté.
-              </p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        {/* Hero Header */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 rounded-none lg:rounded-3xl lg:mx-8 lg:mt-8 shadow-2xl">
+          <div className="absolute inset-0 bg-black/10"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -translate-y-48 translate-x-48"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full translate-y-32 -translate-x-32"></div>
+          <div className="absolute top-1/2 left-1/2 w-32 h-32 bg-white/10 rounded-full transform -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
+          
+          <div className="relative z-10 text-center py-20 px-8">
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center justify-center space-x-4 mb-8">
+                <div className="bg-white/20 backdrop-blur-sm p-6 rounded-3xl shadow-xl">
+                  <MessageSquare className="h-12 w-12 text-white" />
+                </div>
+                <div className="text-left">
+                  <h1 className="text-5xl font-bold text-white mb-4">
+                    Parlons Ensemble
+                  </h1>
+                  <p className="text-xl text-blue-100 max-w-2xl">
+                    Notre équipe est là pour vous accompagner dans tous vos projets. 
+                    Contactez-nous et découvrez comment nous pouvons vous aider.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="grid md:grid-cols-3 gap-8 mt-12">
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-white">
+                  <Clock className="h-8 w-8 mb-4 text-blue-200" />
+                  <h3 className="font-semibold mb-2">Réponse Rapide</h3>
+                  <p className="text-sm text-blue-100">Nous répondons sous 24h maximum</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-white">
+                  <CheckCircle2 className="h-8 w-8 mb-4 text-green-300" />
+                  <h3 className="font-semibold mb-2">Support Expert</h3>
+                  <p className="text-sm text-blue-100">Une équipe qualifiée à votre service</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-white">
+                  <Globe className="h-8 w-8 mb-4 text-purple-200" />
+                  <h3 className="font-semibold mb-2">Disponibilité</h3>
+                  <p className="text-sm text-blue-100">7j/7 pour votre satisfaction</p>
+                </div>
+              </div>
             </div>
-          </motion.div>
+          </div>
         </div>
 
-        <div className="container mx-auto px-4 py-16">
-          <motion.div 
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="grid lg:grid-cols-2 gap-12 max-w-6xl mx-auto"
-          >
-            {/* Contact Form */}
-            <motion.div variants={itemVariants}>
-              <EnhancedCard className="h-full">
-                <EnhancedCardHeader>
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-3 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl">
-                      <MessageCircle className="w-6 h-6 text-white" />
+        <div className="container mx-auto py-16 px-4">
+          <div className="grid lg:grid-cols-2 gap-16">
+            {/* Form Section */}
+            <div className="order-2 lg:order-1">
+              <Card className="border-0 shadow-2xl bg-white/80 backdrop-blur-sm hover:shadow-3xl transition-all duration-500">
+                <CardHeader className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-b border-blue-100 rounded-t-lg">
+                  <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent flex items-center">
+                    <Sparkles className="h-7 w-7 mr-3 text-blue-600" />
+                    Envoyez-nous un message
+                  </CardTitle>
+                  <CardDescription className="text-gray-600 text-lg mt-2">
+                    Remplissez ce formulaire et notre équipe vous contactera rapidement pour répondre à vos besoins.
+                  </CardDescription>
+                </CardHeader>
+                
+                <CardContent className="p-8">
+                  {contactMutation.isPending ? (
+                    <div className="flex justify-center py-12">
+                      <LoadingSpinner size="lg" variant="elegant" text="Envoi de votre message..." />
                     </div>
-                    <EnhancedCardTitle>Envoyez-nous un message</EnhancedCardTitle>
-                  </div>
-                  <EnhancedCardDescription>
-                    Nous vous répondrons dans les plus brefs délais. Tous les champs sont obligatoires.
-                  </EnhancedCardDescription>
-                </EnhancedCardHeader>
-                <EnhancedCardContent>
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Nom complet</label>
-                        <Input
-                          name="name"
-                          value={formData.name}
-                          onChange={handleInputChange}
-                          placeholder="Votre nom complet"
-                          required
-                          className="transition-all duration-200 focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">Email</label>
-                        <Input
-                          type="email"
-                          name="email"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          placeholder="votre@email.com"
-                          required
-                          className="transition-all duration-200 focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Sujet</label>
-                      <Input
-                        name="subject"
-                        value={formData.subject}
-                        onChange={handleInputChange}
-                        placeholder="De quoi souhaitez-vous nous parler ?"
-                        required
-                        className="transition-all duration-200 focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Message</label>
-                      <Textarea
-                        name="message"
-                        value={formData.message}
-                        onChange={handleInputChange}
-                        placeholder="Décrivez votre demande en détail..."
-                        rows={6}
-                        required
-                        className="transition-all duration-200 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 resize-none"
-                      />
-                    </div>
-                    
-                    <Button 
-                      type="submit" 
-                      disabled={isSubmitting}
-                      className="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white py-6 text-lg font-semibold rounded-xl transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-xl"
-                    >
-                      {isSubmitting ? (
-                        <div className="flex items-center justify-center space-x-2">
-                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          <span>Envoi en cours...</span>
+                  ) : (
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                        <div className="grid grid-cols-2 gap-6">
+                          <FormField
+                            control={form.control}
+                            name="nom"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-gray-700 font-semibold">Nom *</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="Dupont" 
+                                    {...field} 
+                                    className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl transition-all duration-300 hover:border-gray-300" 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="prenom"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-gray-700 font-semibold">Prénom *</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="Jean" 
+                                    {...field} 
+                                    className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl transition-all duration-300 hover:border-gray-300" 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         </div>
-                      ) : (
-                        <div className="flex items-center justify-center space-x-2">
-                          <Send className="w-5 h-5" />
-                          <span>Envoyer le message</span>
+                        
+                        <div className="grid grid-cols-2 gap-6">
+                          <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-gray-700 font-semibold">Email *</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="email@example.com" 
+                                    {...field} 
+                                    className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl transition-all duration-300 hover:border-gray-300" 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="telephone"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-gray-700 font-semibold">Téléphone *</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="06 12 34 56 78" 
+                                    {...field} 
+                                    className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl transition-all duration-300 hover:border-gray-300" 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         </div>
-                      )}
-                    </Button>
-                  </form>
-                </EnhancedCardContent>
-              </EnhancedCard>
-            </motion.div>
+                        
+                        <FormField
+                          control={form.control}
+                          name="adresse"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700 font-semibold">Adresse *</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="123 rue des Exemples, 75000 Paris" 
+                                  {...field} 
+                                  className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl transition-all duration-300 hover:border-gray-300" 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="objet"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700 font-semibold">Objet *</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Objet de votre message" 
+                                  {...field} 
+                                  className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-xl transition-all duration-300 hover:border-gray-300" 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="message"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-gray-700 font-semibold">Message *</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="Décrivez votre demande en détail..." 
+                                  {...field} 
+                                  rows={6} 
+                                  className="border-2 border-gray-200 focus:border-blue-500 rounded-xl transition-all duration-300 hover:border-gray-300 resize-none" 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <Button 
+                          type="submit" 
+                          className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white font-semibold h-14 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                          disabled={contactMutation.isPending}
+                        >
+                          <Send className="h-5 w-5 mr-3" />
+                          Envoyer le message
+                          <ArrowRight className="h-5 w-5 ml-3" />
+                        </Button>
+                      </form>
+                    </Form>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+            
+            {/* Contact Info Section */}
+            <div className="order-1 lg:order-2 space-y-8">
+              <div className="text-center lg:text-left mb-12">
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">Nos coordonnées</h2>
+                <p className="text-xl text-gray-600">Plusieurs moyens de nous joindre pour mieux vous servir</p>
+              </div>
 
-            {/* Contact Information */}
-            <motion.div variants={itemVariants} className="space-y-6">
-              <EnhancedCard>
-                <EnhancedCardHeader>
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl">
-                      <Phone className="w-6 h-6 text-white" />
-                    </div>
-                    <EnhancedCardTitle>Nos coordonnées</EnhancedCardTitle>
-                  </div>
-                </EnhancedCardHeader>
-                <EnhancedCardContent className="space-y-6">
-                  {[
-                    {
-                      icon: MapPin,
-                      title: "Adresse",
-                      content: "123 Avenue de la Beauté\n97400 Saint-Denis, La Réunion",
-                      gradient: "from-red-500 to-pink-500"
-                    },
-                    {
-                      icon: Phone,
-                      title: "Téléphone",
-                      content: "+262 123 456 789",
-                      gradient: "from-green-500 to-emerald-500"
-                    },
-                    {
-                      icon: Mail,
-                      title: "Email",
-                      content: "contact@riziky-boutique.com",
-                      gradient: "from-blue-500 to-cyan-500"
-                    },
-                    {
-                      icon: Clock,
-                      title: "Horaires",
-                      content: "Lundi - Samedi: 9h00 - 19h00\nDimanche: Fermé",
-                      gradient: "from-yellow-500 to-orange-500"
-                    }
-                  ].map((item, index) => (
-                    <motion.div 
-                      key={index}
-                      whileHover={{ x: 5 }}
-                      className="flex items-start space-x-4 p-4 rounded-xl bg-gradient-to-r from-gray-50 to-white border border-gray-100 hover:shadow-md transition-all duration-200"
-                    >
-                      <div className={`p-3 bg-gradient-to-r ${item.gradient} rounded-lg shadow-lg`}>
-                        <item.icon className="w-5 h-5 text-white" />
+              <div className="grid gap-6">
+                <Card className="group border-0 shadow-xl bg-gradient-to-br from-white to-red-50 hover:shadow-2xl transition-all duration-300 hover:scale-105">
+                  <CardContent className="p-8">
+                    <div className="flex items-center space-x-4 mb-4">
+                      <div className="bg-gradient-to-br from-red-500 to-pink-600 p-4 rounded-2xl shadow-lg group-hover:shadow-xl transition-shadow">
+                        <MapPin className="h-8 w-8 text-white" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900 mb-1">{item.title}</h3>
-                        <p className="text-gray-600 whitespace-pre-line leading-relaxed">{item.content}</p>
+                        <h3 className="text-xl font-bold text-red-800">Adresse</h3>
+                        <p className="text-gray-600">Notre siège social</p>
                       </div>
-                    </motion.div>
-                  ))}
-                </EnhancedCardContent>
-              </EnhancedCard>
+                    </div>
+                    <div className="ml-16">
+                      <p className="text-gray-700 font-medium">123 Rue du Commerce</p>
+                      <p className="text-gray-700 font-medium">75015 Paris, France</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="group border-0 shadow-xl bg-gradient-to-br from-white to-blue-50 hover:shadow-2xl transition-all duration-300 hover:scale-105">
+                  <CardContent className="p-8">
+                    <div className="flex items-center space-x-4 mb-4">
+                      <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-4 rounded-2xl shadow-lg group-hover:shadow-xl transition-shadow">
+                        <Phone className="h-8 w-8 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-blue-800">Téléphone</h3>
+                        <p className="text-gray-600">Appelez-nous directement</p>
+                      </div>
+                    </div>
+                    <div className="ml-16">
+                      <p className="text-gray-700 font-medium">+33 (0)1 23 45 67 89</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="group border-0 shadow-xl bg-gradient-to-br from-white to-green-50 hover:shadow-2xl transition-all duration-300 hover:scale-105">
+                  <CardContent className="p-8">
+                    <div className="flex items-center space-x-4 mb-4">
+                      <div className="bg-gradient-to-br from-green-500 to-emerald-600 p-4 rounded-2xl shadow-lg group-hover:shadow-xl transition-shadow">
+                        <Mail className="h-8 w-8 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-green-800">Email</h3>
+                        <p className="text-gray-600">Écrivez-nous</p>
+                      </div>
+                    </div>
+                    <div className="ml-16">
+                      <p className="text-gray-700 font-medium">contact@Riziky-Boutic.fr</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="group border-0 shadow-xl bg-gradient-to-br from-white to-purple-50 hover:shadow-2xl transition-all duration-300 hover:scale-105">
+                  <CardContent className="p-8">
+                    <div className="flex items-center space-x-4 mb-4">
+                      <div className="bg-gradient-to-br from-purple-500 to-pink-600 p-4 rounded-2xl shadow-lg group-hover:shadow-xl transition-shadow">
+                        <Clock className="h-8 w-8 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-purple-800">Heures d'ouverture</h3>
+                        <p className="text-gray-600">Quand nous contacter</p>
+                      </div>
+                    </div>
+                    <div className="ml-16 space-y-1">
+                      <p className="text-gray-700 font-medium">Lundi - Vendredi: 9h00 - 18h00</p>
+                      <p className="text-gray-700 font-medium">Samedi: 10h00 - 16h00</p>
+                      <p className="text-gray-700 font-medium">Dimanche: Fermé</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-              {/* Quick Actions */}
-              <EnhancedCard>
-                <EnhancedCardHeader>
-                  <EnhancedCardTitle>Actions rapides</EnhancedCardTitle>
-                  <EnhancedCardDescription>
-                    Besoin d'aide immédiate ? Essayez ces options
-                  </EnhancedCardDescription>
-                </EnhancedCardHeader>
-                <EnhancedCardContent className="space-y-3">
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start h-12 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all duration-200"
-                  >
-                    <MessageCircle className="w-4 h-4 mr-3 text-red-500" />
-                    Chat en direct avec notre équipe
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start h-12 border-blue-200 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
-                  >
-                    <Phone className="w-4 h-4 mr-3 text-blue-500" />
-                    Programmer un rappel téléphonique
-                  </Button>
-                </EnhancedCardContent>
-              </EnhancedCard>
-            </motion.div>
-          </motion.div>
+              {/* Call to Action */}
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white text-center shadow-2xl">
+                <h3 className="text-2xl font-bold mb-4">Besoin d'une réponse immédiate ?</h3>
+                <p className="text-blue-100 mb-6">Notre équipe support est disponible pour vous aider en temps réel</p>
+                <Button className="bg-white text-blue-600 hover:bg-blue-50 font-semibold px-8 py-3 rounded-xl transition-all duration-300 hover:scale-105">
+                  <Phone className="h-5 w-5 mr-2" />
+                  Appelez-nous maintenant
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </Layout>

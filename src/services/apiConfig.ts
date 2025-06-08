@@ -43,12 +43,9 @@ API.interceptors.response.use(
   error => {
     console.error("API Error:", error.response || error);
     
-    // Only redirect on 401 for authenticated routes, and avoid redirect loops
     if (error.response && error.response.status === 401 && 
         !error.config.url.includes('/auth/login') && 
-        !error.config.url.includes('/auth/verify-token') &&
-        !error.config.url.includes('/settings/general') &&
-        !window.location.pathname.includes('/login')) {
+        !error.config.url.includes('/auth/verify-token')) {
       console.log("Session expirée, redirection vers la page de connexion...");
       localStorage.removeItem('authToken');
       window.location.href = '/login';
