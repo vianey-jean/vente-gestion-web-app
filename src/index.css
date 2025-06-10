@@ -83,22 +83,7 @@
   @apply transition-transform duration-200 hover:scale-105;
 }
 
-/* Compact spacing utilities */
-.compact-section {
-  @apply py-4 md:py-6;
-}
 
-.compact-container {
-  @apply py-3 md:py-4;
-}
-
-.compact-card {
-  @apply p-3 md:p-4;
-}
-
-.compact-header {
-  @apply mb-3 md:mb-4;
-}
 
 /* Animations */
 @keyframes fade-in {
@@ -153,7 +138,7 @@
 
 /* Style pour les icônes */
 .navbar-icon {
-  @apply h-5 w-5;
+  @apply h-6 w-6;
 }
 
 /* Composant de carte produit amélioré */
@@ -162,7 +147,7 @@
 }
 
 .product-card:hover {
-  @apply shadow-xl transform translate-y-[-3px];
+  @apply shadow-xl transform translate-y-[-5px];
 }
 
 /* Améliorations pour les images */
@@ -172,17 +157,4 @@
 
 .product-card:hover .product-image {
   @apply transform scale-105;
-}
-
-/* Reduced height utilities */
-.hero-compact {
-  @apply py-8 md:py-12;
-}
-
-.section-compact {
-  @apply py-6 md:py-8;
-}
-
-.card-compact {
-  @apply p-4 md:p-6;
 }
