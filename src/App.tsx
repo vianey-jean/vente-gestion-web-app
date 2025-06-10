@@ -143,8 +143,8 @@ const MaintenanceChecker = ({ children }: { children: React.ReactNode }) => {
   console.log('Est admin:', isAdmin);
   console.log('Admin bypass maintenance:', isMaintenanceAdmin);
   
-  // Si l'utilisateur est un admin connecté via maintenance-login, bypass le mode maintenance
-  if (isMaintenanceAdmin && user && isAdmin) {
+  // NOUVELLE LOGIQUE: Si l'admin a le flag maintenanceAdminBypass, on le laisse passer même si le contexte n'est pas encore mis à jour
+  if (isMaintenanceAdmin) {
     console.log('>>> ADMIN CONNECTÉ VIA MAINTENANCE - BYPASS MODE MAINTENANCE <<<');
     return <>{children}</>;
   }
