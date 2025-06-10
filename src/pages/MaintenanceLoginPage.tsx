@@ -104,6 +104,9 @@ const MaintenanceLoginPage = () => {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
         
+        // Marquer que cet admin s'est connecté via la page maintenance
+        localStorage.setItem('maintenanceAdminBypass', 'true');
+        
         // Redirection vers la page d'accueil
         navigate('/');
       } else {

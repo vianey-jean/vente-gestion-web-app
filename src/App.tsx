@@ -1,8 +1,9 @@
+
 import React, { useEffect, lazy, Suspense } from 'react';
 import './App.css';
 import { Toaster } from './components/ui/sonner';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { StoreProvider } from './contexts/StoreContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import SecureRoute from './components/SecureRoute';
@@ -86,8 +87,8 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 60000, // 1 minute (données considérées fraiches pendant 1 min)
-      gcTime: 5 * 60 * 1000, // 5 minutes (conserver les données en cache 5 min)
+      staleTime: 60000,
+      gcTime: 5 * 60 * 1000,
     },
   },
 });
@@ -99,6 +100,7 @@ const secureRoutes = initSecureRoutes();
 const MaintenanceChecker = ({ children }: { children: React.ReactNode }) => {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const location = useLocation();
+  const { user, isAdmin } = useAuth();
   
   const { data: siteSettings, isLoading, refetch } = useQuery({
     queryKey: ['site-settings'],
@@ -110,7 +112,7 @@ const MaintenanceChecker = ({ children }: { children: React.ReactNode }) => {
       return response.data;
     },
     refetchOnMount: true,
-    refetchOnWindowFocus: false, // Éviter les rechargements excessifs
+    refetchOnWindowFocus: false,
     staleTime: 0,
     gcTime: 0,
   });
@@ -129,10 +131,23 @@ const MaintenanceChecker = ({ children }: { children: React.ReactNode }) => {
 
   // Vérifier les paramètres de maintenance
   const isMaintenanceMode = siteSettings?.system?.maintenanceMode;
+  
+  // Vérifier si l'utilisateur est un admin connecté via maintenance-login
+  const isMaintenanceAdmin = localStorage.getItem('maintenanceAdminBypass') === 'true';
+  
   console.log('=== ÉTAT DU MODE MAINTENANCE ===');
   console.log('maintenanceMode dans les paramètres:', isMaintenanceMode);
   console.log('Type de maintenanceMode:', typeof isMaintenanceMode);
   console.log('Route actuelle:', location.pathname);
+  console.log('Utilisateur connecté:', !!user);
+  console.log('Est admin:', isAdmin);
+  console.log('Admin bypass maintenance:', isMaintenanceAdmin);
+  
+  // Si l'utilisateur est un admin connecté via maintenance-login, bypass le mode maintenance
+  if (isMaintenanceAdmin && user && isAdmin) {
+    console.log('>>> ADMIN CONNECTÉ VIA MAINTENANCE - BYPASS MODE MAINTENANCE <<<');
+    return <>{children}</>;
+  }
   
   // Décision de redirection
   console.log('=== DÉCISION DE REDIRECTION ===');
@@ -234,7 +249,6 @@ function AppRoutes() {
           </MaintenanceChecker>
         } />
         
-        {/* Pages d'information */}
         <Route path="/livraison" element={
           <MaintenanceChecker>
             <DeliveryPage />
@@ -259,7 +273,6 @@ function AppRoutes() {
         <Route path="/tous-les-produits" element={<Navigate to={secureRoutes.get('/tous-les-produits') || '/'} replace />} />
         
 
-        {/* Routes sécurisées pour les promotions et nouveautés */}
         <Route path={secureRoutes.get('/promotions')?.substring(1)} element={
           <MaintenanceChecker>
             <Promotions />
@@ -282,7 +295,6 @@ function AppRoutes() {
         <Route path="/populaires" element={<Navigate to={secureRoutes.get('/populaires') || '/'} replace />} />
 
         
-        {/* Route sécurisée pour la page vente flash */}
         <Route path={secureRoutes.get('/flash-sale/:id')?.substring(1)} element={
           <MaintenanceChecker>
             <FlashSalePage />
@@ -344,7 +356,6 @@ function AppRoutes() {
           </MaintenanceChecker>
         } />
         
-        {/* Routes protégées avec URLs sécurisées */}
         <Route path={secureRoutes.get('/panier')?.substring(1)} element={
           <MaintenanceChecker>
             <SecureRoute>
@@ -400,7 +411,6 @@ function AppRoutes() {
         } />
         <Route path="/profil" element={<Navigate to={secureRoutes.get('/profil') || '/'} replace />} />
         
-        {/* Pages Admin avec URLs sécurisées */}
         <Route path={secureRoutes.get('/admin/produits')?.substring(1)} element={
           <SecureRoute>
             <ProtectedRoute requireAdmin>
@@ -481,7 +491,6 @@ function AppRoutes() {
         } />
         <Route path="/admin/service-client" element={<Navigate to={secureRoutes.get('/admin/service-client') || '/'} replace />} />
         
-        {/* Ajout de la route sécurisée pour la page pub-layout */}
         <Route path={secureRoutes.get('/admin/pub-layout')?.substring(1)} element={
           <SecureRoute>
             <ProtectedRoute requireAdmin>
@@ -491,7 +500,6 @@ function AppRoutes() {
         } />
         <Route path="/admin/pub-layout" element={<Navigate to={secureRoutes.get('/admin/pub-layout') || '/'} replace />} />
         
-        {/* Ajout de la route sécurisée pour la page remboursements */}
         <Route path={secureRoutes.get('/admin/remboursements')?.substring(1)} element={
           <SecureRoute>
             <ProtectedRoute requireAdmin>
@@ -501,7 +509,6 @@ function AppRoutes() {
         } />
         <Route path="/admin/remboursements" element={<Navigate to={secureRoutes.get('/admin/remboursements') || '/'} replace />} />
         
-        {/* Ajout de la route sécurisée pour la page flash-sales admin */}
         <Route path={secureRoutes.get('/admin/flash-sales')?.substring(1)} element={
           <SecureRoute>
             <ProtectedRoute requireAdmin>
@@ -511,10 +518,8 @@ function AppRoutes() {
         } />
         <Route path="/admin/flash-sales" element={<Navigate to={secureRoutes.get('/admin/flash-sales') || '/'} replace />} />
         
-        {/* Route NotFound spécifique */}
         <Route path="/page/notfound" element={<NotFound />} />
         
-        {/* Route sécurisée pour les détails de commande avec ID sécurisé - AVANT les produits */}
         <Route path="/:secureOrderId" element={
           <MaintenanceChecker>
             <SecureRoute>
@@ -525,14 +530,12 @@ function AppRoutes() {
           </MaintenanceChecker>
         } />
         
-        {/* Route de détail produit avec l'ID sécurisé directement dans le chemin - APRÈS les commandes */}
         <Route path="/produit/:productId" element={
           <MaintenanceChecker>
             <ProductDetail />
           </MaintenanceChecker>
         } />
         
-        {/* Route 404 - tous les liens qui n'existent pas */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
