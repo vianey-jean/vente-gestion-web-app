@@ -73,8 +73,9 @@ const AppRoutes: React.FC = () => {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
-        {/* Route pour la page de maintenance-login */}
-        <Route path="/maintenance-login" element={<MaintenanceLoginPage />} />
+        {/* Route sécurisée pour la page de maintenance-login */}
+        <Route path={secureRoutes.get('/maintenance-login')?.substring(1)} element={<MaintenanceLoginPage />} />
+        <Route path="/maintenance-login" element={<Navigate to={secureRoutes.get('/maintenance-login') || '/'} replace />} />
         
         {/* Route principale avec vérification de maintenance */}
         <Route path="/" element={
