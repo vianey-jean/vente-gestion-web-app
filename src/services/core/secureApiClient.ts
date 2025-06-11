@@ -1,5 +1,5 @@
 
-import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import CryptoJS from 'crypto-js';
 
 // Configuration de sécurité
@@ -118,7 +118,7 @@ export const secureApiClient = axios.create({
 
 // Intercepteur de requête avec sécurité
 secureApiClient.interceptors.request.use(
-  (config: AxiosRequestConfig) => {
+  (config: InternalAxiosRequestConfig) => {
     // Vérification du rate limiting
     if (!rateLimiter.canMakeRequest()) {
       throw new Error('Trop de requêtes. Veuillez patienter.');

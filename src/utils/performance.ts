@@ -1,5 +1,4 @@
-
-import { useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 
 // Service de préchargement des ressources
 export class ResourcePreloader {
@@ -193,7 +192,7 @@ export class SmartCache {
 
 // Hook pour la détection de la vitesse de connexion
 export function useNetworkSpeed() {
-  const [networkSpeed, setNetworkSpeed] = React.useState<'slow' | 'fast'>('fast');
+  const [networkSpeed, setNetworkSpeed] = useState<'slow' | 'fast'>('fast');
 
   useEffect(() => {
     const connection = (navigator as any).connection;
