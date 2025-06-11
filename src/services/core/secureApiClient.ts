@@ -127,7 +127,9 @@ secureApiClient.interceptors.request.use(
     // Ajout du token d'authentification
     const token = securityUtils.getSecureItem('authToken');
     if (token && securityUtils.validateToken(token)) {
-      config.headers = config.headers || {};
+      if (!config.headers) {
+        config.headers = {} as any;
+      }
       config.headers['Authorization'] = `Bearer ${token}`;
     }
 
