@@ -1,7 +1,6 @@
 
-// Main API exports with security enhancements
-export { secureApiClient as API } from './core/secureApiClient';
-export { default as apiClient } from './core/secureApiClient';
+// Main API exports with backward compatibility
+export { apiClient as API } from './core/apiClient';
 
 // Service exports
 export { authService as authAPI } from './modules/auth.service';
@@ -22,7 +21,7 @@ export { adminChatAPI, clientChatAPI } from './chatAPI';
 export { codePromosAPI, codePromoAPI } from './codePromosAPI';
 export { remboursementsAPI } from './remboursementsAPI';
 
-// Legacy panier alias with security
+// Legacy panier alias
 export const panierAPI = {
   get: (userId: string) => cartService.get(userId),
   addItem: (userId: string, productId: string, quantity: number = 1) => 
@@ -35,8 +34,8 @@ export const panierAPI = {
 };
 
 // Default export for backward compatibility
-import { secureApiClient } from './core/secureApiClient';
-export default secureApiClient;
+import { apiClient } from './core/apiClient';
+export default apiClient;
 
 // Type exports
 export type { Product } from '@/types/product';
