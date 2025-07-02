@@ -157,25 +157,30 @@ const AppRoutes: React.FC = () => {
       <Route path="/carriers" element={<CarriersPage />} />
       
       {/* Routes admin protégées */}
-      <Route path="/admin/*" element={
-        <SecureRoute>
-          <AdminLayout />
-        </SecureRoute>
-      }>
-        <Route path="products" element={<AdminProductsPage />} />
-        <Route path="orders" element={<AdminOrdersPage />} />
-        <Route path="users" element={<AdminUsersPage />} />
-        <Route path="categories" element={<AdminCategoriesPage />} />
-        <Route path="messages" element={<AdminMessagesPage />} />
-        <Route path="flash-sales" element={<AdminFlashSalesPage />} />
-        <Route path="code-promos" element={<AdminCodePromosPage />} />
-        <Route path="remboursements" element={<AdminRemboursementsPage />} />
-        <Route path="refunds" element={<AdminRefundsPage />} />
-        <Route path="chat" element={<AdminChatPage />} />
-        <Route path="client-chat" element={<AdminClientChatPage />} />
-        <Route path="pub-layout" element={<AdminPubLayoutPage />} />
-        <Route path="settings" element={<AdminSettingsPage />} />
-      </Route>
+      <Route 
+        path="/admin/*" 
+        element={
+          <SecureRoute>
+            <AdminLayout>
+              <Routes>
+                <Route path="products" element={<AdminProductsPage />} />
+                <Route path="orders" element={<AdminOrdersPage />} />
+                <Route path="users" element={<AdminUsersPage />} />
+                <Route path="categories" element={<AdminCategoriesPage />} />
+                <Route path="messages" element={<AdminMessagesPage />} />
+                <Route path="flash-sales" element={<AdminFlashSalesPage />} />
+                <Route path="code-promos" element={<AdminCodePromosPage />} />
+                <Route path="remboursements" element={<AdminRemboursementsPage />} />
+                <Route path="refunds" element={<AdminRefundsPage />} />
+                <Route path="chat" element={<AdminChatPage />} />
+                <Route path="client-chat" element={<AdminClientChatPage />} />
+                <Route path="pub-layout" element={<AdminPubLayoutPage />} />
+                <Route path="settings" element={<AdminSettingsPage />} />
+              </Routes>
+            </AdminLayout>
+          </SecureRoute>
+        } 
+      />
       
       {/* Route 404 */}
       <Route path="*" element={<NotFound />} />
