@@ -1,20 +1,51 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/components/ui/sonner';
 import LoadingSpinner from '@/components/ui/loading-spinner';
+import { cardsAPI } from '@/services/cards';
 
 interface CreditCardFormProps {
   onSuccess: () => void;
+  onSaveCard?: (cardData: any) => void;
 }
 
-const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess }) => {
+const detectCardType = (number: string) => {
+  const cleaned = number.replace(/\s/g, '');
+  if (/^4/.test(cleaned)) return 'Visa';
+  if (/^5[1-5]/.test(cleaned)) return 'Mastercard';
+  if (/^3[47]/.test(cleaned)) return 'Amex';
+  if (/^6(?:011|5)/.test(cleaned)) return 'Discover';
+  return 'Inconnue';
+};
+
+const isValidLuhn = (number: string) => {
+  const cleaned = number.replace(/\s/g, '');
+  let sum = 0;
+  let shouldDouble = false;
+
+  for (let i = cleaned.length - 1; i >= 0; i--) {
+    let digit = parseInt(cleaned.charAt(i), 10);
+    if (shouldDouble) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    shouldDouble = !shouldDouble;
+  }
+
+  return sum % 10 === 0;
+};
+
+const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess, onSaveCard }) => {
   const [cardNumber, setCardNumber] = useState('');
+  const [cardType, setCardType] = useState('Inconnue');
   const [cardName, setCardName] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [cvv, setCvv] = useState('');
+  const [saveCard, setSaveCard] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({
     cardNumber: '',
@@ -24,133 +55,90 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess }) => {
   });
 
   const formatCardNumber = (value: string) => {
-    // Remove non-digit characters
-    const digits = value.replace(/\D/g, '');
-    // Limit to 16 digits
-    const limitedDigits = digits.slice(0, 16);
-    // Add spaces every 4 digits
-    const formatted = limitedDigits.replace(/(\d{4})(?=\d)/g, '$1 ');
-    return formatted;
+    const digits = value.replace(/\D/g, '').slice(0, 16);
+    return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
   };
 
   const formatExpiryDate = (value: string) => {
-    // Remove non-digit characters
-    const digits = value.replace(/\D/g, '');
-    // Limit to 4 digits
-    const limitedDigits = digits.slice(0, 4);
-    // Add slash after first 2 digits
-    if (limitedDigits.length > 2) {
-      return `${limitedDigits.slice(0, 2)}/${limitedDigits.slice(2)}`;
-    }
-    return limitedDigits;
+    const digits = value.replace(/\D/g, '').slice(0, 4);
+    if (digits.length > 2) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return digits;
+  };
+
+  const validateExpiryDate = (date: string) => {
+    if (date.length !== 5) return false;
+    const [month, year] = date.split('/').map(Number);
+    if (isNaN(month) || isNaN(year) || month < 1 || month > 12) return false;
+
+    const now = new Date();
+    const currentYear = Number(String(now.getFullYear()).slice(-2));
+    const currentMonth = now.getMonth() + 1;
+
+    if (year < currentYear) return false;
+    if (year === currentYear && month < currentMonth) return false;
+    return true;
   };
 
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCardNumber(formatCardNumber(e.target.value));
-    setErrors(prev => ({ ...prev, cardNumber: '' }));
-  };
-
-  const handleExpiryDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setExpiryDate(formatExpiryDate(e.target.value));
-    setErrors(prev => ({ ...prev, expiryDate: '' }));
+    const formatted = formatCardNumber(e.target.value);
+    setCardNumber(formatted);
+    setCardType(detectCardType(formatted));
+    
+    const isValid = isValidLuhn(formatted) && formatted.replace(/\s/g, '').length === 16;
+    setErrors(prev => ({ ...prev, cardNumber: isValid ? '' : 'Numéro de carte invalide' }));
   };
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCardName(e.target.value);
-    setErrors(prev => ({ ...prev, cardName: '' }));
+    setErrors(prev => ({ ...prev, cardName: e.target.value.trim() ? '' : 'Nom sur la carte requis' }));
+  };
+
+  const handleExpiryDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatExpiryDate(e.target.value);
+    setExpiryDate(formatted);
+    const valid = validateExpiryDate(formatted);
+    setErrors(prev => ({ ...prev, expiryDate: valid ? '' : 'Date invalide' }));
   };
 
   const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 3);
+    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
     setCvv(value);
-    setErrors(prev => ({ ...prev, cvv: '' }));
+    const valid = (cardType === 'Amex' && value.length === 4) || (cardType !== 'Amex' && value.length === 3);
+    setErrors(prev => ({ ...prev, cvv: valid ? '' : 'CVV invalide' }));
   };
 
-  const validateCardNumber = (number: string) => {
-    const digits = number.replace(/\s/g, '');
-    if (digits.length !== 16) return false;
-    
-    // For testing purposes, accept any 16 digit number
-    return /^\d{16}$/.test(digits);
-  };
-  
-  const validateExpiryDate = (date: string) => {
-    if (date.length !== 5) return false;
-    
-    const parts = date.split('/');
-    if (parts.length !== 2) return false;
-    
-    const month = parseInt(parts[0], 10);
-    const year = parseInt('20' + parts[1], 10);
-    
-    if (isNaN(month) || isNaN(year)) return false;
-    if (month < 1 || month > 12) return false;
-    
-    const currentDate = new Date();
-    const currentYear = currentDate.getFullYear();
-    const currentMonth = currentDate.getMonth() + 1;
-    
-    if (year < currentYear) return false;
-    if (year === currentYear && month < currentMonth) return false;
-    
-    return true;
+  const isFormValid = () => {
+    return (
+      cardName.trim() &&
+      isValidLuhn(cardNumber) &&
+      validateExpiryDate(expiryDate) &&
+      ((cardType === 'Amex' && cvv.length === 4) || (cardType !== 'Amex' && cvv.length === 3))
+    );
   };
 
-  const validateForm = () => {
-    let valid = true;
-    const newErrors = {
-      cardNumber: '',
-      cardName: '',
-      expiryDate: '',
-      cvv: ''
-    };
-
-    if (!cardName.trim()) {
-      newErrors.cardName = 'Le nom du titulaire est requis';
-      valid = false;
-    }
-
-    if (!validateCardNumber(cardNumber)) {
-      newErrors.cardNumber = 'Numéro de carte invalide';
-      valid = false;
-    }
-
-    if (!validateExpiryDate(expiryDate)) {
-      newErrors.expiryDate = 'Date d\'expiration invalide';
-      valid = false;
-    }
-
-    if (cvv.length < 3) {
-      newErrors.cvv = 'CVV invalide';
-      valid = false;
-    }
-
-    setErrors(newErrors);
-    return valid;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
+    if (!isFormValid()) {
+      toast.error("Veuillez corriger les erreurs avant de soumettre");
       return;
     }
-    
     setLoading(true);
-    
-    // Pour test seulement - simuler un paiement réussi après 1.5 secondes
-    setTimeout(() => {
-      setLoading(false);
-      toast.success("Paiement accepté");
-      
-      // Call onSuccess to proceed with order creation
-      if (onSuccess && typeof onSuccess === 'function') {
-        console.log("Calling onSuccess after payment");
-        onSuccess();
-      } else {
-        console.error("onSuccess callback is not properly defined");
+
+    try {
+      if (saveCard) {
+        await cardsAPI.addCard({ cardNumber, cardName, expiryDate, cvv });
+        toast.success("Carte sauvegardée");
       }
-    }, 1500);
+      setTimeout(() => {
+        setLoading(false);
+        toast.success("Paiement accepté");
+        onSuccess();
+      }, 1500);
+    } catch (error) {
+      console.error(error);
+      setLoading(false);
+      toast.error("Erreur lors du paiement");
+    }
   };
 
   return (
@@ -162,25 +150,23 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess }) => {
           placeholder="John Doe"
           value={cardName}
           onChange={handleNameChange}
-          required
-          className={errors.cardName ? "border-red-500" : ""}
+          className={errors.cardName ? 'border-red-600' : ''}
         />
-        {errors.cardName && <p className="text-red-500 text-sm mt-1">{errors.cardName}</p>}
+        {errors.cardName && <p className="text-red-600 font-bold text-sm mt-1">{errors.cardName}</p>}
       </div>
-      
+
       <div>
-        <Label htmlFor="cardNumber">Numéro de carte</Label>
+        <Label htmlFor="cardNumber">Numéro de carte ({cardType})</Label>
         <Input
           id="cardNumber"
           placeholder="1234 5678 9012 3456"
           value={cardNumber}
           onChange={handleCardNumberChange}
-          required
-          className={errors.cardNumber ? "border-red-500" : ""}
+          className={errors.cardNumber ? 'border-red-600' : ''}
         />
-        {errors.cardNumber && <p className="text-red-500 text-sm mt-1">{errors.cardNumber}</p>}
+        {errors.cardNumber && <p className="text-red-600 font-bold text-sm mt-1">{errors.cardNumber}</p>}
       </div>
-      
+
       <div className="flex space-x-4">
         <div className="w-1/2">
           <Label htmlFor="expiryDate">Date d'expiration</Label>
@@ -189,34 +175,43 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess }) => {
             placeholder="MM/YY"
             value={expiryDate}
             onChange={handleExpiryDateChange}
-            required
-            className={errors.expiryDate ? "border-red-500" : ""}
+            className={errors.expiryDate ? 'border-red-600' : ''}
           />
-          {errors.expiryDate && <p className="text-red-500 text-sm mt-1">{errors.expiryDate}</p>}
+          {errors.expiryDate && <p className="text-red-600 font-bold  text-sm mt-1">{errors.expiryDate}</p>}
         </div>
         <div className="w-1/2">
           <Label htmlFor="cvv">CVV</Label>
           <Input
             id="cvv"
-            placeholder="123"
+            placeholder={cardType === 'Amex' ? '4 chiffres' : '3 chiffres'}
             value={cvv}
             onChange={handleCvvChange}
-            required
+            className={errors.cvv ? 'border-red-600' : ''}
             type="password"
-            className={errors.cvv ? "border-red-500" : ""}
           />
-          {errors.cvv && <p className="text-red-500 text-sm mt-1">{errors.cvv}</p>}
+          {errors.cvv && <p className="text-red-600 font-bold text-sm mt-1">{errors.cvv}</p>}
         </div>
       </div>
-      
-      <Button 
-        type="submit" 
+
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="saveCard"
+          checked={saveCard}
+          onCheckedChange={(checked) => setSaveCard(checked === true)}
+        />
+        <Label htmlFor="saveCard" className="text-sm">
+          Enregistrer cette carte pour les prochains paiements
+        </Label>
+      </div>
+
+      <Button
+        type="submit"
         className="w-full mt-4 bg-red-800 hover:bg-red-700"
-        disabled={loading}
+        disabled={loading || !isFormValid()}
       >
         {loading ? (
           <span className="flex items-center justify-center">
-            <LoadingSpinner size="sm" className="mr-2" /> Traitement en cours...
+            <LoadingSpinner size="sm" className="mr-2" /> Traitement...
           </span>
         ) : 'Payer'}
       </Button>
