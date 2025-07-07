@@ -1,5 +1,4 @@
-
-import api from './api';
+import api from '@/service/api';
 
 export interface Appointment {
   id: string;

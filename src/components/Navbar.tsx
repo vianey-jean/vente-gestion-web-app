@@ -1,14 +1,13 @@
+
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useApp } from '@/contexts/AppContext';
-import { AuthService } from '@/services/AuthService';
 import { Moon, Sun, Menu, X, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
-import logo from '@/assets/images/logo.svg';
 import './Navbar.css';
 
 const Navbar: React.FC = () => {
@@ -29,7 +28,6 @@ const Navbar: React.FC = () => {
         {/* Logo et Titre */}
         <div className="flex items-center">
           <NavLink to="/" className="flex items-center">
-            <img src={logo} alt="Logo" className="h-8 w-auto mr-2" />
             <span className="font-bold text-xl">Gestion Ventes</span>
           </NavLink>
         </div>
@@ -49,10 +47,12 @@ const Navbar: React.FC = () => {
             <li><NavLink to="/contact" className="nav-link">Contact</NavLink></li>
             <li><NavLink to="/tendances" className="nav-link">Tendances</NavLink></li>
             {user && (
-              <NavLink to="/rendez-vous" className="nav-link">
-                <Calendar className="w-4 h-4" />
-                Rendez-vous
-              </NavLink>
+              <li>
+                <NavLink to="/rendez-vous" className="nav-link flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Rendez-vous
+                </NavLink>
+              </li>
             )}
           </ul>
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -13,9 +12,8 @@ import { fr } from 'date-fns/locale';
 import WeekCalendar from '@/components/Weekcalendar';
 import AppointmentForm from '@/components/AppointmentForm';
 import AppointmentDetails from '@/components/AppointmentDetails';
-import SearchAppointmentForm from '@/components/SearchAppointmentForm';
 import { useToast } from '@/hooks/use-toast';
-import api from '@/services/api';
+import api from '@/service/api';
 
 interface Appointment {
   id: string;
