@@ -32,10 +32,6 @@ interface AppContextType {
   searchProducts: (query: string) => Promise<Product[]>;
   exportMonth: () => Promise<boolean>;
   refreshData: () => Promise<void>;
-  // Nouvelles propriétés pour la navigation mobile
-  isMobile: boolean;
-  isMenuOpen: boolean;
-  toggleMenu: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -59,10 +55,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
-  // Nouveaux états pour la navigation mobile
-  const [isMobile, setIsMobile] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  
   // Toujours utiliser le mois en cours - pas de sélection manuelle
   const selectedMonth = currentDate.month;
   const selectedYear = currentDate.year;
@@ -73,21 +65,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const currentMonth = selectedMonth; // This will be 1-based (1 = January)
   const currentYear = selectedYear;
   const isLoading = loading;
-
-  // Fonction pour gérer le menu mobile
-  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-
-  // Détecter si on est sur mobile
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // Fonction pour vérifier et mettre à jour le mois en cours
   const checkAndUpdateCurrentMonth = useCallback(() => {
@@ -420,10 +397,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         searchProducts,
         exportMonth,
         refreshData,
-        // Nouvelles propriétés
-        isMobile,
-        isMenuOpen,
-        toggleMenu,
       }}
     >
       {children}

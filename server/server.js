@@ -150,39 +150,6 @@ if (!fs.existsSync(depenseFixePath)) {
   }, null, 2));
 }
 
-// Créer le fichier appointments.json s'il n'existe pas
-const appointmentsPath = path.join(dbPath, 'appointments.json');
-if (!fs.existsSync(appointmentsPath)) {
-  fs.writeFileSync(appointmentsPath, JSON.stringify([
-    {
-      id: "1",
-      titre: "Rendez-vous médecin",
-      description: "Consultation de routine",
-      date: "2024-01-15",
-      heure: "10:30",
-      location: "Cabinet médical",
-      type: "medical",
-      status: "planned",
-      userId: "1",
-      createdAt: "2024-01-10T08:00:00.000Z",
-      updatedAt: "2024-01-10T08:00:00.000Z"
-    },
-    {
-      id: "2",
-      titre: "Réunion équipe",
-      description: "Point mensuel avec l'équipe",
-      date: "2024-01-16",
-      heure: "14:00",
-      location: "Salle de réunion A",
-      type: "business",
-      status: "planned",
-      userId: "1",
-      createdAt: "2024-01-10T09:00:00.000Z",
-      updatedAt: "2024-01-10T09:00:00.000Z"
-    }
-  ], null, 2));
-}
-
 // Import routes
 const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
@@ -191,7 +158,6 @@ const pretFamillesRoutes = require('./routes/pretfamilles');
 const pretProduitsRoutes = require('./routes/pretproduits');
 const depensesRoutes = require('./routes/depenses');
 const syncRoutes = require('./routes/sync');
-const appointmentRoutes = require('./routes/appointments');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -201,7 +167,6 @@ app.use('/api/pretfamilles', pretFamillesRoutes);
 app.use('/api/pretproduits', pretProduitsRoutes);
 app.use('/api/depenses', depensesRoutes);
 app.use('/api/sync', syncRoutes);
-app.use('/api/appointments', appointmentRoutes);
 
 // Static file serving for uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

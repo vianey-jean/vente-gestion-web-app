@@ -1,175 +1,175 @@
-
-import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useApp } from '@/contexts/AppContext';
-import { Moon, Sun, Menu, X, Calendar } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Home, Info, Mail, LogIn, UserCircle, LogOut, LayoutDashboard, Moon, Sun, Sparkles, TrendingUp } from 'lucide-react';
 
 const Navbar: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { isMobile, isMenuOpen, toggleMenu } = useApp();
-  const navigate = useNavigate();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   return (
-    <nav className="bg-background border-b sticky top-0 z-50">
-      <div className="container max-w-7xl h-16 flex items-center justify-between py-4">
-        {/* Logo et Titre */}
-        <div className="flex items-center">
-          <NavLink to="/" className="flex items-center">
-            <span className="font-bold text-xl">Gestion Ventes</span>
-          </NavLink>
-        </div>
-
-        {/* Menu burger (mobile) */}
-        {isMobile && (
-          <button onClick={toggleMenu} className="text-gray-500 hover:text-gray-700 focus:outline-none">
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        )}
-
-        {/* Navigation */}
-        <div className={`${isMobile ? (isMenuOpen ? 'flex' : 'hidden') : 'flex'} flex-col md:flex-row items-center gap-4 ${isMobile ? 'absolute top-16 left-0 right-0 bg-background border-b p-4' : ''}`}>
-          <ul className="flex flex-col md:flex-row gap-4 items-center">
-            <li>
-              <NavLink 
-                to="/" 
-                className={({ isActive }) => 
-                  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'text-foreground hover:bg-accent hover:text-accent-foreground'
-                  }`
-                }
-              >
-                Accueil
-              </NavLink>
-            </li>
-            <li>
-              <NavLink 
-                to="/about" 
-                className={({ isActive }) => 
-                  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'text-foreground hover:bg-accent hover:text-accent-foreground'
-                  }`
-                }
-              >
-                À propos
-              </NavLink>
-            </li>
-            <li>
-              <NavLink 
-                to="/contact" 
-                className={({ isActive }) => 
-                  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'text-foreground hover:bg-accent hover:text-accent-foreground'
-                  }`
-                }
-              >
-                Contact
-              </NavLink>
-            </li>
-            <li>
-              <NavLink 
-                to="/tendances" 
-                className={({ isActive }) => 
-                  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'text-foreground hover:bg-accent hover:text-accent-foreground'
-                  }`
-                }
-              >
-                Tendances
-              </NavLink>
-            </li>
-            {user && (
-              <li>
-                <NavLink 
-                  to="/rendez-vous" 
-                  className={({ isActive }) => 
-                    `px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
-                      isActive 
-                        ? 'bg-primary text-primary-foreground' 
-                        : 'text-foreground hover:bg-accent hover:text-accent-foreground'
-                    }`
-                  }
-                >
-                  <Calendar className="w-4 h-4" />
-                  Rendez-vous
-                </NavLink>
-              </li>
-            )}
-          </ul>
-
-          {/* Actions (Bouton Thème et Connexion/Déconnexion) */}
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="icon" onClick={toggleTheme}>
-              {theme === "light" ? <Moon className="h-[1.2rem] w-[1.2rem]" /> : <Sun className="h-[1.2rem] w-[1.2rem]" />}
-              <span className="sr-only">Toggle theme</span>
-            </Button>
-
-            {user ? (
-              <div className="relative">
-                <Avatar
-                  className="cursor-pointer"
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                >
-                  <AvatarImage src="https://github.com/shadcn.png" alt="Avatar" />
-                  <AvatarFallback>{user.firstName[0]}{user.lastName[0]}</AvatarFallback>
-                </Avatar>
-                {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border">
-                    <div className="py-1">
-                      <a 
-                        href="/profile" 
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        Mon Profil
-                      </a>
-                      <button 
-                        onClick={handleLogout} 
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        Déconnexion
-                      </button>
-                    </div>
+    <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border-b border-gray-200/50 dark:border-gray-700/50">
+      <nav className="transition-all duration-200" role="navigation">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            {/* Logo with modern styling */}
+            <div className="flex items-center">
+              <Link to="/" className="flex-shrink-0 flex items-center group">
+                <div className="logo-container flex items-center p-2 rounded-2xl hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-pink-500/10 transition-all duration-300">
+                  <div className="relative">
+                    <Sparkles className="absolute -top-1 -right-1 h-3 w-3 text-purple-500 animate-pulse" />
+                    <span className="text-2xl font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">G</span>
                   </div>
+                  <span className="text-2xl font-light text-gray-700 dark:text-gray-200 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">estion</span>
+                  <span className="text-2xl font-extrabold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent ml-2">V</span>
+                  <span className="text-2xl font-light text-gray-700 dark:text-gray-200 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">ente</span>
+                </div>
+              </Link>
+            </div>
+            
+            {/* Navigation links with modern styling */}
+            <div className="flex items-center">
+              <div className="hidden sm:ml-6 sm:flex sm:space-x-2">
+                <Link to="/" className="group inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200">
+                  <Home className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
+                  Accueil
+                </Link>
+                
+                <Link to="/about" className="group inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200">
+                  <Info className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
+                  À propos
+                </Link>
+                
+                <Link to="/contact" className="group inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200">
+                  <Mail className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
+                  Contact
+                </Link>
+                
+                {isAuthenticated && (
+                  <>
+                    <Link to="/dashboard" className="group inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200">
+                      <LayoutDashboard className="mr-2 h-4 w-4 text-blue-600 group-hover:scale-110 transition-transform" />
+                      <p className="text-blue-600 bg-transparent">Tableau de Bord</p>
+                    </Link>
+                    
+                    <Link to="/tendances" className="group inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-200">
+                      <TrendingUp className="mr-2 h-4 w-4 text-emerald-600 group-hover:scale-110 transition-transform" />
+                      <p className="text-emerald-600 bg-transparent">Tendances</p>
+                    </Link>
+                  </>
+                )}
+
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={toggleTheme} 
+                  className="ml-2 h-10 w-10 rounded-xl hover:bg-gradient-to-r hover:from-yellow-50 hover:to-orange-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-200"
+                >
+                  {theme === 'dark' ? 
+                    <Sun className="h-4 w-4 text-yellow-500 hover:rotate-180 transition-transform duration-500" /> : 
+                    <Moon className="h-4 w-4 text-blue-600 hover:rotate-180 transition-transform duration-500" />
+                  }
+                </Button>
+                
+                {isAuthenticated ? (
+                  <div className="flex items-center space-x-3 ml-4">
+                    <div className="flex items-center px-3 py-2 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200/50 dark:border-purple-700/50">
+                      <UserCircle className="h-4 w-4 text-purple-600 dark:text-purple-400 mr-2" />
+                      <span className="text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                        {user?.firstName} {user?.lastName}
+                      </span>
+                    </div>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-10 px-4 rounded-xl border-2 border-red-200 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-500 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-500 dark:hover:border-red-500 transition-all duration-200"
+                      onClick={logout}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Déconnexion
+                    </Button>
+                  </div>
+                ) : (
+                  <Link to="/login" className="ml-4">
+                    <Button 
+                      className="h-10 px-6 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all duration-200 transform hover:scale-105"
+                    >
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Connexion
+                    </Button>
+                  </Link>
                 )}
               </div>
-            ) : (
-              <>
-                <NavLink 
-                  to="/login" 
-                  className="px-3 py-2 rounded-md text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+              
+              {/* Mobile menu with modern styling */}
+              <div className="sm:hidden flex items-center space-x-2">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={toggleTheme} 
+                  className="h-10 w-10 rounded-xl hover:bg-gradient-to-r hover:from-yellow-50 hover:to-orange-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20"
                 >
-                  Connexion
-                </NavLink>
-                <NavLink 
-                  to="/register" 
-                  className="px-3 py-2 rounded-md text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-                >
-                  Inscription
-                </NavLink>
-              </>
-            )}
+                  {theme === 'dark' ? 
+                    <Sun className="h-4 w-4 text-yellow-500" /> : 
+                    <Moon className="h-4 w-4 text-blue-600" />
+                  }
+                </Button>
+                
+                {isAuthenticated ? (
+                  <div className="flex items-center space-x-2">
+                    <Link to="/dashboard">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-10 w-10 p-0 rounded-xl border-2 border-green-200 text-green-600 hover:bg-green-500 hover:text-white hover:border-green-500"
+                      >
+                        <LayoutDashboard className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                    
+                    <Link to="/tendances">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-10 w-10 p-0 rounded-xl border-2 border-emerald-200 text-emerald-600 hover:bg-emerald-500 hover:text-white hover:border-emerald-500"
+                      >
+                        <TrendingUp className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                    
+                    <div className="px-2 py-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg">
+                      <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">
+                        {user?.firstName}
+                      </span>
+                    </div>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-10 w-10 p-0 rounded-xl border-2 border-red-200 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-500"
+                      onClick={logout}
+                    >
+                      <LogOut className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Link to="/login">
+                    <Button 
+                      className="h-10 w-10 p-0 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg"
+                    >
+                      <LogIn className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+    </header>
   );
 };
 
