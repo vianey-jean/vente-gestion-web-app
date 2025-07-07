@@ -8,8 +8,6 @@ import { Moon, Sun, Menu, X, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
-import './Navbar.css';
-
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -40,15 +38,76 @@ const Navbar: React.FC = () => {
         )}
 
         {/* Navigation */}
-        <div className={`nav-links ${isMobile ? (isMenuOpen ? 'open' : 'closed') : 'open'} flex items-center gap-4`}>
+        <div className={`${isMobile ? (isMenuOpen ? 'flex' : 'hidden') : 'flex'} flex-col md:flex-row items-center gap-4 ${isMobile ? 'absolute top-16 left-0 right-0 bg-background border-b p-4' : ''}`}>
           <ul className="flex flex-col md:flex-row gap-4 items-center">
-            <li><NavLink to="/" className="nav-link">Accueil</NavLink></li>
-            <li><NavLink to="/about" className="nav-link">À propos</NavLink></li>
-            <li><NavLink to="/contact" className="nav-link">Contact</NavLink></li>
-            <li><NavLink to="/tendances" className="nav-link">Tendances</NavLink></li>
+            <li>
+              <NavLink 
+                to="/" 
+                className={({ isActive }) => 
+                  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                  }`
+                }
+              >
+                Accueil
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/about" 
+                className={({ isActive }) => 
+                  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                  }`
+                }
+              >
+                À propos
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/contact" 
+                className={({ isActive }) => 
+                  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                  }`
+                }
+              >
+                Contact
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/tendances" 
+                className={({ isActive }) => 
+                  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                  }`
+                }
+              >
+                Tendances
+              </NavLink>
+            </li>
             {user && (
               <li>
-                <NavLink to="/rendez-vous" className="nav-link flex items-center gap-2">
+                <NavLink 
+                  to="/rendez-vous" 
+                  className={({ isActive }) => 
+                    `px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
+                      isActive 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'text-foreground hover:bg-accent hover:text-accent-foreground'
+                    }`
+                  }
+                >
                   <Calendar className="w-4 h-4" />
                   Rendez-vous
                 </NavLink>
@@ -73,12 +132,18 @@ const Navbar: React.FC = () => {
                   <AvatarFallback>{user.firstName[0]}{user.lastName[0]}</AvatarFallback>
                 </Avatar>
                 {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border">
                     <div className="py-1">
-                      <a href="/profile" className="dropdown-link">
+                      <a 
+                        href="/profile" 
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
                         Mon Profil
                       </a>
-                      <button onClick={handleLogout} className="dropdown-link">
+                      <button 
+                        onClick={handleLogout} 
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
                         Déconnexion
                       </button>
                     </div>
@@ -87,8 +152,18 @@ const Navbar: React.FC = () => {
               </div>
             ) : (
               <>
-                <NavLink to="/login" className="nav-link">Connexion</NavLink>
-                <NavLink to="/register" className="nav-link">Inscription</NavLink>
+                <NavLink 
+                  to="/login" 
+                  className="px-3 py-2 rounded-md text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                >
+                  Connexion
+                </NavLink>
+                <NavLink 
+                  to="/register" 
+                  className="px-3 py-2 rounded-md text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                >
+                  Inscription
+                </NavLink>
               </>
             )}
           </div>
