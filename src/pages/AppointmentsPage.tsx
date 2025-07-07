@@ -2,13 +2,13 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, Users, Plus } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Plus, Edit, Trash2, Search } from 'lucide-react';
+import { format, addDays, startOfWeek, isToday } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import WeekCalendar from '@/components/WeekCalendar';
 import AppointmentForm from '@/components/AppointmentForm';
 import AppointmentDetails from '@/components/AppointmentDetails';
 import SearchAppointmentForm from '@/components/SearchAppointmentForm';
-import ActionButtons from '@/components/ActionButtons';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const AppointmentsPage = () => {
@@ -17,6 +17,7 @@ const AppointmentsPage = () => {
   const [isEditingAppointment, setIsEditingAppointment] = useState(false);
   const [isDeletingAppointment, setIsDeletingAppointment] = useState(false);
   const [isSearchingAppointment, setIsSearchingAppointment] = useState(false);
+  const [currentWeek, setCurrentWeek] = useState(new Date());
 
   const handleAppointmentSelect = (appointment: any) => {
     setSelectedAppointment(appointment);
@@ -25,84 +26,138 @@ const AppointmentsPage = () => {
   const handleAppointmentSave = () => {
     setIsAddingAppointment(false);
     setIsEditingAppointment(false);
-    // Rafraîchir les données
   };
 
+  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
-            Gestion des Rendez-vous
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Planifiez et gérez vos rendez-vous efficacement
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl mb-4 relative">
+            <Calendar className="h-8 w-8 text-white" />
+            <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+              <span className="text-white text-xs font-bold">2</span>
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Tableau de bord</h1>
+          <p className="text-gray-600">Gérez vos rendez-vous avec style et efficacité</p>
         </div>
 
-        <ActionButtons
-          onAdd={() => setIsAddingAppointment(true)}
-          onEdit={() => setIsEditingAppointment(true)}
-          onDelete={() => setIsDeletingAppointment(true)}
-          onSearch={() => setIsSearchingAppointment(true)}
-        />
+        {/* Action Buttons */}
+        <div className="flex flex-wrap justify-center gap-4 mb-8">
+          <Button 
+            onClick={() => setIsAddingAppointment(true)}
+            className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            <Plus className="h-5 w-5" />
+            Ajouter un rendez-vous
+          </Button>
+          
+          <Button 
+            onClick={() => setIsEditingAppointment(true)}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            <Edit className="h-5 w-5" />
+            Modifier un rendez-vous
+          </Button>
+          
+          <Button 
+            onClick={() => setIsDeletingAppointment(true)}
+            className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            <Trash2 className="h-5 w-5" />
+            Supprimer un rendez-vous
+          </Button>
+          
+          <Button 
+            onClick={() => setIsSearchingAppointment(true)}
+            className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            <Search className="h-5 w-5" />
+            Rechercher un rendez-vous
+          </Button>
+        </div>
 
-        <Tabs defaultValue="calendar" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
-            <TabsTrigger value="calendar" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Calendrier
-            </TabsTrigger>
-            <TabsTrigger value="appointments" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Rendez-vous
-            </TabsTrigger>
-            <TabsTrigger value="clients" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Clients
-            </TabsTrigger>
-          </TabsList>
+        {/* Calendar Section */}
+        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+          {/* Calendar Header */}
+          <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-6">
+            <div className="flex items-center justify-between text-white">
+              <div className="flex items-center gap-4">
+                <Calendar className="h-6 w-6" />
+                <div>
+                  <h2 className="text-xl font-bold">Calendrier Intelligent</h2>
+                  <p className="text-purple-100 text-sm">Interface premium</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="text-white hover:bg-white/20 rounded-lg"
+                  onClick={() => setCurrentWeek(addDays(currentWeek, -7))}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Précédent
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="text-white hover:bg-white/20 rounded-lg"
+                  onClick={() => setCurrentWeek(addDays(currentWeek, 7))}
+                >
+                  Suivant
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
 
-          <TabsContent value="calendar" className="space-y-6">
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-purple-600" />
-                  Calendrier Hebdomadaire
-                </CardTitle>
-                <CardDescription>
-                  Vue d'ensemble de vos rendez-vous de la semaine
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <WeekCalendar onAppointmentSelect={handleAppointmentSelect} />
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {/* Calendar Header Days */}
+          <div className="bg-gradient-to-r from-purple-500 to-blue-500 p-4">
+            <div className="grid grid-cols-7 gap-2">
+              {weekDays.map((day, index) => {
+                const isCurrentDay = isToday(day);
+                return (
+                  <div key={index} className={`text-center p-3 rounded-xl transition-all duration-300 ${
+                    isCurrentDay 
+                      ? 'bg-yellow-400 text-purple-800 shadow-lg transform scale-105' 
+                      : 'text-white hover:bg-white/20'
+                  }`}>
+                    <div className="font-semibold text-sm uppercase">
+                      {format(day, 'EEE', { locale: fr })}
+                    </div>
+                    <div className={`text-2xl font-bold mt-1 ${
+                      isCurrentDay ? 'text-purple-800' : 'text-white'
+                    }`}>
+                      {format(day, 'd')}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
-          <TabsContent value="appointments" className="space-y-6">
-            {selectedAppointment && (
-              <AppointmentDetails 
-                appointment={selectedAppointment} 
-                onClose={() => setSelectedAppointment(null)}
-              />
-            )}
-          </TabsContent>
-
-          <TabsContent value="clients" className="space-y-6">
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle>Gestion des Clients</CardTitle>
-                <CardDescription>
-                  Liste de tous vos clients et leurs rendez-vous
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-500">Fonctionnalité en développement...</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+          {/* Calendar Body */}
+          <div className="p-6">
+            <div className="grid grid-cols-7 gap-4 min-h-[400px]">
+              {weekDays.map((day, index) => (
+                <div key={index} className="border-2 border-gray-100 rounded-xl p-4 hover:shadow-lg transition-all duration-300">
+                  <div className="flex items-center justify-center h-12 text-purple-600 mb-4">
+                    <Calendar className="h-6 w-6 opacity-30" />
+                  </div>
+                  <div className="text-center text-gray-500">
+                    <p className="text-sm">Aucun rendez-vous</p>
+                    <p className="text-xs text-purple-400">Journée libre</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
 
         {/* Dialogs */}
         <Dialog open={isAddingAppointment} onOpenChange={setIsAddingAppointment}>
