@@ -1,0 +1,27 @@
+
+[
+  {
+    "id": "1",
+    "titre": "Rendez-vous médecin",
+    "date": "2024-12-15",
+    "heure": "09:00",
+    "duree": 30,
+    "description": "Consultation de routine",
+    "client": "Jean Dupont",
+    "status": "confirmed",
+    "createdAt": "2024-12-07T10:00:00.000Z",
+    "updatedAt": "2024-12-07T10:00:00.000Z"
+  },
+  {
+    "id": "2",
+    "titre": "Réunion équipe",
+    "date": "2024-12-16",
+    "heure": "14:00",
+    "duree": 60,
+    "description": "Point hebdomadaire",
+    "client": "Équipe Marketing",
+    "status": "pending",
+    "createdAt": "2024-12-07T10:00:00.000Z",
+    "updatedAt": "2024-12-07T10:00:00.000Z"
+  }
+]

@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Home, Info, Mail, LogIn, UserCircle, LogOut, LayoutDashboard, Moon, Sun, Sparkles, TrendingUp } from 'lucide-react';
+import { Home, Info, Mail, LogIn, UserCircle, LogOut, LayoutDashboard, Moon, Sun, Sparkles, TrendingUp, Calendar } from 'lucide-react';
 
 const Navbar: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -45,6 +46,11 @@ const Navbar: React.FC = () => {
                 <Link to="/contact" className="group inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200">
                   <Mail className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
                   Contact
+                </Link>
+
+                <Link to="/appointments" className="group inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all duration-200">
+                  <Calendar className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
+                  <p className="text-indigo-600 bg-transparent">Rendez-vous</p>
                 </Link>
                 
                 {isAuthenticated && (
@@ -117,6 +123,16 @@ const Navbar: React.FC = () => {
                     <Moon className="h-4 w-4 text-blue-600" />
                   }
                 </Button>
+
+                <Link to="/appointments">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-10 w-10 p-0 rounded-xl border-2 border-indigo-200 text-indigo-600 hover:bg-indigo-500 hover:text-white hover:border-indigo-500"
+                  >
+                    <Calendar className="h-4 w-4" />
+                  </Button>
+                </Link>
                 
                 {isAuthenticated ? (
                   <div className="flex items-center space-x-2">

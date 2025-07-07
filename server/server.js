@@ -1,3 +1,4 @@
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -150,6 +151,37 @@ if (!fs.existsSync(depenseFixePath)) {
   }, null, 2));
 }
 
+// Créer le fichier des rendez-vous s'il n'existe pas
+const appointmentsPath = path.join(dbPath, 'appointments.json');
+if (!fs.existsSync(appointmentsPath)) {
+  fs.writeFileSync(appointmentsPath, JSON.stringify([
+    {
+      id: "1",
+      titre: "Rendez-vous médecin",
+      date: "2024-12-15",
+      heure: "09:00",
+      duree: 30,
+      description: "Consultation de routine",
+      client: "Jean Dupont",
+      status: "confirmed",
+      createdAt: "2024-12-07T10:00:00.000Z",
+      updatedAt: "2024-12-07T10:00:00.000Z"
+    },
+    {
+      id: "2",
+      titre: "Réunion équipe",
+      date: "2024-12-16",
+      heure: "14:00",
+      duree: 60,
+      description: "Point hebdomadaire",
+      client: "Équipe Marketing",
+      status: "pending",
+      createdAt: "2024-12-07T10:00:00.000Z",
+      updatedAt: "2024-12-07T10:00:00.000Z"
+    }
+  ], null, 2));
+}
+
 // Import routes
 const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
@@ -158,6 +190,7 @@ const pretFamillesRoutes = require('./routes/pretfamilles');
 const pretProduitsRoutes = require('./routes/pretproduits');
 const depensesRoutes = require('./routes/depenses');
 const syncRoutes = require('./routes/sync');
+const appointmentsRoutes = require('./routes/appointments');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -167,6 +200,7 @@ app.use('/api/pretfamilles', pretFamillesRoutes);
 app.use('/api/pretproduits', pretProduitsRoutes);
 app.use('/api/depenses', depensesRoutes);
 app.use('/api/sync', syncRoutes);
+app.use('/api/appointments', appointmentsRoutes);
 
 // Static file serving for uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
