@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const Sale = require('../models/Sale');
@@ -40,7 +39,48 @@ router.get('/by-month', authMiddleware, async (req, res) => {
   }
 });
 
-// Create new sale
+// Get sales by year only
+router.get('/by-year/:year', authMiddleware, async (req, res) => {
+  try {
+    const { year } = req.params;
+    
+    if (!year) {
+      return res.status(400).json({ message: 'Year is required' });
+    }
+    
+    console.log(`Fetching sales for year: ${year}`);
+    
+    const sales = Sale.getByYear(year);
+    console.log(`Found ${sales.length} sales for ${year}`);
+    
+    res.json(sales);
+  } catch (error) {
+    console.error('Error getting sales by year:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Search sales by customer name
+router.get('/search-customer', authMiddleware, async (req, res) => {
+  try {
+    const { customerName, year } = req.query;
+    
+    if (!customerName || customerName.length < 3) {
+      return res.status(400).json({ message: 'Customer name must have at least 3 characters' });
+    }
+    
+    console.log(`Searching sales for customer: ${customerName}, year: ${year || 'all'}`);
+    
+    const sales = Sale.searchByCustomerName(customerName, year);
+    console.log(`Found ${sales.length} sales for customer: ${customerName}`);
+    
+    res.json(sales);
+  } catch (error) {
+    console.error('Error searching sales by customer:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 router.post('/', authMiddleware, async (req, res) => {
   try {
     console.log('📝 SALES API - Création d\'une nouvelle vente');
@@ -48,7 +88,9 @@ router.post('/', authMiddleware, async (req, res) => {
     
     const { 
       date, productId, description, sellingPrice, 
-      quantitySold, purchasePrice, profit 
+      quantitySold, purchasePrice, profit,
+      // New customer fields
+      customerName, customerAddress, customerPhone
     } = req.body;
     
     // Validation des champs obligatoires
@@ -136,7 +178,11 @@ router.post('/', authMiddleware, async (req, res) => {
       sellingPrice: numericSellingPrice,
       quantitySold: finalQuantitySold,
       purchasePrice: numericPurchasePrice,
-      profit: numericProfit
+      profit: numericProfit,
+      // Add customer information
+      customerName: customerName || '',
+      customerAddress: customerAddress || '',
+      customerPhone: customerPhone || ''
     };
     
     console.log('💾 Données de vente à créer:', JSON.stringify(saleData, null, 2));
@@ -161,12 +207,12 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-// Update sale
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const { 
       date, productId, description, sellingPrice, 
-      quantitySold, purchasePrice, profit 
+      quantitySold, purchasePrice, profit,
+      customerName, customerAddress, customerPhone
     } = req.body;
     
     if (!date || !productId || !description || !sellingPrice || purchasePrice === undefined) {
@@ -187,7 +233,10 @@ router.put('/:id', authMiddleware, async (req, res) => {
       sellingPrice: Number(sellingPrice),
       quantitySold: finalQuantitySold,
       purchasePrice: Number(purchasePrice),
-      profit: Number(profit) // Use the profit directly from frontend calculation
+      profit: Number(profit),
+      customerName: customerName || '',
+      customerAddress: customerAddress || '',
+      customerPhone: customerPhone || ''
     };
     
     const updatedSale = Sale.update(req.params.id, saleData);
@@ -207,7 +256,6 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Delete sale
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const success = Sale.delete(req.params.id);
@@ -223,7 +271,6 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Export sales (clear month)
 router.post('/export-month', authMiddleware, async (req, res) => {
   try {
     const { month, year } = req.body;

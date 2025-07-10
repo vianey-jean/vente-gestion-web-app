@@ -1,111 +1,127 @@
-
-// Types pour l'application
-
-export interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  gender?: string;
-  address?: string;
-  phone?: string;
-}
-
-export interface Sale {
-  id: string;
-  productId: string;
-  description: string;
-  date: string;
-  quantitySold: number;
-  purchasePrice: number;
-  sellingPrice: number;
-  profit: number;
-}
-
 export interface Product {
   id: string;
   description: string;
   purchasePrice: number;
   quantity: number;
-  sellingPrice?: number;
-  profit?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export interface PretFamille {
+export interface Sale {
   id: string;
-  nom: string;
-  pretTotal: number;
-  soldeRestant: number;
-  dernierRemboursement: number;
-  dateRemboursement: string;
+  date: string;
+  productId: string;
+  description: string;
+  sellingPrice: number;
+  quantitySold: number;
+  purchasePrice: number;
+  profit: number;
+  // Nouveaux champs client
+  customerName?: string;
+  customerAddress?: string;
+  customerPhone?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PretProduit {
   id: string;
+  date: string;
+  productId: string;
   description: string;
-  nom?: string;
-  date: string; // date de prêt
-  datePaiement?: string; // nouvelle date de paiement
-  phone?: string; // nouveau numéro de téléphone
-  prixVente: number;
-  avanceRecue: number;
-  reste: number;
-  estPaye: boolean;
-  productId?: string;
+  quantityBorrowed: number;
+  borrowerName: string;
+  dueDate: string;
+  returned: boolean;
+  returnDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export interface DepenseFixe {
-  free: number;
-  internetZeop: number;
-  assuranceVoiture: number;
-  autreDepense: number;
-  assuranceVie: number;
-  total: number;
+export interface PretFamille {
+  id: string;
+  date: string;
+  familyMemberName: string;
+  amount: number;
+  dueDate: string;
+  returned: boolean;
+  returnDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DepenseDuMois {
   id: string;
-  description: string;
-  categorie: string;
   date: string;
-  debit: string;
-  credit: string;
-  solde: number;
+  description: string;
+  amount: number;
+  category: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export interface LoginCredentials {
-  email: string;
-  password: string;
+export interface Benefice {
+  id: string;
+  month: number;
+  year: number;
+  totalBenefice: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export interface RegisterCredentials {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  gender: 'male' | 'female' | 'other';
-  address: string;
-  phone: string;
-}
+export interface AppContextType {
+  // Products
+  products: Product[];
+  fetchProducts: () => Promise<void>;
+  addProduct: (product: Omit<Product, 'id'>) => Promise<boolean>;
+  updateProduct: (product: Product) => Promise<boolean>;
+  deleteProduct: (id: string) => Promise<boolean>;
 
-export interface RegistrationData {
-  email: string;
-  password: string;
-  confirmPassword: string;
-  firstName: string;
-  lastName: string;
-  gender: 'male' | 'female' | 'other';
-  address: string;
-  phone: string;
-  acceptTerms: boolean;
-}
+  // Sales
+  sales: Sale[];
+  fetchSales: () => Promise<void>;
+  addSale: (sale: Omit<Sale, 'id'>) => Promise<boolean>;
+  updateSale: (sale: Sale) => Promise<boolean>;
+  deleteSale: (id: string) => Promise<boolean>;
 
-export interface PasswordResetRequest {
-  email: string;
-}
+  // Prêt Produits
+  pretProduits: PretProduit[];
+  fetchPretProduits: () => Promise<void>;
+  addPretProduit: (pret: Omit<PretProduit, 'id'>) => Promise<boolean>;
+  updatePretProduit: (pret: PretProduit) => Promise<boolean>;
+  deletePretProduit: (id: string) => Promise<boolean>;
 
-export interface PasswordResetData {
-  email: string;
-  newPassword: string;
-  confirmPassword: string;
+  // Prêt Familles
+  pretFamilles: PretFamille[];
+  fetchPretFamilles: () => Promise<void>;
+  addPretFamille: (pret: Omit<PretFamille, 'id'>) => Promise<boolean>;
+  updatePretFamille: (pret: PretFamille) => Promise<boolean>;
+  deletePretFamille: (id: string) => Promise<boolean>;
+
+  // Dépenses du mois
+  depensesDuMois: DepenseDuMois[];
+  fetchDepensesDuMois: () => Promise<void>;
+  addDepenseDuMois: (depense: Omit<DepenseDuMois, 'id'>) => Promise<boolean>;
+  updateDepenseDuMois: (depense: DepenseDuMois) => Promise<boolean>;
+  deleteDepenseDuMois: (id: string) => Promise<boolean>;
+
+  // Bénéfices
+  benefices: Benefice[];
+  fetchBenefices: () => Promise<void>;
+
+  // Current month and year
+  currentMonth: number;
+  currentYear: number;
+
+  // Loading state
+  isLoading: boolean;
 }
