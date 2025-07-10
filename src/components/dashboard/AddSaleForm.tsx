@@ -94,7 +94,8 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({ isOpen, onClose, editSale }) 
       return;
     }
     
-    if (!isAdvanceProduct && isOutOfStock) {
+    // Pour les nouveaux ajouts (pas les modifications), vérifier le stock
+    if (!editSale && !isAdvanceProduct && isOutOfStock) {
       toast({
         title: "Erreur",
         description: "Stock épuisé. Impossible d'ajouter cette vente.",
@@ -209,6 +210,27 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({ isOpen, onClose, editSale }) 
 
   const isProfitNegative = Number(formData.profit) < 0;
 
+  // Améliorer la logique de désactivation du bouton
+  const isButtonDisabled = () => {
+    if (isSubmitting) return true;
+    if (!selectedProduct) return true;
+    
+    // Pour les nouveaux ajouts seulement
+    if (!editSale) {
+      // Pour les produits normaux, vérifier le stock
+      if (!isAdvanceProduct && isOutOfStock) return true;
+    }
+    
+    return false;
+  };
+
+  const getButtonText = () => {
+    if (isSubmitting) return "Enregistrement...";
+    if (!editSale && !selectedProduct) return "Sélectionner un produit";
+    if (!editSale && !isAdvanceProduct && isOutOfStock) return "Stock épuisé";
+    return editSale ? "Mettre à jour" : "Ajouter";
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -267,16 +289,9 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({ isOpen, onClose, editSale }) 
               <Button
                 type="submit"
                 className="bg-app-green hover:bg-opacity-90"
-                disabled={isSubmitting || (!editSale && (!selectedProduct || (isOutOfStock && !isAdvanceProduct)))}
+                disabled={isButtonDisabled()}
               >
-                {isSubmitting 
-                  ? "Enregistrement..." 
-                  : isOutOfStock && !isAdvanceProduct && !editSale
-                    ? "Stock épuisé" 
-                    : editSale 
-                      ? "Mettre à jour" 
-                      : "Ajouter"
-                }
+                {getButtonText()}
               </Button>
             </DialogFooter>
           </form>

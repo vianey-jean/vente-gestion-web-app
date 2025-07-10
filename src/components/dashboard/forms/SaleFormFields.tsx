@@ -51,7 +51,7 @@ const SaleFormFields: React.FC<SaleFormFieldsProps> = ({
   return (
     <div className="grid gap-4 py-4">
       {/* Date de vente */}
-      <div className="space-y-2 hei">
+      <div className="space-y-2">
         <Label htmlFor="date">Date de vente</Label>
         <Input
           id="date"
