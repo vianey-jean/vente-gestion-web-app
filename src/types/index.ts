@@ -1,4 +1,3 @@
-
 export interface Product {
   id: string;
   description: string;
@@ -43,21 +42,25 @@ export interface LoginCredentials {
 export interface RegisterCredentials {
   email: string;
   password: string;
+  confirmPassword: string;
   firstName: string;
   lastName: string;
   gender?: string;
   address?: string;
   phone?: string;
+  acceptTerms?: boolean;
 }
 
 export interface RegistrationData {
   email: string;
   password: string;
+  confirmPassword: string;
   firstName: string;
   lastName: string;
   gender?: string;
   address?: string;
   phone?: string;
+  acceptTerms?: boolean;
 }
 
 export interface PasswordResetRequest {
@@ -67,6 +70,7 @@ export interface PasswordResetRequest {
 export interface PasswordResetData {
   email: string;
   newPassword: string;
+  confirmPassword: string;
 }
 
 // Interfaces pour les prêts produits avec toutes les propriétés nécessaires

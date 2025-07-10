@@ -183,6 +183,12 @@ const PretFamilles: React.FC = () => {
       setLoading(true);
       
       const newPret: Omit<PretFamille, 'id'> = {
+        date: format(nouvDate, 'yyyy-MM-dd'),
+        familyMemberName: nouvNom,
+        amount: parseFloat(nouvPretTotal),
+        dueDate: format(nouvDate, 'yyyy-MM-dd'),
+        returned: false,
+        // Propriétés supplémentaires
         nom: nouvNom,
         pretTotal: parseFloat(nouvPretTotal),
         soldeRestant: parseFloat(nouvPretTotal),
