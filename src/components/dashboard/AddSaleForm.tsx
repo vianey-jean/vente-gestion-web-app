@@ -2,15 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useApp } from '@/contexts/AppContext';
 import { Product, Sale } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Trash2 } from 'lucide-react';
-import ProductSearchInput from './ProductSearchInput';
-import SalePriceInput from './forms/SalePriceInput';
-import SaleQuantityInput from './forms/SaleQuantityInput';
 import ConfirmDeleteDialog from './forms/ConfirmDeleteDialog';
 import { useSaleForm } from './forms/hooks/useSaleForm';
 import { calculateSaleProfit } from './forms/utils/saleCalculations';
@@ -151,6 +146,9 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({ isOpen, onClose, editSale }) 
         quantitySold: quantity,
         purchasePrice: purchasePrice,
         profit: profit,
+        clientName: formData.clientName,
+        clientAddress: formData.clientAddress,
+        clientPhone: formData.clientPhone,
       };
 
       let success: boolean | Sale = false;
