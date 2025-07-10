@@ -1,3 +1,4 @@
+
 export interface Product {
   id: string;
   description: string;
@@ -33,6 +34,42 @@ export interface User {
   updatedAt?: string;
 }
 
+// Types d'authentification
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterCredentials {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  gender?: string;
+  address?: string;
+  phone?: string;
+}
+
+export interface RegistrationData {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  gender?: string;
+  address?: string;
+  phone?: string;
+}
+
+export interface PasswordResetRequest {
+  email: string;
+}
+
+export interface PasswordResetData {
+  email: string;
+  newPassword: string;
+}
+
+// Interfaces pour les prêts produits avec toutes les propriétés nécessaires
 export interface PretProduit {
   id: string;
   date: string;
@@ -43,10 +80,19 @@ export interface PretProduit {
   dueDate: string;
   returned: boolean;
   returnDate?: string;
+  // Propriétés supplémentaires utilisées dans les composants
+  nom?: string;
+  phone?: string;
+  prixVente?: number;
+  avanceRecue?: number;
+  reste?: number;
+  datePaiement?: string;
+  estPaye?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
 
+// Interfaces pour les prêts familles avec toutes les propriétés nécessaires
 export interface PretFamille {
   id: string;
   date: string;
@@ -55,16 +101,41 @@ export interface PretFamille {
   dueDate: string;
   returned: boolean;
   returnDate?: string;
+  // Propriétés supplémentaires utilisées dans les composants
+  nom?: string;
+  pretTotal?: number;
+  soldeRestant?: number;
+  dernierRemboursement?: number;
+  dateRemboursement?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
+// Interface pour les dépenses du mois
 export interface DepenseDuMois {
   id: string;
   date: string;
   description: string;
   amount: number;
   category: string;
+  // Propriétés supplémentaires pour la compatibilité
+  debit?: number;
+  credit?: number;
+  solde?: number;
+  categorie?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Interface pour les dépenses fixes
+export interface DepenseFixe {
+  id?: string;
+  free: number;
+  internetZeop: number;
+  assuranceVoiture: number;
+  autreDepense: number;
+  assuranceVie: number;
+  total?: number;
   createdAt?: string;
   updatedAt?: string;
 }
