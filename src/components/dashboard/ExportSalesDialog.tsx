@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,7 @@ import { Download, FileText, CheckCircle, Calendar, TrendingUp } from 'lucide-re
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Sale } from '@/types';
-import { saleService } from '@/service/api';
+import { salesService } from '@/service/api';
 
 // Noms des mois en français
 const monthNames = [
@@ -70,7 +71,7 @@ const ExportSalesDialog: React.FC<ExportSalesDialogProps> = ({ isOpen, onClose }
       const monthForDB = selectedMonth + 1; // Convert from 0-based to 1-based
       
       // Récupérer les ventes pour le mois et l'année sélectionnés
-      const sales = await saleService.getSales(monthForDB, selectedYear);
+      const sales = await salesService.getSales(monthForDB, selectedYear);
       
       if (!sales || sales.length === 0) {
         toast({

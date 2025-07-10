@@ -29,86 +29,23 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({ isOpen, onClose, editSale }) 
   const { products, addSale, updateSale, deleteSale } = useApp();
   const { toast } = useToast();
   
-  // Initialisation du formulaire avec les nouveaux champs
-  const initialFormData = {
-    date: new Date().toISOString().split('T')[0],
-    description: '',
-    productId: '',
-    sellingPriceUnit: '',
-    quantitySold: '1',
-    purchasePriceUnit: '',
-    profit: '0.00',
-    // Nouveaux champs client
-    customerName: '',
-    customerAddress: '',
-    customerPhone: ''
-  };
-
-  const [formData, setFormData] = useState(initialFormData);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [maxQuantity, setMaxQuantity] = useState(0);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isAdvanceProduct, setIsAdvanceProduct] = useState(false);
-
-  // Initialiser le formulaire pour l'édition
-  useEffect(() => {
-    if (isOpen && editSale) {
-      const product = products.find(p => p.id === editSale.productId);
-      if (product) {
-        setSelectedProduct(product);
-        setMaxQuantity(product.quantity + editSale.quantitySold);
-        
-        const isAdvance = editSale.description.toLowerCase().includes('avance');
-        setIsAdvanceProduct(isAdvance);
-        
-        setFormData({
-          date: editSale.date,
-          description: editSale.description,
-          productId: editSale.productId,
-          sellingPriceUnit: isAdvance 
-            ? editSale.sellingPrice.toString()
-            : (editSale.sellingPrice / (editSale.quantitySold || 1)).toFixed(2),
-          quantitySold: editSale.quantitySold.toString(),
-          purchasePriceUnit: isAdvance
-            ? editSale.purchasePrice.toString()
-            : (editSale.purchasePrice / (editSale.quantitySold || 1)).toFixed(2),
-          profit: editSale.profit.toFixed(2),
-          // Nouveaux champs client
-          customerName: editSale.customerName || '',
-          customerAddress: editSale.customerAddress || '',
-          customerPhone: editSale.customerPhone || ''
-        });
-      }
-    } else if (isOpen && !editSale) {
-      // Réinitialiser pour une nouvelle vente
-      setFormData(initialFormData);
-      setSelectedProduct(null);
-      setMaxQuantity(0);
-      setIsAdvanceProduct(false);
-    }
-  }, [isOpen, editSale, products]);
-
-  const isOutOfStock = maxQuantity === 0 && !isAdvanceProduct;
-
-  // Gestion de la sélection de produit
-  const handleProductSelect = (product: Product) => {
-    setSelectedProduct(product);
-    setMaxQuantity(product.quantity);
-    
-    const isAdvance = product.description.toLowerCase().includes('avance');
-    setIsAdvanceProduct(isAdvance);
-    
-    setFormData(prev => ({
-      ...prev,
-      description: product.description,
-      productId: product.id,
-      purchasePriceUnit: product.purchasePrice.toFixed(2),
-      sellingPriceUnit: '',
-      quantitySold: isAdvance ? '0' : '1',
-      profit: '0.00'
-    }));
-  };
+  const {
+    formData,
+    setFormData,
+    selectedProduct,
+    setSelectedProduct,
+    isSubmitting,
+    setIsSubmitting,
+    maxQuantity,
+    setMaxQuantity,
+    showDeleteConfirm,
+    setShowDeleteConfirm,
+    isAdvanceProduct,
+    setIsAdvanceProduct,
+    isOutOfStock,
+    handleProductSelect,
+    initializeForm
+  } = useSaleForm(editSale, products, isOpen);
 
   // Fonction pour calculer le profit selon la nouvelle logique
   const updateProfit = (priceUnit: string, quantity: string, purchasePriceUnit: string) => {
@@ -157,15 +94,6 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({ isOpen, onClose, editSale }) 
       toast({
         title: "Erreur",
         description: "Veuillez sélectionner un produit.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!formData.customerName.trim()) {
-      toast({
-        title: "Erreur",
-        description: "Le nom du client est obligatoire.",
         variant: "destructive",
       });
       return;
@@ -223,10 +151,6 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({ isOpen, onClose, editSale }) 
         quantitySold: quantity,
         purchasePrice: purchasePrice,
         profit: profit,
-        // Informations client
-        customerName: formData.customerName.trim(),
-        customerAddress: formData.customerAddress.trim(),
-        customerPhone: formData.customerPhone.trim(),
       };
 
       let success: boolean | Sale = false;
@@ -290,11 +214,11 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({ isOpen, onClose, editSale }) 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editSale ? 'Modifier la vente' : 'Ajouter une vente'}</DialogTitle>
             <DialogDescription>
-              {editSale ? 'Modifiez les détails de la vente.' : 'Enregistrez une nouvelle vente avec les informations client.'}
+              {editSale ? 'Modifiez les détails de la vente.' : 'Enregistrez une nouvelle vente.'}
               {isAdvanceProduct && (
                 <div className="mt-2 text-amber-600 text-sm font-medium">
                   Produit d'avance détecté - La quantité sera automatiquement fixée à 0.
@@ -345,7 +269,7 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({ isOpen, onClose, editSale }) 
               <Button
                 type="submit"
                 className="bg-app-green hover:bg-opacity-90"
-                disabled={isSubmitting || (!editSale && (!selectedProduct || (isOutOfStock && !isAdvanceProduct) || !formData.customerName.trim()))}
+                disabled={isSubmitting || (!editSale && (!selectedProduct || (isOutOfStock && !isAdvanceProduct)))}
               >
                 {isSubmitting 
                   ? "Enregistrement..." 

@@ -122,15 +122,9 @@ const DepenseDuMois = () => {
         return;
       }
 
-      // Créer l'objet mouvement avec les bonnes propriétés de l'interface DepenseDuMois
+      // Créer l'objet mouvement avec le solde calculé
       const mouvementData = {
-        date: newMouvement.date,
-        description: newMouvement.description,
-        amount: parseFloat(newMouvement.debit || newMouvement.credit || '0'),
-        category: newMouvement.categorie,
-        // Propriétés supplémentaires pour la compatibilité
-        debit: parseFloat(newMouvement.debit || '0'),
-        credit: parseFloat(newMouvement.credit || '0'),
+        ...newMouvement,
         solde: solde + (parseFloat(newMouvement.credit) || 0) - (parseFloat(newMouvement.debit) || 0)
       };
       

@@ -1,25 +1,17 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  RegistrationData,
-  LoginCredentials,
-  RegisterCredentials,
-  User,
-  PasswordResetRequest,
-  PasswordResetData,
-} from '@/types';
-import { authService } from '@/service/api';
-import { useToast } from "@/hooks/use-toast";
+
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { LoginCredentials, PasswordResetData, PasswordResetRequest, RegistrationData, User } from '../types';
+import { authService } from '../service/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
-  isLoggedIn: boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
   token: string | null;
-  register: (data: RegisterCredentials) => Promise<boolean>;
   login: (credentials: LoginCredentials) => Promise<boolean>;
   logout: () => void;
+  register: (data: RegistrationData) => Promise<boolean>;
   checkEmail: (email: string) => Promise<boolean>;
   resetPasswordRequest: (data: PasswordResetRequest) => Promise<boolean>;
   resetPassword: (data: PasswordResetData) => Promise<boolean>;
@@ -29,215 +21,194 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
-  const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Computed property for backwards compatibility
-  const isAuthenticated = isLoggedIn;
-
   useEffect(() => {
-    const checkAuthentication = async () => {
-      setIsLoading(true);
-      try {
-        const storedToken = localStorage.getItem('token');
-        if (storedToken) {
-          setToken(storedToken);
-          // Since we don't have userService, we'll simulate user data
-          const userData = {
-            id: '1',
-            email: 'user@example.com',
-            firstName: 'User',
-            lastName: 'Name'
-          };
-          setUser(userData);
-          setIsLoggedIn(true);
-        }
-      } catch (error) {
-        console.error('Authentication check failed:', error);
-        setIsLoggedIn(false);
-        setUser(null);
-        setToken(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuthentication();
+    // Check if user is already logged in
+    const currentUser = authService.getCurrentUser();
+    const storedToken = localStorage.getItem('token');
+    
+    setUser(currentUser);
+    setToken(storedToken);
+    setIsLoading(false);
   }, []);
-
-  const register = async (data: RegisterCredentials): Promise<boolean> => {
-    try {
-      const response = await authService.register(data);
-      if (response.user && response.token) {
-        setUser(response.user);
-        setIsLoggedIn(true);
-        setToken(response.token);
-        localStorage.setItem('token', response.token);
-        toast({
-          title: "Succès",
-          description: "Votre compte a été créé avec succès",
-          variant: "default",
-          className: "bg-green-500 text-white",
-        });
-        return true;
-      } else {
-        toast({
-          title: "Erreur",
-          description: "L'enregistrement a échoué. Veuillez réessayer.",
-          variant: "destructive",
-        });
-        return false;
-      }
-    } catch (error: any) {
-      console.error('Registration failed:', error);
-      toast({
-        title: "Erreur",
-        description: error.response?.data?.message || "Échec de l'enregistrement",
-        variant: "destructive",
-      });
-      return false;
-    }
-  };
 
   const login = async (credentials: LoginCredentials): Promise<boolean> => {
     try {
-      const response = await authService.login(credentials);
-      if (response.user && response.token) {
-        setUser(response.user);
-        setIsLoggedIn(true);
-        setToken(response.token);
-        localStorage.setItem('token', response.token);
+      setIsLoading(true);
+      const result = await authService.login(credentials);
+      
+      if (result && result.user) {
+        setUser(result.user);
+        setToken(result.token);
         toast({
-          title: "Succès",
-          description: "Connexion réussie",
-          variant: "default",
+          title: "Connexion réussie",
+          description: `Bienvenue ${result.user.firstName} ${result.user.lastName}`,
           className: "bg-green-500 text-white",
         });
         return true;
       } else {
         toast({
-          title: "Erreur",
-          description: "La connexion a échoué. Veuillez vérifier vos informations d'identification.",
+          title: "Échec de la connexion",
+          description: "Email ou mot de passe incorrect",
           variant: "destructive",
         });
         return false;
       }
-    } catch (error: any) {
-      console.error('Login failed:', error);
+    } catch (error) {
       toast({
         title: "Erreur",
-        description: error.response?.data?.message || "Échec de la connexion",
+        description: "Une erreur s'est produite lors de la connexion",
         variant: "destructive",
       });
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const logout = () => {
     setUser(null);
-    setIsLoggedIn(false);
     setToken(null);
-    localStorage.removeItem('token');
-    navigate('/login');
+    authService.setCurrentUser(null);
     toast({
-      title: "Succès",
-      description: "Déconnexion réussie",
-      variant: "default",
-      className: "bg-blue-500 text-white",
+      title: "Déconnexion réussie",
+      description: "Vous avez été déconnecté avec succès",
     });
+    // Redirect to login page after logout
+    window.location.href = '/login';
+  };
+
+  const register = async (data: RegistrationData): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      const registerData = {
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        gender: data.gender,
+        address: data.address,
+        phone: data.phone,
+      };
+      
+      const result = await authService.register(registerData);
+      
+      if (result && result.user) {
+        setUser(result.user);
+        setToken(result.token);
+        toast({
+          title: "Inscription réussie",
+          description: `Bienvenue ${result.user.firstName} ${result.user.lastName}`,
+          className: "notification-success",
+        });
+        return true;
+      } else {
+        toast({
+          title: "Échec de l'inscription",
+          description: "Cet email est déjà utilisé",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de l'inscription",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const checkEmail = async (email: string): Promise<boolean> => {
     try {
-      const response = await authService.checkEmail(email);
-      return response.exists || false;
+      const result = await authService.checkEmail(email);
+      return result.exists;
     } catch (error) {
-      console.error('Error checking email:', error);
       return false;
     }
   };
 
   const resetPasswordRequest = async (data: PasswordResetRequest): Promise<boolean> => {
     try {
-      console.log('Tentative de demande de réinitialisation du mot de passe pour:', data.email);
+      setIsLoading(true);
+      const exists = await authService.resetPasswordRequest(data);
       
-      // Simuler une demande réussie
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!exists) {
+        toast({
+          title: "Échec de la réinitialisation",
+          description: "Cet email n'existe pas dans notre système",
+          variant: "destructive",
+        });
+      }
       
-      toast({
-        title: "Succès",
-        description: "Un lien de réinitialisation a été envoyé à votre adresse e-mail",
-        variant: "default",
-        className: "bg-green-500 text-white",
-      });
-      
-      return true;
-    } catch (error: any) {
-      console.error('Erreur lors de la demande de réinitialisation du mot de passe:', error);
-      
+      return exists;
+    } catch (error) {
       toast({
         title: "Erreur",
-        description: error.response?.data?.message || "Échec de la demande de réinitialisation du mot de passe",
+        description: "Une erreur s'est produite lors de la réinitialisation",
         variant: "destructive",
       });
-      
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const resetPassword = async (data: PasswordResetData): Promise<boolean> => {
     try {
-      console.log('Tentative de réinitialisation du mot de passe pour:', data.email);
+      setIsLoading(true);
+      const result = await authService.resetPassword(data.email);
       
-      // Simuler une réinitialisation réussie
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Succès",
-        description: "Votre mot de passe a été réinitialisé avec succès",
-        variant: "default",
-        className: "bg-green-500 text-white",
-      });
-      
-      return true;
-    } catch (error: any) {
-      console.error('Erreur lors de la réinitialisation du mot de passe:', error);
-      
+      if (result.success) {
+        toast({
+          title: "Réinitialisation réussie",
+          description: "Votre mot de passe a été réinitialisé avec succès",
+          className: "notification-success",
+        });
+        return true;
+      } else {
+        toast({
+          title: "Échec de la réinitialisation",
+          description: "Le nouveau mot de passe doit être différent de l'ancien",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch (error) {
       toast({
         title: "Erreur",
-        description: error.response?.data?.message || "Échec de la réinitialisation du mot de passe",
+        description: "Une erreur s'est produite lors de la réinitialisation",
         variant: "destructive",
       });
-      
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const value: AuthContextType = {
+  const value = {
     user,
-    isLoggedIn,
-    isAuthenticated,
+    isAuthenticated: !!user,
     isLoading,
     token,
-    register,
     login,
     logout,
+    register,
     checkEmail,
     resetPasswordRequest,
     resetPassword,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');

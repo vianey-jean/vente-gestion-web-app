@@ -43,48 +43,6 @@ const Sale = {
     }
   },
 
-  // Get sales by year only
-  getByYear: (year) => {
-    try {
-      const sales = JSON.parse(fs.readFileSync(salesPath, 'utf8'));
-      const yearNum = Number(year);
-      
-      return sales.filter(sale => {
-        const saleDate = new Date(sale.date);
-        return saleDate.getFullYear() === yearNum;
-      });
-    } catch (error) {
-      console.error("Error filtering sales by year:", error);
-      return [];
-    }
-  },
-
-  // Search sales by customer name
-  searchByCustomerName: (customerName, year = null) => {
-    try {
-      const sales = JSON.parse(fs.readFileSync(salesPath, 'utf8'));
-      let filteredSales = sales;
-      
-      // Filter by year if provided
-      if (year) {
-        const yearNum = Number(year);
-        filteredSales = sales.filter(sale => {
-          const saleDate = new Date(sale.date);
-          return saleDate.getFullYear() === yearNum;
-        });
-      }
-      
-      // Filter by customer name (case insensitive, partial match)
-      return filteredSales.filter(sale => 
-        sale.customerName && 
-        sale.customerName.toLowerCase().includes(customerName.toLowerCase())
-      );
-    } catch (error) {
-      console.error("Error searching sales by customer name:", error);
-      return [];
-    }
-  },
-
   // Create new sale
   create: (saleData) => {
     try {
@@ -101,14 +59,10 @@ const Sale = {
       // Don't recalculate profit - use the profit already calculated by AddSaleForm
       // The profit should already be correctly calculated (V - A) from the frontend
       
-      // Create new sale object with customer information
+      // Create new sale object
       const newSale = {
         id: Date.now().toString(),
-        ...saleData,
-        // Ensure customer fields are included
-        customerName: saleData.customerName || '',
-        customerAddress: saleData.customerAddress || '',
-        customerPhone: saleData.customerPhone || ''
+        ...saleData
       };
       
       // For regular products, update product quantity
@@ -168,15 +122,8 @@ const Sale = {
         }
       }
       
-      // Update sale data including customer information
-      sales[saleIndex] = { 
-        ...oldSale, 
-        ...saleData,
-        // Ensure customer fields are updated
-        customerName: saleData.customerName || oldSale.customerName || '',
-        customerAddress: saleData.customerAddress || oldSale.customerAddress || '',
-        customerPhone: saleData.customerPhone || oldSale.customerPhone || ''
-      };
+      // Update sale data
+      sales[saleIndex] = { ...oldSale, ...saleData };
       
       // Write back to file
       fs.writeFileSync(salesPath, JSON.stringify(sales, null, 2));
@@ -188,6 +135,7 @@ const Sale = {
     }
   },
 
+  // Delete sale and return quantity to product
   delete: (id) => {
     try {
       let sales = JSON.parse(fs.readFileSync(salesPath, 'utf8'));
@@ -222,6 +170,7 @@ const Sale = {
     }
   },
 
+  // Clear sales for a specific month and year
   clearByMonthYear: (month, year) => {
     try {
       let sales = JSON.parse(fs.readFileSync(salesPath, 'utf8'));

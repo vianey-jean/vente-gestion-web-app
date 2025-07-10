@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,10 +8,9 @@ import AddSaleForm from '@/components/dashboard/AddSaleForm';
 import AddProductForm from '@/components/dashboard/AddProductForm';
 import EditProductForm from '@/components/dashboard/EditProductForm';
 import ExportSalesDialog from '@/components/dashboard/ExportSalesDialog';
-import InvoiceGenerator from '@/components/dashboard/InvoiceGenerator';
 import ModernContainer from '@/components/dashboard/forms/ModernContainer';
 import ModernActionButton from '@/components/dashboard/forms/ModernActionButton';
-import { PlusCircle, Edit, ShoppingCart, Loader2, FileText, TrendingUp, Package, Warehouse, BarChart3, Receipt } from 'lucide-react';
+import { PlusCircle, Edit, ShoppingCart, Loader2, FileText, TrendingUp, Package, Warehouse, BarChart3 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +30,7 @@ const monthNames = [
  * Affiche automatiquement le mois en cours uniquement
  */
 const VentesProduits: React.FC = () => {
+  // Récupérer les données et fonctions du contexte
   const { 
     sales, 
     products, 
@@ -49,18 +50,20 @@ const VentesProduits: React.FC = () => {
   const [addProductDialogOpen, setAddProductDialogOpen] = React.useState(false);
   const [editProductDialogOpen, setEditProductDialogOpen] = React.useState(false);
   const [exportDialogOpen, setExportDialogOpen] = React.useState(false);
-  const [invoiceGeneratorOpen, setInvoiceGeneratorOpen] = React.useState(false);
   const [selectedSale, setSelectedSale] = React.useState<Sale | undefined>(undefined);
   const [showProductsList, setShowProductsList] = React.useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Les ventes sont automatiquement filtrées pour le mois en cours par le contexte
   const filteredSales = sales;
 
+  // Calcul des statistiques basés sur les ventes du mois en cours
   const totalProfit = filteredSales.reduce((sum, sale) => sum + sale.profit, 0);
   const totalProductsSold = filteredSales.reduce((sum, sale) => sum + sale.quantitySold, 0);
   const availableProducts = products.filter(p => p.quantity > 0);
   const totalStock = products.reduce((sum, product) => sum + product.quantity, 0);
 
+  // Charger les données au montage du composant seulement si authentifié
   useEffect(() => {
     if (!isAuthenticated || authLoading) {
       console.log('User not authenticated, not loading data');
@@ -72,6 +75,7 @@ const VentesProduits: React.FC = () => {
       
       try {
         console.log(`Loading data for current month ${currentMonth}, year ${currentYear}`);
+        // Charger les produits et les ventes en parallèle
         await Promise.all([
           fetchProducts(),
           fetchSales()
@@ -92,6 +96,7 @@ const VentesProduits: React.FC = () => {
     loadData();
   }, [fetchProducts, fetchSales, toast, isAuthenticated, authLoading, currentMonth, currentYear]);
 
+  // Si l'utilisateur n'est pas authentifié, afficher un message
   if (!isAuthenticated) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -102,17 +107,15 @@ const VentesProduits: React.FC = () => {
     );
   }
 
+  // Gestion du clic sur une ligne du tableau des ventes
   const handleRowClick = (sale: Sale) => {
     setSelectedSale(sale);
     setAddSaleDialogOpen(true);
   };
 
+  // Ouverture du dialogue d'exportation
   const handleOpenExportDialog = () => {
     setExportDialogOpen(true);
-  };
-
-  const handleOpenInvoiceGenerator = () => {
-    setInvoiceGeneratorOpen(true);
   };
 
   return (
@@ -224,19 +227,9 @@ const VentesProduits: React.FC = () => {
           >
             Ajouter une vente
           </ModernActionButton>
-
-          {/* Nouveau bouton Générer facture */}
-          <ModernActionButton
-            icon={Receipt}
-            onClick={handleOpenInvoiceGenerator}
-            gradient="purple"
-            buttonSize="md"
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg transform transition hover:scale-105"
-          >
-            Générer facture
-          </ModernActionButton>
         </div>
         
+        {/* Indicateur de chargement modernisé */}
         {(appLoading || authLoading) && (
           <div className="flex justify-center items-center py-12">
             <div className="flex items-center space-x-4 p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
@@ -246,6 +239,7 @@ const VentesProduits: React.FC = () => {
           </div>
         )}
         
+        {/* Tableau des ventes */}
         {!appLoading && !authLoading && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
             <SalesTable 
@@ -255,6 +249,7 @@ const VentesProduits: React.FC = () => {
           </div>
         )}
         
+        {/* Message informatif */}
         <div className="text-sm text-gray-500 mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
           <p className="font-medium text-blue-700 dark:text-blue-300">
             📅 Affichage automatique du mois en cours: {monthNames[currentMonth - 1]} {currentYear}
@@ -291,17 +286,13 @@ const VentesProduits: React.FC = () => {
         />
       )}
       
+      {/* Dialogue d'exportation des ventes */}
       <ExportSalesDialog
         isOpen={exportDialogOpen}
         onClose={() => setExportDialogOpen(false)}
       />
-
-      {/* Nouveau dialogue de génération de factures */}
-      <InvoiceGenerator
-        isOpen={invoiceGeneratorOpen}
-        onClose={() => setInvoiceGeneratorOpen(false)}
-      />
       
+      {/* Liste des produits disponibles */}
       <Dialog open={showProductsList} onOpenChange={setShowProductsList}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
