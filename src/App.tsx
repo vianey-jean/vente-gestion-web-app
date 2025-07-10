@@ -1,11 +1,13 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { ThemeProvider } from '@/contexts/ThemeContext';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { AppProvider } from '@/contexts/AppContext';
+
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
-import { Layout } from '@/layout/Layout';
-import ScrollToTop from '@/components/ScrollToTop';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
+import { AppProvider } from '@/contexts/AppContext';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { RealtimeWrapper } from '@/components/common/RealtimeWrapper';
+
 import HomePage from '@/pages/HomePage';
 import AboutPage from '@/pages/AboutPage';
 import ContactPage from '@/pages/ContactPage';
@@ -15,54 +17,50 @@ import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import DashboardPage from '@/pages/DashboardPage';
 import TendancesPage from '@/pages/TendancesPage';
 import NotFound from '@/pages/NotFound';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import RealtimeWrapper from '@/components/RealtimeWrapper';
-import AppointmentsPage from '@/pages/AppointmentsPage';
+
+import './App.css';
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function App() {
   return (
-    <BrowserRouter>
-      <ThemeProvider>
-        <AuthProvider>
-          <AppProvider>
-            <div className="App">
-              <Toaster />
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppProvider>
               <RealtimeWrapper>
-                <Layout>
-                  <ScrollToTop />
-                  <Routes>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/about" element={<AboutPage />} />
-                    <Route path="/contact" element={<ContactPage />} />
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register" element={<RegisterPage />} />
-                    <Route path="/reset-password" element={<ResetPasswordPage />} />
-                    <Route path="/appointments" element={<AppointmentsPage />} />
-                    <Route 
-                      path="/dashboard" 
-                      element={
-                        <ProtectedRoute>
-                          <DashboardPage />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/tendances" 
-                      element={
-                        <ProtectedRoute>
-                          <TendancesPage />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Layout>
+                <div className="App">
+                  <Router>
+                    <Routes>
+                      <Route path="/" element={<HomePage />} />
+                      <Route path="/about" element={<AboutPage />} />
+                      <Route path="/contact" element={<ContactPage />} />
+                      <Route path="/login" element={<LoginPage />} />
+                      <Route path="/register" element={<RegisterPage />} />
+                      <Route path="/reset-password" element={<ResetPasswordPage />} />
+                      <Route path="/dashboard" element={<DashboardPage />} />
+                      <Route path="/tendances" element={<TendancesPage />} />
+                      <Route path="/404" element={<NotFound />} />
+                      <Route path="*" element={<Navigate to="/404" replace />} />
+                    </Routes>
+                  </Router>
+                  <Toaster />
+                </div>
               </RealtimeWrapper>
-            </div>
-          </AppProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+            </AppProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

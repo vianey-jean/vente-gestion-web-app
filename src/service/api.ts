@@ -1,4 +1,3 @@
-
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import axiosRetry from 'axios-retry';
 import { Product, Sale, User, LoginCredentials, RegisterCredentials, PretFamille, PretProduit, DepenseFixe, DepenseDuMois } from '@/types';
@@ -8,11 +7,11 @@ const getBaseURL = () => {
   const isDevelopment = import.meta.env.DEV;
   
   if (isDevelopment) {
-    return import.meta.env.VITE_API_URL || 'https://server-gestion-ventes.onrender.com';
+    return import.meta.env.VITE_API_BASE_URL ;
   }
   
   // En production, utiliser l'URL du serveur déployé
-  return import.meta.env.VITE_API_URL || 'https://server-gestion-ventes.onrender.com';
+  return import.meta.env.VITE_API_BASE_URL;
 };
 
 // Create axios instance with base configuration
@@ -139,23 +138,51 @@ export const authService = {
 // Products API
 export const productService = {
   async getProducts(): Promise<Product[]> {
-    const response: AxiosResponse<Product[]> = await api.get('/api/products');
-    return response.data;
+    try {
+      console.log('📦 Fetching products from API...');
+      const response: AxiosResponse<Product[]> = await api.get('/api/products');
+      console.log(`✅ Retrieved ${response.data.length} products from API`);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching products:', error);
+      throw error;
+    }
   },
 
   async addProduct(product: Omit<Product, 'id'>): Promise<Product> {
-    const response: AxiosResponse<Product> = await api.post('/api/products', product);
-    return response.data;
+    try {
+      console.log('📝 Adding new product:', product);
+      const response: AxiosResponse<Product> = await api.post('/api/products', product);
+      console.log('✅ Product added successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error adding product:', error);
+      throw error;
+    }
   },
 
   async updateProduct(product: Product): Promise<Product> {
-    const response: AxiosResponse<Product> = await api.put(`/api/products/${product.id}`, product);
-    return response.data;
+    try {
+      console.log('📝 Updating product:', product);
+      const response: AxiosResponse<Product> = await api.put(`/api/products/${product.id}`, product);
+      console.log('✅ Product updated successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error updating product:', error);
+      throw error;
+    }
   },
 
   async deleteProduct(id: string): Promise<boolean> {
-    await api.delete(`/api/products/${id}`);
-    return true;
+    try {
+      console.log('🗑️ Deleting product with ID:', id);
+      const response = await api.delete(`/api/products/${id}`);
+      console.log('✅ Product deleted successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Error deleting product:', error);
+      throw error;
+    }
   },
 };
 
@@ -283,6 +310,67 @@ export const pretProduitService = {
   async deletePretProduit(id: string): Promise<boolean> {
     await api.delete(`/api/pretproduits/${id}`);
     return true;
+  },
+};
+
+// Benefice Service
+export const beneficeService = {
+  async getBenefices(): Promise<any[]> {
+    try {
+      console.log('📊 Fetching benefices from API...');
+      const response = await api.get('/api/benefices');
+      console.log(`✅ Retrieved ${response.data.length} benefices from API`);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching benefices:', error);
+      throw error;
+    }
+  },
+
+  async getBeneficeByProductId(productId: string): Promise<any> {
+    try {
+      const response = await api.get(`/api/benefices/product/${productId}`);
+      return response.data;
+    } catch (error) {
+      console.log('Aucune donnée de bénéfice existante pour ce produit');
+      return null;
+    }
+  },
+
+  async createBenefice(beneficeData: any): Promise<any> {
+    try {
+      console.log('📝 Adding new benefice:', beneficeData);
+      const response = await api.post('/api/benefices', beneficeData);
+      console.log('✅ Benefice added successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error adding benefice:', error);
+      throw error;
+    }
+  },
+
+  async updateBenefice(id: string, beneficeData: any): Promise<any> {
+    try {
+      console.log('📝 Updating benefice:', beneficeData);
+      const response = await api.put(`/api/benefices/${id}`, beneficeData);
+      console.log('✅ Benefice updated successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error updating benefice:', error);
+      throw error;
+    }
+  },
+
+  async deleteBenefice(id: string): Promise<boolean> {
+    try {
+      console.log('🗑️ Deleting benefice with ID:', id);
+      await api.delete(`/api/benefices/${id}`);
+      console.log('✅ Benefice deleted successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Error deleting benefice:', error);
+      throw error;
+    }
   },
 };
 

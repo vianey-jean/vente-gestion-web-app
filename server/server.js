@@ -1,4 +1,3 @@
-
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -14,30 +13,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Configuration CORS simplifiée et efficace
+// Configuration CORS simplifiée pour le développement
 const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      'http://localhost:5173',
-      'http://localhost:3000', 
-      'http://localhost:8080',
-      'https://riziky-gestion-ventes.vercel.app',
-      'https://server-gestion-ventes.onrender.com'
-    ];
-    
-    // Allow requests with no origin (comme les apps mobiles)
-    if (!origin) return callback(null, true);
-    
-    // Vérifier les domaines autorisés
-    if (allowedOrigins.includes(origin) || 
-        origin.match(/^https:\/\/.*\.lovableproject\.com$/) ||
-        origin.match(/^https:\/\/.*\.lovable\.app$/)) {
-      return callback(null, true);
-    }
-    
-    console.log('CORS blocked origin:', origin);
-    return callback(null, false); // Ne pas lever d'erreur, juste refuser
-  },
+  origin: true, // Permet toutes les origines en développement
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
@@ -53,12 +31,6 @@ const corsOptions = {
 
 // Middleware CORS global
 app.use(cors(corsOptions));
-
-// Middleware spécial pour les EventSource - pas de CORS additionnel
-app.use('/api/sync/events', (req, res, next) => {
-  // Les headers CORS sont gérés dans la route elle-même
-  next();
-});
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -151,35 +123,9 @@ if (!fs.existsSync(depenseFixePath)) {
   }, null, 2));
 }
 
-// Créer le fichier des rendez-vous s'il n'existe pas
-const appointmentsPath = path.join(dbPath, 'appointments.json');
-if (!fs.existsSync(appointmentsPath)) {
-  fs.writeFileSync(appointmentsPath, JSON.stringify([
-    {
-      id: "1",
-      titre: "Rendez-vous médecin",
-      date: "2024-12-15",
-      heure: "09:00",
-      duree: 30,
-      description: "Consultation de routine",
-      client: "Jean Dupont",
-      status: "confirmed",
-      createdAt: "2024-12-07T10:00:00.000Z",
-      updatedAt: "2024-12-07T10:00:00.000Z"
-    },
-    {
-      id: "2",
-      titre: "Réunion équipe",
-      date: "2024-12-16",
-      heure: "14:00",
-      duree: 60,
-      description: "Point hebdomadaire",
-      client: "Équipe Marketing",
-      status: "pending",
-      createdAt: "2024-12-07T10:00:00.000Z",
-      updatedAt: "2024-12-07T10:00:00.000Z"
-    }
-  ], null, 2));
+const beneficePath = path.join(dbPath, 'benefice.json');
+if (!fs.existsSync(beneficePath)) {
+  fs.writeFileSync(beneficePath, JSON.stringify([], null, 2));
 }
 
 // Import routes
@@ -190,7 +136,7 @@ const pretFamillesRoutes = require('./routes/pretfamilles');
 const pretProduitsRoutes = require('./routes/pretproduits');
 const depensesRoutes = require('./routes/depenses');
 const syncRoutes = require('./routes/sync');
-const appointmentsRoutes = require('./routes/appointments');
+const beneficesRoutes = require('./routes/benefices');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -200,7 +146,7 @@ app.use('/api/pretfamilles', pretFamillesRoutes);
 app.use('/api/pretproduits', pretProduitsRoutes);
 app.use('/api/depenses', depensesRoutes);
 app.use('/api/sync', syncRoutes);
-app.use('/api/appointments', appointmentsRoutes);
+app.use('/api/benefices', beneficesRoutes);
 
 // Static file serving for uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -218,6 +164,6 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`CORS enabled for Lovable domains`);
-  console.log(`Sync events available at https://server-gestion-ventes.onrender.com:${PORT}/api/sync/events`);
+  console.log(`CORS enabled for all origins in development`);
+  console.log(`Sync events available at http://localhost:${PORT}/api/sync/events`);
 });
