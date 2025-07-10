@@ -1,3 +1,4 @@
+
 import axios, { AxiosResponse } from 'axios';
 import axiosRetry from 'axios-retry';
 import { 
@@ -25,6 +26,9 @@ axiosRetry(axios, {
 });
 
 const API_BASE_URL = 'http://localhost:3001/api';
+
+// Export axios instance as api
+export const api = axios;
 
 // Intercepteur pour ajouter le token aux requêtes
 axios.interceptors.request.use((config) => {
@@ -95,8 +99,12 @@ export const productService = {
 
 // Sale Service
 export const saleService = {
-  async getSales(): Promise<Sale[]> {
-    const response: AxiosResponse<Sale[]> = await axios.get(`${API_BASE_URL}/sales`);
+  async getSales(month?: number, year?: number): Promise<Sale[]> {
+    let url = `${API_BASE_URL}/sales`;
+    if (month && year) {
+      url += `?month=${month}&year=${year}`;
+    }
+    const response: AxiosResponse<Sale[]> = await axios.get(url);
     return response.data;
   },
 
@@ -149,35 +157,54 @@ export const pretFamilleService = {
     return response.data;
   },
 
-  async updatePretFamille(pret: PretFamille): Promise<PretFamille> {
-    const response: AxiosResponse<PretFamille> = await axios.put(`${API_BASE_URL}/pretfamilles/${pret.id}`, pret);
+  async updatePretFamille(id: string, pret: Partial<PretFamille>): Promise<PretFamille> {
+    const response: AxiosResponse<PretFamille> = await axios.put(`${API_BASE_URL}/pretfamilles/${id}`, pret);
     return response.data;
   },
 
   async deletePretFamille(id: string): Promise<void> {
     await axios.delete(`${API_BASE_URL}/pretfamilles/${id}`);
+  },
+
+  async searchByName(query: string): Promise<PretFamille[]> {
+    const response: AxiosResponse<PretFamille[]> = await axios.get(`${API_BASE_URL}/pretfamilles/search/nom?q=${query}`);
+    return response.data;
   }
 };
 
-// Dépenses du mois Service
-export const depenseDuMoisService = {
-  async getDepensesDuMois(): Promise<DepenseDuMois[]> {
+// Dépenses Service
+export const depenseService = {
+  async getMouvements(): Promise<DepenseDuMois[]> {
     const response: AxiosResponse<DepenseDuMois[]> = await axios.get(`${API_BASE_URL}/depenses`);
     return response.data;
   },
 
-  async addDepenseDuMois(depense: Omit<DepenseDuMois, 'id'>): Promise<DepenseDuMois> {
-    const response: AxiosResponse<DepenseDuMois> = await axios.post(`${API_BASE_URL}/depenses`, depense);
+  async addMouvement(mouvement: Omit<DepenseDuMois, 'id'>): Promise<DepenseDuMois> {
+    const response: AxiosResponse<DepenseDuMois> = await axios.post(`${API_BASE_URL}/depenses`, mouvement);
     return response.data;
   },
 
-  async updateDepenseDuMois(depense: DepenseDuMois): Promise<DepenseDuMois> {
-    const response: AxiosResponse<DepenseDuMois> = await axios.put(`${API_BASE_URL}/depenses/${depense.id}`, depense);
+  async updateMouvement(id: string, mouvement: Partial<DepenseDuMois>): Promise<DepenseDuMois> {
+    const response: AxiosResponse<DepenseDuMois> = await axios.put(`${API_BASE_URL}/depenses/${id}`, mouvement);
     return response.data;
   },
 
-  async deleteDepenseDuMois(id: string): Promise<void> {
+  async deleteMouvement(id: string): Promise<void> {
     await axios.delete(`${API_BASE_URL}/depenses/${id}`);
+  },
+
+  async getDepensesFixe(): Promise<DepenseFixe> {
+    const response: AxiosResponse<DepenseFixe> = await axios.get(`${API_BASE_URL}/depenses/fixe`);
+    return response.data;
+  },
+
+  async updateDepensesFixe(depenses: DepenseFixe): Promise<DepenseFixe> {
+    const response: AxiosResponse<DepenseFixe> = await axios.put(`${API_BASE_URL}/depenses/fixe`, depenses);
+    return response.data;
+  },
+
+  async resetMouvements(): Promise<void> {
+    await axios.delete(`${API_BASE_URL}/depenses/reset`);
   }
 };
 
@@ -188,3 +215,6 @@ export const beneficeService = {
     return response.data;
   }
 };
+
+// Export salesService as an alias for saleService for backward compatibility
+export const salesService = saleService;

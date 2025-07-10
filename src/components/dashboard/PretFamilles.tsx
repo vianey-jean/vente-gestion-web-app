@@ -121,15 +121,14 @@ const PretFamilles: React.FC = () => {
       const pretReel = soldRst - dernierRem;
       
       // Créer l'objet mis à jour
-      const updatedPret: PretFamille = {
-        ...selectedPret,
+      const updatedData = {
         soldeRestant: pretReel,
         dernierRemboursement: dernierRem,
         dateRemboursement: new Date().toISOString().split('T')[0]
       };
       
       // Mettre à jour via l'API
-      await pretFamilleService.updatePretFamille(selectedPret.id, updatedPret);
+      await pretFamilleService.updatePretFamille(selectedPret.id, updatedData);
       
       // Recharger les données
       const updatedPrets = await pretFamilleService.getPretFamilles();
