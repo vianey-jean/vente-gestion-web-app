@@ -1,3 +1,4 @@
+
 export interface Product {
   id: string;
   description: string;
@@ -37,6 +38,7 @@ export interface User {
 export interface LoginCredentials {
   email: string;
   password: string;
+  confirmPassword?: string;
 }
 
 export interface RegisterCredentials {
@@ -48,7 +50,7 @@ export interface RegisterCredentials {
   gender?: string;
   address?: string;
   phone?: string;
-  acceptTerms?: boolean;
+  acceptTerms: boolean;
 }
 
 export interface RegistrationData {
@@ -60,7 +62,7 @@ export interface RegistrationData {
   gender?: string;
   address?: string;
   phone?: string;
-  acceptTerms?: boolean;
+  acceptTerms: boolean;
 }
 
 export interface PasswordResetRequest {
@@ -92,6 +94,8 @@ export interface PretProduit {
   reste?: number;
   datePaiement?: string;
   estPaye?: boolean;
+  dernierRemboursement?: number;
+  dateRemboursement?: string;
   createdAt?: string;
   updatedAt?: string;
 }
