@@ -68,10 +68,10 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ isOpen, onClose }) 
     const textColor = [31, 41, 55]; // Gris foncé
     
     // En-tête avec gradient visuel simulé
-    doc.setFillColor(...primaryColor);
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.rect(0, 0, pageWidth, 40, 'F');
     
-    doc.setFillColor(...secondaryColor);
+    doc.setFillColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
     doc.rect(0, 35, pageWidth, 5, 'F');
     
     // Logo et titre de l'entreprise
@@ -88,13 +88,13 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ isOpen, onClose }) 
     doc.text('Tél: 0692 19 87 01', 20, 75);
     
     // Titre FACTURE avec style moderne
-    doc.setTextColor(...primaryColor);
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.setFontSize(28);
     doc.setFont('helvetica', 'bold');
     doc.text('FACTURE', pageWidth - 80, 60);
     
     // Numéro de facture et date
-    doc.setTextColor(...textColor);
+    doc.setTextColor(textColor[0], textColor[1], textColor[2]);
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
     doc.text(`N° ${sale.id}`, pageWidth - 80, 75);
@@ -104,16 +104,16 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ isOpen, onClose }) 
     const clientY = 100;
     doc.setFillColor(248, 250, 252); // Fond gris très clair
     doc.rect(20, clientY, pageWidth - 40, 40, 'F');
-    doc.setDrawColor(...secondaryColor);
+    doc.setDrawColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
     doc.setLineWidth(1);
     doc.rect(20, clientY, pageWidth - 40, 40, 'S');
     
-    doc.setTextColor(...secondaryColor);
+    doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.text('FACTURÉ À:', 25, clientY + 15);
     
-    doc.setTextColor(...textColor);
+    doc.setTextColor(textColor[0], textColor[1], textColor[2]);
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
     doc.text(sale.clientName, 25, clientY + 25);
@@ -128,7 +128,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ isOpen, onClose }) 
     const tableY = clientY + 60;
     
     // En-tête du tableau avec gradient
-    doc.setFillColor(...accentColor);
+    doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
     doc.rect(20, tableY, pageWidth - 40, 15, 'F');
     
     doc.setTextColor(255, 255, 255);
@@ -146,7 +146,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ isOpen, onClose }) 
     doc.setDrawColor(200, 200, 200);
     doc.rect(20, rowY, pageWidth - 40, 15, 'S');
     
-    doc.setTextColor(...textColor);
+    doc.setTextColor(textColor[0], textColor[1], textColor[2]);
     doc.setFont('helvetica', 'normal');
     doc.text(sale.description, 25, rowY + 10);
     doc.text(sale.quantitySold.toString(), 100, rowY + 10);
@@ -157,7 +157,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ isOpen, onClose }) 
     
     // Total avec style élégant
     const totalY = rowY + 30;
-    doc.setFillColor(...primaryColor);
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.rect(120, totalY, pageWidth - 140, 25, 'F');
     
     doc.setTextColor(255, 255, 255);
@@ -167,18 +167,18 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ isOpen, onClose }) 
     doc.text(formatEuro(sale.sellingPrice), 160, totalY + 12);
     
     // Bénéfice (information interne)
-    doc.setTextColor(...accentColor);
+    doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'italic');
     doc.text(`Bénéfice: ${formatEuro(sale.profit)}`, 125, totalY + 20);
     
     // Pied de page élégant
     const footerY = doc.internal.pageSize.height - 30;
-    doc.setDrawColor(...primaryColor);
+    doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.setLineWidth(2);
     doc.line(20, footerY, pageWidth - 20, footerY);
     
-    doc.setTextColor(...textColor);
+    doc.setTextColor(textColor[0], textColor[1], textColor[2]);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.text('Merci de votre confiance !', pageWidth / 2, footerY + 10, { align: 'center' });
