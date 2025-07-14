@@ -8,13 +8,46 @@ import DepenseDuMois from '@/components/dashboard/DepenseDuMois';
 import Inventaire from '@/components/dashboard/Inventaire';
 import ProfitCalculator from '@/components/dashboard/ProfitCalculator';
 import Layout from '@/components/Layout';
+import PremiumLoading from '@/components/ui/premium-loading';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/contexts/AuthContext';
+import { useApp } from '@/contexts/AppContext';
 import { ShoppingCart, Users, Package, CreditCard, TrendingUp, Sparkles, Archive, Calculator } from 'lucide-react';
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState('ventes');
   const isMobile = useIsMobile();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isLoading: appLoading } = useApp();
+
+  // Afficher le loading premium pendant le chargement de la page
+  if (authLoading || appLoading) {
+    return (
+      <Layout requireAuth>
+        <PremiumLoading 
+          text="Chargement du Tableau de Bord"
+          variant="dashboard"
+          size="xl"
+          overlay={true}
+        />
+      </Layout>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Layout requireAuth>
+        <div className="flex justify-center items-center min-h-screen">
+          <PremiumLoading 
+            text="Authentification requise"
+            variant="dashboard"
+            size="lg"
+          />
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout requireAuth>
@@ -161,7 +194,7 @@ const DashboardPage = () => {
                   <PretFamilles />
                 </TabsContent>
                 
-                <TabsContent value="pret-produits" className="mt-0 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
+                <TabsContent value="pret-produits" className="mt-0 animate-in fade-in-from-bottom-4 duration-500">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="w-10 h-10 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center">
                       <Package className="h-5 w-5 text-white" />
