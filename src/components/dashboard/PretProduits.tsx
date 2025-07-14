@@ -77,19 +77,19 @@ const PretProduits: React.FC = () => {
 
   // Fonction pour déterminer la classe CSS de la date de paiement
   const getDatePaiementClass = (pret: PretProduit) => {
-    if (!pret.datePaiement) return "font-medium text-green-600";
+    if (!pret.datePaiement) return "font-bold text-green-600";
     
     const isDepassee = isDatePaiementDepassee(pret.datePaiement);
     
     if (pret.estPaye) {
       // Si le prêt est payé, toujours en vert
-      return "font-medium text-green-600";
+      return "font-bold text-green-600";
     } else if (isDepassee) {
       // Si le prêt n'est pas payé et la date est dépassée, rouge et clignotant
-      return "font-medium text-red-600 animate-pulse font-bold";
+      return "font-bold text-red-600 animate-pulse font-bold";
     } else {
       // Si le prêt n'est pas payé et la date n'est pas dépassée, vert
-      return "font-medium text-green-600";
+      return "font-bold text-green-600";
     }
   };
 
@@ -603,17 +603,17 @@ const PretProduits: React.FC = () => {
                           className="cursor-pointer hover:bg-purple-50/50 dark:hover:bg-purple-900/20 transition-all duration-200 border-gray-100 dark:border-gray-700" 
                           onClick={() => selectPretForEdit(pret)}
                         >
-                          <TableCell className="font-medium">{format(new Date(pret.date), 'dd/MM/yyyy')}</TableCell>
-                          <TableCell className={getDatePaiementClass(pret)}>
+                          <TableCell className="font-bold">{format(new Date(pret.date), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell className={getDatePaiementClass(pret)} >
                             {pret.datePaiement ? format(new Date(pret.datePaiement), 'dd/MM/yyyy') : '-'}
                           </TableCell>
-                          <TableCell className="font-medium text-gray-900 dark:text-gray-100">{pret.description}</TableCell>
-                          <TableCell className="text-gray-600 dark:text-gray-300">{pret.nom || '-'}</TableCell>
+                          <TableCell className="font-bold text-gray-900 dark:text-gray-100">{pret.description}</TableCell>
+                          <TableCell className="text-purple-600 dark:text-purple-300 font-bold">{pret.nom || '-'}</TableCell>
                           <TableCell className="text-gray-600 dark:text-gray-300">
                             {pret.phone && (
                               <div className="flex items-center gap-1">
-                                <Phone className="h-3 w-3" />
-                                <span>{pret.phone}</span>
+                                <Phone className="h-6 w-6 text-green-800" />
+                                <span className="text-red-800 font-bold">{pret.phone}</span>
                               </div>
                             )}
                           </TableCell>
@@ -629,8 +629,8 @@ const PretProduits: React.FC = () => {
                           <TableCell className="text-center">
                             <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold ${
                               pret.estPaye 
-                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                                : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                                ? 'font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                                : 'font-bold bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
                             }`}>
                               {pret.estPaye ? (
                                 <>
@@ -639,7 +639,7 @@ const PretProduits: React.FC = () => {
                                 </>
                               ) : (
                                 <>
-                                  <Clock className="h-3 w-3 mr-1" />
+                                  <Clock className="h-3 w-3 mr-1 " />
                                   En cours
                                 </>
                               )}
