@@ -12,7 +12,7 @@ import PremiumLoading from '@/components/ui/premium-loading';
 const Inventaire: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('name');
+  const [sortBy, setSortBy] = useState('description');
   const [filterBy, setFilterBy] = useState('all');
   
   const { products, loading } = useApp();
@@ -28,8 +28,7 @@ const Inventaire: React.FC = () => {
   // Filtrer et trier les produits
   const filteredProducts = products
     .filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = product.description.toLowerCase().includes(searchTerm.toLowerCase());
       
       if (filterBy === 'low_stock') {
         return matchesSearch && product.quantity <= 10;
@@ -43,12 +42,12 @@ const Inventaire: React.FC = () => {
     })
     .sort((a, b) => {
       switch (sortBy) {
-        case 'name':
-          return a.name.localeCompare(b.name);
+        case 'description':
+          return a.description.localeCompare(b.description);
         case 'quantity':
           return b.quantity - a.quantity;
-        case 'price':
-          return b.price - a.price;
+        case 'purchasePrice':
+          return b.purchasePrice - a.purchasePrice;
         case 'low_stock':
           return a.quantity - b.quantity;
         default:
@@ -59,7 +58,7 @@ const Inventaire: React.FC = () => {
   // Calculer les statistiques
   const stats = {
     totalProducts: products.length,
-    totalValue: products.reduce((sum, product) => sum + (product.price * product.quantity), 0),
+    totalValue: products.reduce((sum, product) => sum + (product.purchasePrice * product.quantity), 0),
     lowStockCount: products.filter(p => p.quantity > 0 && p.quantity <= 10).length,
     outOfStockCount: products.filter(p => p.quantity === 0).length
   };
@@ -215,9 +214,9 @@ const Inventaire: React.FC = () => {
                   <SelectValue placeholder="Trier par" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="name">Nom (A-Z)</SelectItem>
+                  <SelectItem value="description">Description (A-Z)</SelectItem>
                   <SelectItem value="quantity">Quantité (↓)</SelectItem>
-                  <SelectItem value="price">Prix (↓)</SelectItem>
+                  <SelectItem value="purchasePrice">Prix (↓)</SelectItem>
                   <SelectItem value="low_stock">Stock critique</SelectItem>
                 </SelectContent>
               </Select>
@@ -274,12 +273,12 @@ const Inventaire: React.FC = () => {
                           <div className="bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 rounded-full w-8 h-8 flex items-center justify-center">
                             <Package className="h-4 w-4 text-emerald-600" />
                           </div>
-                          <span className="text-gray-900 dark:text-gray-100">{product.name}</span>
+                          <span className="text-gray-900 dark:text-gray-100">{product.description.substring(0, 30)}{product.description.length > 30 ? '...' : ''}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-gray-600 dark:text-gray-400">
-                          {product.description || 'Aucune description'}
+                          {product.description}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
@@ -291,13 +290,13 @@ const Inventaire: React.FC = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <span className="font-semibold text-gray-700 dark:text-gray-300">
-                          {formatCurrency(product.price)}
+                          {formatCurrency(product.purchasePrice)}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="bg-gradient-to-r from-emerald-100 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 px-3 py-1 rounded-full inline-block">
                           <span className="font-bold text-emerald-700 dark:text-emerald-400">
-                            {formatCurrency(product.price * product.quantity)}
+                            {formatCurrency(product.purchasePrice * product.quantity)}
                           </span>
                         </div>
                       </TableCell>
@@ -314,6 +313,18 @@ const Inventaire: React.FC = () => {
       </Card>
     </div>
   );
+};
+
+const getStockBadge = (quantity: number) => {
+  if (quantity === 0) {
+    return <Badge className="bg-red-100 text-red-800 hover:bg-red-200"><AlertTriangle className="w-3 h-3 mr-1" />Rupture</Badge>;
+  } else if (quantity <= 5) {
+    return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-200"><AlertTriangle className="w-3 h-3 mr-1" />Critique</Badge>;
+  } else if (quantity <= 10) {
+    return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200"><AlertTriangle className="w-3 h-3 mr-1" />Faible</Badge>;
+  } else {
+    return <Badge className="bg-green-100 text-green-800 hover:bg-green-200"><Package className="w-3 h-3 mr-1" />Bon</Badge>;
+  }
 };
 
 export default Inventaire;

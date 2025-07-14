@@ -136,7 +136,7 @@ const PretProduits: React.FC = () => {
     const pretData: Omit<PretProduit, 'id'> = {
       nomEmprunteur: formData.nomEmprunteur,
       produitId: formData.produitId,
-      nomProduit: selectedProduct.name,
+      nomProduit: selectedProduct.description,
       quantite: parseInt(formData.quantite),
       datePret: selectedDatePret.toISOString(),
       dateRetourPrevue: selectedDateRetour.toISOString(),
@@ -298,7 +298,7 @@ const PretProduits: React.FC = () => {
                   <SelectContent>
                     {products.map((product) => (
                       <SelectItem key={product.id} value={product.id}>
-                        {product.name} (Stock: {product.quantity})
+                        {product.description} (Stock: {product.quantity})
                       </SelectItem>
                     ))}
                   </SelectContent>
