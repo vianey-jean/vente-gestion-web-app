@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ModernContainer } from '@/components/dashboard/forms/ModernContainer';
-import { ModernCard } from '@/components/dashboard/forms/ModernCard';
+import ModernContainer from '@/components/dashboard/forms/ModernContainer';
+import ModernCard from '@/components/dashboard/forms/ModernCard';
 import { 
   Calculator, 
   TrendingUp, 
@@ -53,7 +54,7 @@ const ProfitCalculator: React.FC = () => {
   // Top 5 des produits les plus vendus
   const topSellingProducts = useMemo(() => {
     const productSales = allSales.reduce((acc, sale) => {
-      const productName = products.find(p => p.id === sale.productId)?.name || 'Inconnu';
+      const productName = products.find(p => p.id === sale.productId)?.description || 'Inconnu';
       if (!acc[productName]) {
         acc[productName] = { name: productName, quantity: 0, revenue: 0 };
       }

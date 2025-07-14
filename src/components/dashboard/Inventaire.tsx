@@ -1,11 +1,12 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ModernContainer } from '@/components/dashboard/forms/ModernContainer';
-import { ModernCard } from '@/components/dashboard/forms/ModernCard';
+import ModernContainer from '@/components/dashboard/forms/ModernContainer';
+import ModernCard from '@/components/dashboard/forms/ModernCard';
 import { 
   Package, 
   Search, 
@@ -38,7 +39,6 @@ const Inventaire: React.FC = () => {
   // Filtrage des produits en fonction du terme de recherche
   const filteredProducts = useMemo(() => {
     return products.filter(product =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [products, searchTerm]);
@@ -209,7 +209,7 @@ const Inventaire: React.FC = () => {
                 {salesAnalysis.map((product) => (
                   <tr key={product.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-300">
-                      {product.name}
+                      {product.description}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                       {product.description}
