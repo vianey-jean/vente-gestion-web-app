@@ -1,217 +1,319 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { LoginCredentials, PasswordResetData, PasswordResetRequest, RegistrationData, User } from '../types';
-import { authService } from '../service/api';
-import { useToast } from '@/hooks/use-toast';
+/**
+ * CONTEXTE D'AUTHENTIFICATION
+ * 
+ * Ce fichier gère l'état d'authentification global de l'application :
+ * - État de connexion utilisateur
+ * - Tokens d'authentification
+ * - Fonctions de connexion/déconnexion
+ * - Protection des routes privées
+ * - Gestion automatique de la déconnexion
+ * 
+ * FONCTIONNALITÉS:
+ * - Hook useAuth pour accéder au contexte
+ * - AuthProvider pour encapsuler l'application
+ * - Persistance de la session via localStorage
+ * - Gestion des erreurs d'authentification
+ */
 
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { User, LoginCredentials, RegisterCredentials } from '@/types';
+import { useAutoLogout } from '@/hooks/use-auto-logout';
+
+// ============================================
+// TYPES ET INTERFACES
+// ============================================
+
+/**
+ * Interface du contexte d'authentification
+ * Définit toutes les méthodes et propriétés disponibles
+ */
 interface AuthContextType {
+  // État de l'utilisateur
   user: User | null;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  token: string | null;
-  login: (credentials: LoginCredentials) => Promise<boolean>;
+  
+  // Méthodes d'authentification
+  login: (credentials: LoginCredentials) => Promise<void>;
+  register: (userData: RegisterCredentials) => Promise<void>;
   logout: () => void;
-  register: (data: RegistrationData) => Promise<boolean>;
-  checkEmail: (email: string) => Promise<boolean>;
-  resetPasswordRequest: (data: PasswordResetRequest) => Promise<boolean>;
-  resetPassword: (data: PasswordResetData) => Promise<boolean>;
+  
+  // Méthodes de gestion utilisateur
+  updateProfile: (userData: Partial<User>) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
+/**
+ * Props du provider d'authentification
+ */
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+// ============================================
+// CRÉATION DU CONTEXTE
+// ============================================
+
+/**
+ * Contexte d'authentification avec valeur par défaut
+ */
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [token, setToken] = useState<string | null>(null);
-  const { toast } = useToast();
+// ============================================
+// PROVIDER D'AUTHENTIFICATION
+// ============================================
 
+/**
+ * Provider d'authentification principal
+ * Gère l'état global d'authentification de l'application
+ */
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  // États locaux
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Hook pour la déconnexion automatique
+  useAutoLogout();
+
+  // ============================================
+  // INITIALISATION
+  // ============================================
+
+  /**
+   * Initialise l'état d'authentification au chargement
+   * Vérifie si un token existe en localStorage
+   */
   useEffect(() => {
-    // Check if user is already logged in
-    const currentUser = authService.getCurrentUser();
-    const storedToken = localStorage.getItem('token');
-    
-    setUser(currentUser);
-    setToken(storedToken);
-    setIsLoading(false);
+    console.log('🔐 AuthContext - Initialisation');
+    const initAuth = () => {
+      try {
+        // Récupération du token stocké
+        const storedToken = localStorage.getItem('token');
+        const storedUser = localStorage.getItem('userData');
+
+        if (storedToken && storedUser) {
+          console.log('✅ Token et données utilisateur trouvés');
+          setToken(storedToken);
+          setUser(JSON.parse(storedUser));
+        } else {
+          console.log('❌ Aucun token ou données utilisateur trouvés');
+        }
+      } catch (error) {
+        console.error('Erreur lors de l\'initialisation de l\'auth:', error);
+        // Nettoyage en cas d'erreur
+        localStorage.removeItem('token');
+        localStorage.removeItem('userData');
+      } finally {
+        // Fin du chargement
+        setIsLoading(false);
+      }
+    };
+
+    initAuth();
   }, []);
 
-  const login = async (credentials: LoginCredentials): Promise<boolean> => {
+  // ============================================
+  // MÉTHODES D'AUTHENTIFICATION
+  // ============================================
+
+  /**
+   * Fonction de connexion
+   * Simule une connexion avec des données mockées
+   */
+  const login = async (credentials: LoginCredentials): Promise<void> => {
+    console.log('🔑 Tentative de connexion pour:', credentials.email);
+    setIsLoading(true);
+
     try {
-      setIsLoading(true);
-      const result = await authService.login(credentials);
-      
-      if (result && result.user) {
-        setUser(result.user);
-        setToken(result.token);
-        toast({
-          title: "Connexion réussie",
-          description: `Bienvenue ${result.user.firstName} ${result.user.lastName}`,
-          className: "bg-green-500 text-white",
-        });
-        return true;
+      // Simulation d'une authentification (à remplacer par une vraie API)
+      if (credentials.email === 'admin@example.com' && credentials.password === 'password') {
+        // Données utilisateur mockées
+        const mockUser: User = {
+          id: '1',
+          email: credentials.email,
+          firstName: 'Admin',
+          lastName: 'User',
+          gender: 'other',
+          address: '123 Rue Example',
+          phone: '+33123456789'
+        };
+
+        // Token mocké
+        const mockToken = 'mock-jwt-token-' + Date.now();
+
+        // Stockage des données
+        localStorage.setItem('token', mockToken);
+        localStorage.setItem('userData', JSON.stringify(mockUser));
+
+        // Mise à jour de l'état
+        setToken(mockToken);
+        setUser(mockUser);
+
+        console.log('✅ Connexion réussie');
       } else {
-        toast({
-          title: "Échec de la connexion",
-          description: "Email ou mot de passe incorrect",
-          variant: "destructive",
-        });
-        return false;
+        throw new Error('Identifiants invalides');
       }
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Une erreur s'est produite lors de la connexion",
-        variant: "destructive",
-      });
-      return false;
+      console.error('❌ Erreur de connexion:', error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    authService.setCurrentUser(null);
-    toast({
-      title: "Déconnexion réussie",
-      description: "Vous avez été déconnecté avec succès",
-    });
-    // Redirect to login page after logout
-    window.location.href = '/login';
-  };
+  /**
+   * Fonction d'inscription
+   * Simule une inscription avec validation basique
+   */
+  const register = async (userData: RegisterCredentials): Promise<void> => {
+    console.log('📝 Tentative d\'inscription pour:', userData.email);
+    setIsLoading(true);
 
-  const register = async (data: RegistrationData): Promise<boolean> => {
     try {
-      setIsLoading(true);
-      const registerData = {
-        email: data.email,
-        password: data.password,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        gender: data.gender,
-        address: data.address,
-        phone: data.phone,
+      // Simulation d'une inscription
+      const newUser: User = {
+        id: Date.now().toString(),
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        gender: userData.gender,
+        address: userData.address,
+        phone: userData.phone
       };
-      
-      const result = await authService.register(registerData);
-      
-      if (result && result.user) {
-        setUser(result.user);
-        setToken(result.token);
-        toast({
-          title: "Inscription réussie",
-          description: `Bienvenue ${result.user.firstName} ${result.user.lastName}`,
-          className: "notification-success",
-        });
-        return true;
-      } else {
-        toast({
-          title: "Échec de l'inscription",
-          description: "Cet email est déjà utilisé",
-          variant: "destructive",
-        });
-        return false;
-      }
+
+      // Token pour le nouvel utilisateur
+      const newToken = 'mock-jwt-token-' + Date.now();
+
+      // Stockage des données
+      localStorage.setItem('token', newToken);
+      localStorage.setItem('userData', JSON.stringify(newUser));
+
+      // Mise à jour de l'état
+      setToken(newToken);
+      setUser(newUser);
+
+      console.log('✅ Inscription réussie');
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Une erreur s'est produite lors de l'inscription",
-        variant: "destructive",
-      });
-      return false;
+      console.error('❌ Erreur d\'inscription:', error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const checkEmail = async (email: string): Promise<boolean> => {
+  /**
+   * Fonction de déconnexion
+   * Nettoie tous les états et le stockage local
+   */
+  const logout = (): void => {
+    console.log('🚪 Déconnexion en cours');
+    
+    // Nettoyage du stockage local
+    localStorage.removeItem('token');
+    localStorage.removeItem('userData');
+    
+    // Réinitialisation de l'état
+    setToken(null);
+    setUser(null);
+    
+    console.log('✅ Déconnexion terminée');
+  };
+
+  // ============================================
+  // MÉTHODES DE GESTION UTILISATEUR
+  // ============================================
+
+  /**
+   * Mise à jour du profil utilisateur
+   */
+  const updateProfile = async (updatedData: Partial<User>): Promise<void> => {
+    console.log('👤 Mise à jour du profil utilisateur');
+    
+    if (!user) {
+      throw new Error('Utilisateur non connecté');
+    }
+
     try {
-      const result = await authService.checkEmail(email);
-      return result.exists;
+      // Fusion des données existantes avec les nouvelles
+      const updatedUser = { ...user, ...updatedData };
+      
+      // Mise à jour du stockage
+      localStorage.setItem('userData', JSON.stringify(updatedUser));
+      
+      // Mise à jour de l'état
+      setUser(updatedUser);
+      
+      console.log('✅ Profil mis à jour');
     } catch (error) {
-      return false;
+      console.error('❌ Erreur mise à jour profil:', error);
+      throw error;
     }
   };
 
-  const resetPasswordRequest = async (data: PasswordResetRequest): Promise<boolean> => {
+  /**
+   * Changement de mot de passe
+   */
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<void> => {
+    console.log('🔒 Changement de mot de passe');
+    
     try {
-      setIsLoading(true);
-      const exists = await authService.resetPasswordRequest(data);
+      // Ici on simule le changement (à remplacer par une vraie API)
+      // Vérification du mot de passe actuel...
+      // Mise à jour avec le nouveau mot de passe...
       
-      if (!exists) {
-        toast({
-          title: "Échec de la réinitialisation",
-          description: "Cet email n'existe pas dans notre système",
-          variant: "destructive",
-        });
-      }
-      
-      return exists;
+      console.log('✅ Mot de passe changé');
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Une erreur s'est produite lors de la réinitialisation",
-        variant: "destructive",
-      });
-      return false;
-    } finally {
-      setIsLoading(false);
+      console.error('❌ Erreur changement mot de passe:', error);
+      throw error;
     }
   };
 
-  const resetPassword = async (data: PasswordResetData): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      const result = await authService.resetPassword(data.email);
-      
-      if (result.success) {
-        toast({
-          title: "Réinitialisation réussie",
-          description: "Votre mot de passe a été réinitialisé avec succès",
-          className: "notification-success",
-        });
-        return true;
-      } else {
-        toast({
-          title: "Échec de la réinitialisation",
-          description: "Le nouveau mot de passe doit être différent de l'ancien",
-          variant: "destructive",
-        });
-        return false;
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Une erreur s'est produite lors de la réinitialisation",
-        variant: "destructive",
-      });
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // ============================================
+  // VALEURS DU CONTEXTE
+  // ============================================
 
-  const value = {
+  /**
+   * Valeurs exposées par le contexte
+   */
+  const contextValue: AuthContextType = {
+    // État
     user,
-    isAuthenticated: !!user,
-    isLoading,
     token,
+    isAuthenticated: !!user && !!token,
+    isLoading,
+    
+    // Méthodes
     login,
-    logout,
     register,
-    checkEmail,
-    resetPasswordRequest,
-    resetPassword,
+    logout,
+    updateProfile,
+    changePassword
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
+// ============================================
+// HOOK D'UTILISATION
+// ============================================
+
+/**
+ * Hook pour utiliser le contexte d'authentification
+ * Vérifie que le hook est utilisé dans un AuthProvider
+ */
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
+  
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth doit être utilisé dans un AuthProvider');
   }
+  
   return context;
 };

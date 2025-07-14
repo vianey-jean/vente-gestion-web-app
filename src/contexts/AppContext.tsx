@@ -1,413 +1,360 @@
-// We need to add typings to handle boolean returns from the API
-import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { Product, Sale } from '@/types';
-import { productService, salesService } from '@/service/api';
-import { useAuth } from '@/contexts/AuthContext';
 
-interface AppContextType {
+/**
+ * CONTEXTE PRINCIPAL DE L'APPLICATION
+ * 
+ * Ce fichier gère l'état global des données métier :
+ * - Gestion des produits (inventaire)
+ * - Gestion des ventes
+ * - Synchronisation des données
+ * - État de chargement global
+ * - Rafraîchissement des données
+ * 
+ * FONCTIONNALITÉS:
+ * - Hook useApp pour accéder aux données
+ * - AppProvider pour encapsuler les composants
+ * - Gestion centralisée des produits et ventes
+ * - Fonctions CRUD pour les données
+ */
+
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Product, Sale } from '@/types';
+
+// ============================================
+// TYPES ET INTERFACES
+// ============================================
+
+/**
+ * Interface du contexte de l'application
+ * Définit toutes les données et méthodes disponibles
+ */
+export interface AppContextType {
+  // Données principales
   products: Product[];
-  setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
   sales: Sale[];
-  setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
-  allSales: Sale[]; // Toutes les ventes historiques pour les tendances
-  setAllSales: React.Dispatch<React.SetStateAction<Sale[]>>;
+  allSales: Sale[];
+  
+  // États de chargement
   loading: boolean;
-  error: string | null;
-  fetchProducts: () => Promise<void>;
-  fetchSales: (month?: number, year?: number) => Promise<void>;
-  fetchAllSales: () => Promise<void>; // Nouvelle fonction pour récupérer toutes les ventes
-  addProduct: (product: Omit<Product, 'id'>) => Promise<Product | null>;
-  updateProduct: (product: Product) => Promise<Product | null>;
-  addSale: (sale: Omit<Sale, 'id'>) => Promise<Sale | null>;
-  updateSale: (sale: Sale) => Promise<Sale | null>;
-  deleteSale: (id: string) => Promise<boolean>;
-  selectedMonth: number;
-  selectedYear: number;
-  setSelectedMonth: (month: number) => void;
-  setSelectedYear: (year: number) => void;
-  currentMonth: number;
-  currentYear: number;
-  isLoading: boolean;
-  searchProducts: (query: string) => Promise<Product[]>;
-  exportMonth: () => Promise<boolean>;
+  isDataLoaded: boolean;
+  
+  // Méthodes de gestion des produits
+  setProducts: (products: Product[]) => void;
+  addProduct: (product: Product) => void;
+  updateProduct: (id: string, product: Partial<Product>) => void;
+  deleteProduct: (id: string) => void;
+  
+  // Méthodes de gestion des ventes
+  setSales: (sales: Sale[]) => void;
+  addSale: (sale: Sale) => void;
+  updateSale: (id: string, sale: Partial<Sale>) => void;
+  deleteSale: (id: string) => void;
+  
+  // Méthodes utilitaires
   refreshData: () => Promise<void>;
+  getProductById: (id: string) => Product | undefined;
+  getSalesByProductId: (productId: string) => Sale[];
 }
 
+/**
+ * Props du provider de l'application
+ */
+interface AppProviderProps {
+  children: ReactNode;
+}
+
+// ============================================
+// DONNÉES MOCKÉES POUR LE DÉVELOPPEMENT
+// ============================================
+
+/**
+ * Produits mockés pour les tests et développement
+ */
+const mockProducts: Product[] = [
+  {
+    id: '1',
+    description: 'Perruque Lace Front Premium',
+    purchasePrice: 45.00,
+    quantity: 12,
+    sellingPrice: 85.00,
+    profit: 40.00
+  },
+  {
+    id: '2',
+    description: 'Tissage Brésilien 20 pouces',
+    purchasePrice: 32.00,
+    quantity: 8,
+    sellingPrice: 65.00,
+    profit: 33.00
+  }
+];
+
+/**
+ * Ventes mockées pour les tests et développement
+ */
+const mockSales: Sale[] = [
+  {
+    id: '1',
+    productId: '1',
+    description: 'Perruque Lace Front Premium',
+    date: new Date().toISOString(),
+    quantitySold: 1,
+    purchasePrice: 45.00,
+    sellingPrice: 85.00,
+    profit: 40.00,
+    clientName: 'Marie Dubois',
+    clientPhone: '+33123456789'
+  },
+  {
+    id: '2',
+    productId: '2',
+    description: 'Tissage Brésilien 20 pouces',
+    date: new Date(Date.now() - 86400000).toISOString(), // Hier
+    quantitySold: 2,
+    purchasePrice: 64.00,
+    sellingPrice: 130.00,
+    profit: 66.00,
+    clientName: 'Sophie Martin'
+  }
+];
+
+// ============================================
+// CRÉATION DU CONTEXTE
+// ============================================
+
+/**
+ * Contexte principal de l'application
+ */
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const AppProvider = ({ children }: { children: ReactNode }) => {
-  // Fonction pour obtenir le mois et l'année actuels
-  const getCurrentMonthYear = () => {
-    const now = new Date();
-    return {
-      month: now.getMonth() + 1, // Convert to 1-based (1-12)
-      year: now.getFullYear()
+// ============================================
+// PROVIDER DE L'APPLICATION
+// ============================================
+
+/**
+ * Provider principal de l'application
+ * Gère l'état global des données métier
+ */
+export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
+  // États locaux
+  const [products, setProductsState] = useState<Product[]>([]);
+  const [sales, setSalesState] = useState<Sale[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  // ============================================
+  // INITIALISATION DES DONNÉES
+  // ============================================
+
+  /**
+   * Initialise les données au chargement du contexte
+   * Charge les données mockées ou depuis une API
+   */
+  useEffect(() => {
+    console.log('📊 AppContext - Initialisation des données');
+    
+    const initializeData = async () => {
+      try {
+        setLoading(true);
+        
+        // Simulation d'un délai de chargement
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Chargement des données mockées
+        setProductsState(mockProducts);
+        setSalesState(mockSales);
+        
+        setIsDataLoaded(true);
+        console.log('✅ Données initialisées avec succès');
+      } catch (error) {
+        console.error('❌ Erreur lors de l\'initialisation des données:', error);
+      } finally {
+        setLoading(false);
+      }
     };
+
+    initializeData();
+  }, []);
+
+  // ============================================
+  // MÉTHODES DE GESTION DES PRODUITS
+  // ============================================
+
+  /**
+   * Met à jour la liste complète des produits
+   */
+  const setProducts = (newProducts: Product[]): void => {
+    console.log('🛍️ Mise à jour de la liste des produits');
+    setProductsState(newProducts);
   };
 
-  // Initialiser toujours avec le mois en cours
-  const [currentDate, setCurrentDate] = useState(getCurrentMonthYear());
-  const [products, setProducts] = useState<Product[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [allSales, setAllSales] = useState<Sale[]>([]); // Nouvelles données pour toutes les ventes
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
-  
-  // Toujours utiliser le mois en cours - pas de sélection manuelle
-  const selectedMonth = currentDate.month;
-  const selectedYear = currentDate.year;
-  
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-  
-  // Add the missing properties that components are expecting - Use consistent 1-based indexing
-  const currentMonth = selectedMonth; // This will be 1-based (1 = January)
-  const currentYear = selectedYear;
-  const isLoading = loading;
-
-  // Fonction pour vérifier et mettre à jour le mois en cours
-  const checkAndUpdateCurrentMonth = useCallback(() => {
-    const newDate = getCurrentMonthYear();
-    if (newDate.month !== currentDate.month || newDate.year !== currentDate.year) {
-      console.log(`Changement de mois détecté: ${currentDate.month}/${currentDate.year} -> ${newDate.month}/${newDate.year}`);
-      setCurrentDate(newDate);
-      // Vider les ventes existantes car on change de mois
-      setSales([]);
-      toast({
-        title: "Nouveau mois",
-        description: `Passage au mois ${newDate.month}/${newDate.year}. Les données ont été rafraîchies.`,
-      });
-    }
-  }, [currentDate, toast]);
-
-  // Vérifier le changement de mois toutes les minutes
-  useEffect(() => {
-    const interval = setInterval(checkAndUpdateCurrentMonth, 60000); // Vérifier chaque minute
-    return () => clearInterval(interval);
-  }, [checkAndUpdateCurrentMonth]);
-
-  // Fonctions pour la compatibilité (même si on ne permet plus la sélection manuelle)
-  const setSelectedMonth = (month: number) => {
-    console.log('setSelectedMonth appelé mais ignoré - utilisation du mois en cours uniquement');
-  };
-  
-  const setSelectedYear = (year: number) => {
-    console.log('setSelectedYear appelé mais ignoré - utilisation de l\'année en cours uniquement');
+  /**
+   * Ajoute un nouveau produit
+   */
+  const addProduct = (product: Product): void => {
+    console.log('➕ Ajout d\'un nouveau produit:', product.description);
+    setProductsState(prev => [...prev, product]);
   };
 
-  const fetchProducts = useCallback(async () => {
-    if (!isAuthenticated || authLoading) {
-      console.log('User not authenticated, skipping product fetch');
-      return;
-    }
+  /**
+   * Met à jour un produit existant
+   */
+  const updateProduct = (id: string, updatedProduct: Partial<Product>): void => {
+    console.log('✏️ Mise à jour du produit ID:', id);
+    setProductsState(prev => 
+      prev.map(product => 
+        product.id === id ? { ...product, ...updatedProduct } : product
+      )
+    );
+  };
+
+  /**
+   * Supprime un produit
+   */
+  const deleteProduct = (id: string): void => {
+    console.log('🗑️ Suppression du produit ID:', id);
+    setProductsState(prev => prev.filter(product => product.id !== id));
+  };
+
+  // ============================================
+  // MÉTHODES DE GESTION DES VENTES
+  // ============================================
+
+  /**
+   * Met à jour la liste complète des ventes
+   */
+  const setSales = (newSales: Sale[]): void => {
+    console.log('💰 Mise à jour de la liste des ventes');
+    setSalesState(newSales);
+  };
+
+  /**
+   * Ajoute une nouvelle vente
+   */
+  const addSale = (sale: Sale): void => {
+    console.log('➕ Ajout d\'une nouvelle vente:', sale.description);
+    setSalesState(prev => [...prev, sale]);
+  };
+
+  /**
+   * Met à jour une vente existante
+   */
+  const updateSale = (id: string, updatedSale: Partial<Sale>): void => {
+    console.log('✏️ Mise à jour de la vente ID:', id);
+    setSalesState(prev => 
+      prev.map(sale => 
+        sale.id === id ? { ...sale, ...updatedSale } : sale
+      )
+    );
+  };
+
+  /**
+   * Supprime une vente
+   */
+  const deleteSale = (id: string): void => {
+    console.log('🗑️ Suppression de la vente ID:', id);
+    setSalesState(prev => prev.filter(sale => sale.id !== id));
+  };
+
+  // ============================================
+  // MÉTHODES UTILITAIRES
+  // ============================================
+
+  /**
+   * Rafraîchit toutes les données
+   */
+  const refreshData = async (): Promise<void> => {
+    console.log('🔄 Rafraîchissement des données');
     
-    setLoading(true);
-    setError(null);
     try {
-      const fetchedProducts = await productService.getProducts();
-      setProducts(fetchedProducts);
-      console.log(`Fetched ${fetchedProducts.length} products`);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch products');
-      toast({
-        title: "Erreur de chargement",
-        description: "Impossible de charger les produits.",
-        variant: "destructive",
-      });
+      setLoading(true);
+      
+      // Simulation d'un appel API
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Ici on ferait appel à une vraie API
+      // const [productsData, salesData] = await Promise.all([
+      //   fetchProducts(),
+      //   fetchSales()
+      // ]);
+      
+      console.log('✅ Données rafraîchies');
+    } catch (error) {
+      console.error('❌ Erreur lors du rafraîchissement:', error);
     } finally {
       setLoading(false);
     }
-  }, [toast, isAuthenticated, authLoading]);
-
-  const fetchSales = useCallback(async (month?: number, year?: number) => {
-    if (!isAuthenticated || authLoading) {
-      console.log('User not authenticated, skipping sales fetch');
-      return;
-    }
-    
-    // Toujours utiliser le mois en cours, ignorer les paramètres
-    const monthToFetch = currentDate.month;
-    const yearToFetch = currentDate.year;
-    
-    console.log(`Fetching sales for current month: ${monthToFetch} (1-based), year: ${yearToFetch}`);
-    
-    setLoading(true);
-    setError(null);
-    try {
-      // API expects 1-based month, so pass it directly
-      const fetchedSales = await salesService.getSales(monthToFetch, yearToFetch);
-      console.log(`Fetched ${fetchedSales.length} sales for ${monthToFetch}/${yearToFetch}`);
-      setSales(fetchedSales);
-    } catch (err: any) {
-      console.error('Error fetching sales:', err);
-      setError(err.message || 'Failed to fetch sales');
-      toast({
-        title: "Erreur de chargement",
-        description: "Impossible de charger les ventes.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast, currentDate, isAuthenticated, authLoading]);
-
-  // Nouvelle fonction pour récupérer toutes les ventes historiques
-  const fetchAllSales = useCallback(async () => {
-    if (!isAuthenticated || authLoading) {
-      console.log('User not authenticated, skipping all sales fetch');
-      return;
-    }
-    
-    console.log('Fetching ALL historical sales for trends analysis');
-    
-    setLoading(true);
-    setError(null);
-    try {
-      const fetchedAllSales = await salesService.getAllSales();
-      console.log(`Fetched ${fetchedAllSales.length} total historical sales`);
-      setAllSales(fetchedAllSales);
-    } catch (err: any) {
-      console.error('Error fetching all sales:', err);
-      setError(err.message || 'Failed to fetch all sales');
-      toast({
-        title: "Erreur de chargement",
-        description: "Impossible de charger les données historiques.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast, isAuthenticated, authLoading]);
-
-  // Fonction de rafraîchissement pour la synchronisation temps réel
-  const refreshData = useCallback(async () => {
-    if (!isAuthenticated || authLoading) return;
-    
-    try {
-      await Promise.all([
-        fetchProducts(),
-        fetchSales(),
-        fetchAllSales() // Rafraîchir aussi toutes les données historiques
-      ]);
-    } catch (error) {
-      console.error('Erreur lors du rafraîchissement des données:', error);
-    }
-  }, [fetchProducts, fetchSales, fetchAllSales, isAuthenticated, authLoading]);
-
-  // Charger les données seulement pour le mois en cours + toutes les données historiques
-  useEffect(() => {
-    if (isAuthenticated && !authLoading) {
-      console.log(`User authenticated, fetching data for current month: ${currentDate.month}/${currentDate.year}`);
-      fetchProducts();
-      fetchSales();
-      fetchAllSales(); // Charger aussi toutes les données historiques
-    } else {
-      console.log('User not authenticated or auth loading, clearing data');
-      setProducts([]);
-      setSales([]);
-      setAllSales([]);
-    }
-  }, [isAuthenticated, authLoading, currentDate, fetchProducts, fetchSales, fetchAllSales]);
-
-  // Add searchProducts function that is being used
-  const searchProducts = async (query: string): Promise<Product[]> => {
-    if (!query || query.length < 3) return [];
-    
-    try {
-      // Simple client-side search implementation
-      return products.filter(product => 
-        product.description.toLowerCase().includes(query.toLowerCase())
-      );
-    } catch (error) {
-      console.error('Error searching products:', error);
-      return [];
-    }
   };
 
-  // Add exportMonth function
-  const exportMonth = async (): Promise<boolean> => {
-    try {
-      // Implementation would depend on your API
-      // For now, this is a placeholder that returns success
-      return true;
-    } catch (error) {
-      console.error('Error exporting month:', error);
-      return false;
-    }
+  /**
+   * Trouve un produit par son ID
+   */
+  const getProductById = (id: string): Product | undefined => {
+    return products.find(product => product.id === id);
   };
 
-  const addProduct = async (productData: Omit<Product, 'id'>): Promise<Product | null> => {
-    if (!isAuthenticated) {
-      console.log('User not authenticated, cannot add product');
-      return null;
-    }
-    
-    try {
-      const newProduct = await productService.addProduct(productData);
-      if (newProduct) {
-        setProducts(prevProducts => [...prevProducts, newProduct]);
-        return newProduct;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error adding product:', error);
-      return null;
-    }
+  /**
+   * Récupère toutes les ventes d'un produit spécifique
+   */
+  const getSalesByProductId = (productId: string): Sale[] => {
+    return sales.filter(sale => sale.productId === productId);
   };
 
-  const updateProduct = async (product: Product): Promise<Product | null> => {
-    if (!isAuthenticated) {
-      console.log('User not authenticated, cannot update product');
-      return null;
-    }
-    
-    try {
-      const updatedProduct = await productService.updateProduct(product);
-      if (updatedProduct) {
-        setProducts(prevProducts =>
-          prevProducts.map(p => (p.id === product.id ? updatedProduct : p))
-        );
-        return updatedProduct;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error updating product:', error);
-      return null;
-    }
-  };
-  
-  const addSale = async (saleData: Omit<Sale, 'id'>): Promise<Sale | null> => {
-    if (!isAuthenticated) {
-      console.log('User not authenticated, cannot add sale');
-      return null;
-    }
-    
-    try {
-      const result = await salesService.addSale(saleData);
-      
-      // Update local state - result should be a Sale object
-      if (result && typeof result === 'object' && 'id' in result) {
-        // Check if the new sale belongs to the current month/year
-        const saleDate = new Date(result.date);
-        const saleMonth = saleDate.getMonth() + 1; // Convert from 0-based to 1-based
-        const saleYear = saleDate.getFullYear();
-        
-        console.log(`New sale added for ${saleMonth}/${saleYear}, current month is ${currentDate.month}/${currentDate.year}`);
-        
-        if (saleMonth === currentDate.month && saleYear === currentDate.year) {
-          setSales(prevSales => [...prevSales, result]);
-        } else {
-          console.log("Sale added but for a different month than current");
-          toast({
-            title: "Vente ajoutée",
-            description: `La vente a été ajoutée pour le mois de ${saleMonth}/${saleYear}, différent du mois en cours.`,
-          });
-        }
-        
-        // Toujours ajouter à allSales pour les tendances
-        setAllSales(prevAllSales => [...prevAllSales, result]);
-        
-        return result;
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Error adding sale:', error);
-      return null;
-    }
-  };
+  // ============================================
+  // VALEURS DU CONTEXTE
+  // ============================================
 
-  const updateSale = async (sale: Sale): Promise<Sale | null> => {
-    if (!isAuthenticated) {
-      console.log('User not authenticated, cannot update sale');
-      return null;
-    }
+  /**
+   * Valeurs exposées par le contexte
+   */
+  const contextValue: AppContextType = {
+    // Données
+    products,
+    sales,
+    allSales: sales, // Alias pour compatibilité
     
-    try {
-      const result = await salesService.updateSale(sale);
-      
-      // Update local state - result should be a Sale object
-      if (result && typeof result === 'object' && 'id' in result) {
-        setSales(prevSales =>
-          prevSales.map(s => (s.id === sale.id ? result : s))
-        );
-        
-        // Mettre à jour aussi allSales
-        setAllSales(prevAllSales =>
-          prevAllSales.map(s => (s.id === sale.id ? result : s))
-        );
-        
-        return result;
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Error updating sale:', error);
-      return null;
-    }
-  };
-
-  const deleteSale = async (id: string): Promise<boolean> => {
-    if (!isAuthenticated) {
-      console.log('User not authenticated, cannot delete sale');
-      return false;
-    }
+    // États
+    loading,
+    isDataLoaded,
     
-    try {
-      const success = await salesService.deleteSale(id);
-      if (success) {
-        setSales(prevSales => prevSales.filter(sale => sale.id !== id));
-        setAllSales(prevAllSales => prevAllSales.filter(sale => sale.id !== id));
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error deleting sale:', error);
-      return false;
-    }
+    // Méthodes produits
+    setProducts,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    
+    // Méthodes ventes
+    setSales,
+    addSale,
+    updateSale,
+    deleteSale,
+    
+    // Utilitaires
+    refreshData,
+    getProductById,
+    getSalesByProductId
   };
 
   return (
-    <AppContext.Provider
-      value={{
-        products,
-        setProducts,
-        sales,
-        setSales,
-        allSales, // Nouvelles données pour les tendances
-        setAllSales,
-        loading,
-        error,
-        fetchProducts,
-        fetchSales,
-        fetchAllSales, // Nouvelle fonction
-        addProduct,
-        updateProduct,
-        addSale,
-        updateSale,
-        deleteSale,
-        selectedMonth,
-        selectedYear,
-        setSelectedMonth,
-        setSelectedYear,
-        currentMonth,
-        currentYear,
-        isLoading,
-        searchProducts,
-        exportMonth,
-        refreshData,
-      }}
-    >
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );
 };
 
-export const useApp = () => {
+// ============================================
+// HOOK D'UTILISATION
+// ============================================
+
+/**
+ * Hook pour utiliser le contexte de l'application
+ * Vérifie que le hook est utilisé dans un AppProvider
+ */
+export const useApp = (): AppContextType => {
   const context = useContext(AppContext);
+  
   if (context === undefined) {
-    throw new Error('useApp must be used within an AppProvider');
+    throw new Error('useApp doit être utilisé dans un AppProvider');
   }
+  
   return context;
 };
