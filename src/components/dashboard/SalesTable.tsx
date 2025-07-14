@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { TableBody, TableCell, TableFooter, TableRow } from '@/components/ui/table';
 import { ModernTable, ModernTableHeader, ModernTableRow, ModernTableHead, ModernTableCell } from '@/components/dashboard/forms/ModernTable';
+import PremiumLoading from '@/components/ui/premium-loading';
 import { Sale } from '@/types';
 import { TrendingUp, Package, Euro, Calendar, Sparkles, Award, Clock } from 'lucide-react';
 import { realtimeService } from '@/services/realtimeService';
@@ -18,6 +19,7 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales: initialSales, onRowClick
   const [sales, setSales] = useState<Sale[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Fonction pour filtrer les ventes du mois en cours
   const filterCurrentMonthSales = (salesData: Sale[]) => {
@@ -40,9 +42,14 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales: initialSales, onRowClick
   useEffect(() => {
     console.log('🔄 Initialisation SalesTable - Filtrage mois en cours');
     
-    // Initialiser avec les ventes du mois en cours seulement
-    setSales(currentMonthSales);
-    
+    // Simuler un chargement initial
+    setIsLoading(true);
+    const loadingTimer = setTimeout(() => {
+      // Initialiser avec les ventes du mois en cours seulement
+      setSales(currentMonthSales);
+      setIsLoading(false);
+    }, 1200);
+
     // Connexion au service temps réel
     realtimeService.connect();
     
@@ -76,6 +83,7 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales: initialSales, onRowClick
     setIsRealtimeActive(realtimeService.getConnectionStatus());
 
     return () => {
+      clearTimeout(loadingTimer);
       unsubscribeData();
       unsubscribeSync();
     };
@@ -127,6 +135,19 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales: initialSales, onRowClick
     const now = new Date();
     return now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
   };
+
+  if (isLoading) {
+    return (
+      <div className="bg-gradient-to-br from-white/95 to-gray-50/95 dark:from-gray-900/95 dark:to-gray-800/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
+        <PremiumLoading 
+          text="Chargement des Ventes"
+          size="md"
+          variant="ventes"
+          showText={true}
+        />
+      </div>
+    );
+  }
   
   return (
     <div className="bg-gradient-to-br from-white/95 to-gray-50/95 dark:from-gray-900/95 dark:to-gray-800/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
@@ -140,6 +161,7 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales: initialSales, onRowClick
             <h3 className="text-xl font-bold text-white">Ventes de {getCurrentMonthName()} - Temps Réel</h3>
             <p className="text-white/80 text-sm">Synchronisation instantanée • Filtrage mois en cours</p>
           </div>
+          {/* ... keep existing code (status indicators and sparkles icon) */}
           <div className="flex items-center gap-2">
             {/* Indicateur de synchronisation temps réel */}
             <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${
