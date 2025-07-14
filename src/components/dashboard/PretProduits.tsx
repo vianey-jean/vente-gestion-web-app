@@ -1,477 +1,1177 @@
-
 import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { CalendarIcon, Package, Plus, CheckCircle, XCircle, AlertTriangle, Clock, Sparkles, ShoppingBag } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { api } from '@/service/api';
 import { useToast } from '@/hooks/use-toast';
+import { PlusCircle, Edit, CalendarIcon, Loader2, Trash2, Plus, CreditCard, TrendingUp, Wallet, CheckCircle, Clock, Search, Phone } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
-import PremiumLoading from '@/components/ui/premium-loading';
-
-interface PretProduit {
-  id: string;
-  nomEmprunteur: string;
-  produitId: string;
-  nomProduit: string;
-  quantite: number;
-  datePret: string;
-  dateRetourPrevue: string;
-  dateRetourEffective?: string;
-  statut: 'en_cours' | 'retourne' | 'en_retard';
-  notes?: string;
-}
+import { Product, PretProduit } from '@/types';
+import { pretProduitService } from '@/service/api';
+import { motion } from 'framer-motion';
+import PretRetardNotification from './PretRetardNotification';
 
 const PretProduits: React.FC = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedDatePret, setSelectedDatePret] = useState<Date>();
-  const [selectedDateRetour, setSelectedDateRetour] = useState<Date>();
-  const [formData, setFormData] = useState({
-    nomEmprunteur: '',
-    produitId: '',
-    quantite: '',
-    notes: ''
-  });
-
+  const [prets, setPrets] = useState<PretProduit[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [ajoutAvanceDialogOpen, setAjoutAvanceDialogOpen] = useState(false);
+  const [datePret, setDatePret] = useState<Date>(new Date());
+  const [datePaiement, setDatePaiement] = useState<Date | undefined>();
+  const [description, setDescription] = useState('');
+  const [nom, setNom] = useState('');
+  const [phone, setPhone] = useState('');
+  const [prixVente, setPrixVente] = useState('');
+  const [avanceRecue, setAvanceRecue] = useState('');
+  const [ajoutAvance, setAjoutAvance] = useState('');
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [searchPretResults, setSearchPretResults] = useState<PretProduit[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedPret, setSelectedPret] = useState<PretProduit | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const { products, searchProducts } = useApp();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const { products } = useApp();
 
-  // Simuler un chargement initial
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1400);
-    return () => clearTimeout(timer);
-  }, []);
+  // Calculer reste automatiquement
+  const reste = React.useMemo(() => {
+    const prix = parseFloat(prixVente) || 0;
+    const avance = parseFloat(avanceRecue) || 0;
+    return prix - avance;
+  }, [prixVente, avanceRecue]);
 
-  const { data: prets = [], isLoading: dataLoading } = useQuery<PretProduit[]>({
-    queryKey: ['pretproduits'],
-    queryFn: () => api.get('/api/pretproduits').then(res => res.data),
-    enabled: !isLoading,
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (data: Omit<PretProduit, 'id'>) => api.post('/api/pretproduits', data).then(res => res.data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pretproduits'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast({
-        title: "Prêt enregistré",
-        description: "Le prêt de produit a été ajouté avec succès.",
-      });
-      resetForm();
-    },
-    onError: () => {
-      toast({
-        title: "Erreur",
-        description: "Une erreur est survenue lors de l'enregistrement.",
-        variant: "destructive",
-      });
-    }
-  });
-
-  const updateStatutMutation = useMutation({
-    mutationFn: ({ id, statut }: { id: string; statut: PretProduit['statut'] }) => {
-      const updateData = {
-        statut,
-        ...(statut === 'retourne' ? { dateRetourEffective: new Date().toISOString() } : {})
-      };
-      return api.put(`/api/pretproduits/${id}`, updateData).then(res => res.data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pretproduits'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      toast({
-        title: "Statut mis à jour",
-        description: "Le statut du prêt a été modifié.",
-      });
-    }
-  });
-
-  const resetForm = () => {
-    setFormData({
-      nomEmprunteur: '',
-      produitId: '',
-      quantite: '',
-      notes: ''
-    });
-    setSelectedDatePret(undefined);
-    setSelectedDateRetour(undefined);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Calculer nouveau reste après ajout d'avance
+  const nouveauReste = React.useMemo(() => {
+    if (!selectedPret) return 0;
     
-    if (!formData.nomEmprunteur || !formData.produitId || !formData.quantite || !selectedDatePret || !selectedDateRetour) {
+    const prix = selectedPret.prixVente || 0;
+    const avanceActuelle = selectedPret.avanceRecue || 0;
+    const nouvelleAvance = parseFloat(ajoutAvance) || 0;
+    
+    return prix - (avanceActuelle + nouvelleAvance);
+  }, [selectedPret, ajoutAvance]);
+
+  // Nouvel état du paiement après ajout d'avance
+  const nouveauEstPaye = nouveauReste <= 0;
+
+  // État du paiement
+  const estPaye = reste <= 0;
+
+  // Fonction pour vérifier si une date de paiement est dépassée
+  const isDatePaiementDepassee = (datePaiement: string) => {
+    const date = new Date(datePaiement);
+    const aujourdhui = new Date();
+    aujourdhui.setHours(0, 0, 0, 0);
+    date.setHours(0, 0, 0, 0);
+    return date < aujourdhui;
+  };
+
+  // Fonction pour déterminer la classe CSS de la date de paiement
+  const getDatePaiementClass = (pret: PretProduit) => {
+    if (!pret.datePaiement) return "font-bold text-green-600";
+    
+    const isDepassee = isDatePaiementDepassee(pret.datePaiement);
+    
+    if (pret.estPaye) {
+      // Si le prêt est payé, toujours en vert
+      return "font-bold text-green-600";
+    } else if (isDepassee) {
+      // Si le prêt n'est pas payé et la date est dépassée, rouge et clignotant
+      return "font-bold text-red-600 animate-pulse font-bold";
+    } else {
+      // Si le prêt n'est pas payé et la date n'est pas dépassée, vert
+      return "font-bold text-green-600";
+    }
+  };
+
+  // Charger les données depuis l'API
+  const fetchPrets = async () => {
+    try {
+      setLoading(true);
+      const data = await pretProduitService.getPretProduits();
+      setPrets(data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des prêts produits', error);
       toast({
-        title: "Erreur",
-        description: "Veuillez remplir tous les champs obligatoires.",
-        variant: "destructive",
+        title: 'Erreur',
+        description: 'Impossible de charger les prêts produits',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPrets();
+  }, [toast]);
+
+  // Calculer le total restant
+  const totalReste = prets.reduce((sum, pret) => sum + pret.reste, 0);
+  const totalAvances = prets.reduce((sum, pret) => sum + pret.avanceRecue, 0);
+  const totalVentes = prets.reduce((sum, pret) => sum + pret.prixVente, 0);
+  const pretsPayes = prets.filter(pret => pret.estPaye).length;
+
+  // Recherche des produits par description
+  const handleSearch = async (text: string) => {
+    setDescription(text);
+    if (text.length >= 3) {
+      try {
+        const results = await searchProducts(text);
+        setSearchResults(results);
+      } catch (error) {
+        console.error('Erreur lors de la recherche de produits', error);
+      }
+    } else {
+      setSearchResults([]);
+    }
+  };
+
+  // Recherche des prêts par description
+  const handleSearchPret = async (text: string) => {
+    setSearchTerm(text);
+    if (text.length >= 3) {
+      try {
+        const filtered = prets.filter(pret => 
+          pret.description.toLowerCase().includes(text.toLowerCase())
+        );
+        setSearchPretResults(filtered);
+      } catch (error) {
+        console.error('Erreur lors de la recherche de prêts', error);
+      }
+    } else {
+      setSearchPretResults([]);
+    }
+  };
+
+  // Sélectionner un produit dans les résultats de recherche
+  const selectProduct = (product: Product) => {
+    setSelectedProduct(product);
+    setDescription(product.description);
+    setPrixVente(product.purchasePrice.toString());
+    setSearchResults([]);
+  };
+
+  // Sélectionner un prêt pour modification
+  const selectPretForEdit = (pret: PretProduit) => {
+    setSelectedPret(pret);
+    setDatePret(new Date(pret.date));
+    setDatePaiement(pret.datePaiement ? new Date(pret.datePaiement) : undefined);
+    setDescription(pret.description);
+    setNom(pret.nom || '');
+    setPhone(pret.phone || '');
+    setPrixVente(pret.prixVente.toString());
+    setAvanceRecue(pret.avanceRecue.toString());
+    setSearchPretResults([]);
+    setSearchDialogOpen(false);
+    setEditDialogOpen(true);
+  };
+
+  // Sélectionner un prêt pour ajouter une avance
+  const selectPretForAjoutAvance = (pret: PretProduit, e: React.MouseEvent) => {
+    e.stopPropagation(); // Empêche le déclenchement du onClick de la ligne
+    setSelectedPret(pret);
+    setAjoutAvance('');
+    setAjoutAvanceDialogOpen(true);
+  };
+
+  // Sélectionner un prêt pour suppression
+  const selectPretForDelete = (pret: PretProduit, e: React.MouseEvent) => {
+    e.stopPropagation(); // Empêche le déclenchement du onClick de la ligne
+    setSelectedPret(pret);
+    setDeleteDialogOpen(true);
+  };
+
+  // Sélectionner un prêt depuis le tableau pour édition
+  const handleRowClick = (pret: PretProduit) => {
+    selectPretForEdit(pret);
+  };
+
+  // Ouvrir le formulaire d'édition pour un prêt
+  const handleEditClick = (pret: PretProduit, e: React.MouseEvent) => {
+    e.stopPropagation(); // Empêche le déclenchement du onClick de la ligne
+    selectPretForEdit(pret);
+  };
+
+  // Enregistrer le prêt
+  const handleSubmit = async () => {
+    if (!description) {
+      toast({
+        title: 'Erreur',
+        description: 'Veuillez saisir une description',
+        variant: 'destructive',
       });
       return;
     }
 
-    const selectedProduct = products.find(p => p.id === formData.produitId);
-    if (!selectedProduct) {
+    if (!prixVente || parseFloat(prixVente) <= 0) {
       toast({
-        title: "Erreur",
-        description: "Produit non trouvé.",
-        variant: "destructive",
+        title: 'Erreur',
+        description: 'Veuillez saisir un prix de vente valide',
+        variant: 'destructive',
       });
       return;
     }
 
-    const pretData: Omit<PretProduit, 'id'> = {
-      nomEmprunteur: formData.nomEmprunteur,
-      produitId: formData.produitId,
-      nomProduit: selectedProduct.description,
-      quantite: parseInt(formData.quantite),
-      datePret: selectedDatePret.toISOString(),
-      dateRetourPrevue: selectedDateRetour.toISOString(),
-      statut: 'en_cours',
-      notes: formData.notes
-    };
-
-    createMutation.mutate(pretData);
-  };
-
-  const getStatutBadge = (statut: PretProduit['statut']) => {
-    switch (statut) {
-      case 'retourne':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-200"><CheckCircle className="w-3 h-3 mr-1" />Retourné</Badge>;
-      case 'en_retard':
-        return <Badge className="bg-red-100 text-red-800 hover:bg-red-200"><XCircle className="w-3 h-3 mr-1" />En retard</Badge>;
-      default:
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200"><Clock className="w-3 h-3 mr-1" />En cours</Badge>;
+    try {
+      setLoading(true);
+      
+      const newPret: Omit<PretProduit, 'id'> = {
+        date: format(datePret, 'yyyy-MM-dd'),
+        datePaiement: datePaiement ? format(datePaiement, 'yyyy-MM-dd') : undefined,
+        description,
+        nom,
+        phone,
+        prixVente: parseFloat(prixVente),
+        avanceRecue: parseFloat(avanceRecue) || 0,
+        reste,
+        estPaye,
+        productId: selectedProduct?.id
+      };
+      
+      // Enregistrer via l'API
+      await pretProduitService.addPretProduit(newPret);
+      
+      // Recharger les données
+      await fetchPrets();
+      
+      toast({
+        title: 'Succès',
+        description: 'Prêt enregistré avec succès',
+        variant: 'default',
+        className: 'notification-success',
+      });
+      
+      // Réinitialiser le formulaire
+      resetForm();
+      setDialogOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement du prêt', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible d\'enregistrer le prêt',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'dd/MM/yyyy', { locale: fr });
+  // Mettre à jour un prêt existant
+  const handleUpdate = async () => {
+    if (!selectedPret) return;
+
+    try {
+      setLoading(true);
+      
+      const updatedPret: PretProduit = {
+        ...selectedPret,
+        datePaiement: datePaiement ? format(datePaiement, 'yyyy-MM-dd') : undefined,
+        nom,
+        phone,
+        avanceRecue: parseFloat(avanceRecue) || 0,
+        reste: reste,
+        estPaye: estPaye
+      };
+      
+      // Mettre à jour via l'API
+      await pretProduitService.updatePretProduit(selectedPret.id, updatedPret);
+      
+      // Recharger les données
+      await fetchPrets();
+      
+      toast({
+        title: 'Succès',
+        description: 'Prêt mis à jour avec succès',
+        variant: 'default',
+        className: 'notification-success',
+      });
+      
+      // Réinitialiser le formulaire
+      resetForm();
+      setEditDialogOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du prêt', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de mettre à jour le prêt',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Calculer les statistiques
-  const stats = {
-    totalPrets: prets.length,
-    produitsEnCours: prets.filter(p => p.statut === 'en_cours').reduce((sum, pret) => sum + pret.quantite, 0),
-    produitsRetournes: prets.filter(p => p.statut === 'retourne').reduce((sum, pret) => sum + pret.quantite, 0),
-    nombreEnRetard: prets.filter(p => p.statut === 'en_retard').length
+  // Ajouter une avance à un prêt
+  const handleAjoutAvance = async () => {
+    if (!selectedPret) return;
+    
+    if (!ajoutAvance || parseFloat(ajoutAvance) <= 0) {
+      toast({
+        title: 'Erreur',
+        description: 'Veuillez saisir un montant valide',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Calculer la nouvelle avance totale
+      const nouvelleAvanceRecue = selectedPret.avanceRecue + parseFloat(ajoutAvance);
+      
+      // Calculer le nouveau reste
+      const nouveauReste = selectedPret.prixVente - nouvelleAvanceRecue;
+      
+      // Déterminer si le prêt est maintenant entièrement payé
+      const nouveauEstPaye = nouveauReste <= 0;
+      
+      const updatedPret: PretProduit = {
+        ...selectedPret,
+        avanceRecue: nouvelleAvanceRecue,
+        reste: nouveauReste,
+        estPaye: nouveauEstPaye
+      };
+      
+      // Mettre à jour via l'API
+      await pretProduitService.updatePretProduit(selectedPret.id, updatedPret);
+      
+      // Recharger les données
+      await fetchPrets();
+      
+      toast({
+        title: 'Succès',
+        description: 'Avance ajoutée avec succès',
+        variant: 'default',
+        className: 'notification-success',
+      });
+      
+      // Réinitialiser le formulaire
+      setAjoutAvance('');
+      setSelectedPret(null);
+      setAjoutAvanceDialogOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout de l\'avance', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible d\'ajouter l\'avance',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (isLoading || dataLoading) {
-    return (
-      <div className="space-y-6">
-        <PremiumLoading 
-          text="Chargement des Prêts Produits"
-          size="md"
-          variant="dashboard"
-          showText={true}
-        />
-      </div>
-    );
-  }
+  // Supprimer un prêt
+  const handleDelete = async () => {
+    if (!selectedPret) return;
+
+    try {
+      setLoading(true);
+      
+      // Supprimer via l'API
+      await pretProduitService.deletePretProduit(selectedPret.id);
+      
+      // Recharger les données
+      await fetchPrets();
+      
+      toast({
+        title: 'Succès',
+        description: 'Prêt supprimé avec succès',
+        variant: 'default',
+        className: 'notification-success',
+      });
+      
+      // Réinitialiser et fermer
+      resetForm();
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la suppression du prêt', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de supprimer le prêt',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Réinitialiser le formulaire
+  const resetForm = () => {
+    setSelectedPret(null);
+    setDatePret(new Date());
+    setDatePaiement(undefined);
+    setDescription('');
+    setNom('');
+    setPhone('');
+    setPrixVente('');
+    setAvanceRecue('');
+    setAjoutAvance('');
+    setSelectedProduct(null);
+  };
+
+  // Format de devise
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-br from-purple-50 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 rounded-3xl p-8 border border-purple-200 dark:border-purple-800">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl p-4">
-              <Package className="h-8 w-8 text-white" />
-            </div>
-            <div>
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Prêts de Produits
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300 mt-1">
-                Suivez les produits prêtés et leur retour
-              </p>
-            </div>
-          </div>
-          <div className="hidden md:flex items-center space-x-2">
-            <Sparkles className="h-6 w-6 text-purple-500 animate-pulse" />
-            <span className="text-sm text-purple-600 dark:text-purple-400 font-medium">Gestion optimisée</span>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-indigo-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-slate-900 p-6">
+      {/* Notifications des prêts en retard */}
+      <PretRetardNotification prets={prets} />
+      
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="max-w-7xl mx-auto"
+      >
+        {/* Hero Header */}
+        <div className="text-center mb-12">
+          <motion.div 
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 backdrop-blur-sm rounded-full text-purple-600 dark:text-purple-400 text-sm font-semibold mb-6 border border-purple-200/50 dark:border-purple-800/50"
+          >
+            <CreditCard className="h-5 w-5 mr-2 animate-pulse" />
+            Gestion Premium des Prêts
+          </motion.div>
+          
+          <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent mb-4">
+            Prêts Produits
+          </h1>
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            Gérez vos prêts avec élégance et efficacité
+          </p>
         </div>
-      </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-none shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Prêts</CardTitle>
-            <Package className="h-4 w-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalPrets}</div>
-            <p className="text-xs text-purple-100">
-              Prêts enregistrés
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-none shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">En Cours</CardTitle>
-            <Clock className="h-4 w-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.produitsEnCours}</div>
-            <p className="text-xs text-blue-100">
-              Produits prêtés
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-none shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Retournés</CardTitle>
-            <CheckCircle className="h-4 w-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.produitsRetournes}</div>
-            <p className="text-xs text-emerald-100">
-              Produits récupérés
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white border-none shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">En Retard</CardTitle>
-            <AlertTriangle className="h-4 w-4" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.nombreEnRetard}</div>
-            <p className="text-xs text-red-100">
-              Nécessitent un suivi
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Formulaire d'ajout */}
-        <Card className="lg:col-span-1 bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border border-white/20 shadow-2xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-full p-2">
-                <Plus className="h-4 w-4 text-white" />
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
+          >
+            <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-none shadow-xl hover:shadow-2xl transition-all duration-300">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-white/20 rounded-lg">
+                    <TrendingUp className="h-6 w-6" />
+                  </div>
+                  <div className="text-right">
+                    <p className="text-emerald-100 text-sm">Total Ventes</p>
+                    <p className="text-2xl font-bold">{formatCurrency(totalVentes)}</p>
+                  </div>
+                </div>
               </div>
-              Nouveau Prêt
-            </CardTitle>
-            <CardDescription>Enregistrer un nouveau prêt de produit</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="nom">Nom de l'emprunteur *</Label>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+          >
+            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-none shadow-xl hover:shadow-2xl transition-all duration-300">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-white/20 rounded-lg">
+                    <Wallet className="h-6 w-6" />
+                  </div>
+                  <div className="text-right">
+                    <p className="text-blue-100 text-sm">Avances Reçues</p>
+                    <p className="text-2xl font-bold">{formatCurrency(totalAvances)}</p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          >
+            <Card className="bg-gradient-to-br from-orange-500 to-red-500 text-white border-none shadow-xl hover:shadow-2xl transition-all duration-300">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-white/20 rounded-lg">
+                    <Clock className="h-6 w-6" />
+                  </div>
+                  <div className="text-right">
+                    <p className="text-orange-100 text-sm">Reste à Payer</p>
+                    <p className="text-2xl font-bold">{formatCurrency(totalReste)}</p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+          >
+            <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-none shadow-xl hover:shadow-2xl transition-all duration-300">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-white/20 rounded-lg">
+                    <CheckCircle className="h-6 w-6" />
+                  </div>
+                  <div className="text-right">
+                    <p className="text-purple-100 text-sm">Prêts Payés</p>
+                    <p className="text-2xl font-bold">{pretsPayes}/{prets.length}</p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Action Buttons */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+          className="flex flex-wrap gap-4 mb-8 justify-center"
+        >
+          <Button 
+            onClick={() => setDialogOpen(true)} 
+            className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-3 rounded-xl font-semibold"
+          >
+            <PlusCircle className="mr-2 h-5 w-5" />
+            Nouveau Prêt
+          </Button>
+          
+          <Button 
+            onClick={() => setSearchDialogOpen(true)} 
+            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-3 rounded-xl font-semibold"
+          >
+            <Search className="mr-2 h-5 w-5" />
+            Rechercher
+          </Button>
+        </motion.div>
+        
+        {/* Main Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.5 }}
+        >
+          <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/20 shadow-2xl">
+            <div className="p-8">
+              {loading ? (
+                <div className="flex justify-center items-center py-16">
+                  <div className="text-center">
+                    <Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" />
+                    <p className="text-lg text-gray-600 dark:text-gray-300">Chargement des données...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table className="w-full">
+                    <TableHeader>
+                      <TableRow className="border-gray-200 dark:border-gray-700">
+                        <TableHead className="font-bold text-purple-600 dark:text-purple-400 text-left">Date de Prêt</TableHead>
+                        <TableHead className="font-bold text-purple-600 dark:text-purple-400 text-left">Date Paiement</TableHead>
+                        <TableHead className="font-bold text-purple-600 dark:text-purple-400 text-left">Description</TableHead>
+                        <TableHead className="font-bold text-purple-600 dark:text-purple-400 text-left">Nom</TableHead>
+                        <TableHead className="font-bold text-purple-600 dark:text-purple-400 text-left">Téléphone</TableHead>
+                        <TableHead className="font-bold text-purple-600 dark:text-purple-400 text-right">Prix Vente</TableHead>
+                        <TableHead className="font-bold text-purple-600 dark:text-purple-400 text-right">Avance</TableHead>
+                        <TableHead className="font-bold text-purple-600 dark:text-purple-400 text-right">Reste</TableHead>
+                        <TableHead className="font-bold text-purple-600 dark:text-purple-400 text-center">Statut</TableHead>
+                        <TableHead className="font-bold text-purple-600 dark:text-purple-400 text-center">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {prets.map((pret) => (
+                        <TableRow 
+                          key={pret.id} 
+                          className="cursor-pointer hover:bg-purple-50/50 dark:hover:bg-purple-900/20 transition-all duration-200 border-gray-100 dark:border-gray-700" 
+                          onClick={() => selectPretForEdit(pret)}
+                        >
+                          <TableCell className="font-bold">{format(new Date(pret.date), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell className={getDatePaiementClass(pret)} >
+                            {pret.datePaiement ? format(new Date(pret.datePaiement), 'dd/MM/yyyy') : '-'}
+                          </TableCell>
+                          <TableCell className="font-bold text-gray-900 dark:text-gray-100">{pret.description}</TableCell>
+                          <TableCell className="text-purple-600 dark:text-purple-300 font-bold">{pret.nom || '-'}</TableCell>
+                          <TableCell className="text-gray-600 dark:text-gray-300">
+                            {pret.phone && (
+                              <div className="flex items-center gap-1">
+                                <Phone className="h-6 w-6 text-green-800" />
+                                <span className="text-red-800 font-bold">{pret.phone}</span>
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {formatCurrency(pret.prixVente)}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-blue-600">
+                            {formatCurrency(pret.avanceRecue)}
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-orange-600">
+                            {formatCurrency(pret.reste)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold ${
+                              pret.estPaye 
+                                ? 'font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                                : 'font-bold bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                            }`}>
+                              {pret.estPaye ? (
+                                <>
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Payé
+                                </>
+                              ) : (
+                                <>
+                                  <Clock className="h-3 w-3 mr-1 " />
+                                  En cours
+                                </>
+                              )}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex justify-center space-x-2">
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPret(pret);
+                                  setAjoutAvance('');
+                                  setAjoutAvanceDialogOpen(true);
+                                }} 
+                                className="p-2 rounded-lg bg-emerald-100 text-emerald-600 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50 transition-colors"
+                                title="Ajouter une avance"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  selectPretForEdit(pret);
+                                }} 
+                                className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50 transition-colors"
+                                title="Modifier"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPret(pret);
+                                  setDeleteDialogOpen(true);
+                                }} 
+                                className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 transition-colors"
+                                title="Supprimer"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          </Card>
+        </motion.div>
+      </motion.div>
+      
+      {/* Formulaire d'ajout de prêt */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-white/20">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              Ajouter un prêt de produit
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-6 py-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="datePret" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Date de prêt</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-300 dark:border-gray-600",
+                        !datePret && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {datePret ? format(datePret, "PPP", { locale: fr }) : "Sélectionner une date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={datePret}
+                      onSelect={(newDate) => setDatePret(newDate || new Date())}
+                      disabled={(date) =>
+                        date > new Date() || date < new Date("1900-01-01")
+                      }
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="datePaiement" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Date de paiement prévue</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-300 dark:border-gray-600",
+                        !datePaiement && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {datePaiement ? format(datePaiement, "PPP", { locale: fr }) : "Sélectionner une date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={datePaiement}
+                      onSelect={setDatePaiement}
+                      disabled={(date) =>
+                        date < new Date("1900-01-01")
+                      }
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="description" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Description du produit</Label>
+              <Input
+                id="description"
+                value={description}
+                onChange={(e) => handleSearch(e.target.value)}
+                placeholder="Tapez pour rechercher un produit..."
+                className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-300 dark:border-gray-600"
+              />
+              {searchResults.length > 0 && (
+                <div className="border rounded-md max-h-40 overflow-y-auto bg-white dark:bg-gray-800">
+                  {searchResults.map((product) => (
+                    <div
+                      key={product.id}
+                      className="p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                      onClick={() => selectProduct(product)}
+                    >
+                      <div className="text-sm font-medium">{product.description}</div>
+                      <div className="text-xs text-gray-500">Prix: {formatCurrency(product.purchasePrice)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="nom" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Nom du client</Label>
                 <Input
                   id="nom"
-                  value={formData.nomEmprunteur}
-                  onChange={(e) => setFormData(prev => ({...prev, nomEmprunteur: e.target.value}))}
-                  placeholder="Nom complet"
-                  className="mt-1"
+                  value={nom}
+                  onChange={(e) => setNom(e.target.value)}
+                  placeholder="Nom du client"
+                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-300 dark:border-gray-600"
                 />
               </div>
 
-              <div>
-                <Label htmlFor="produit">Produit *</Label>
-                <Select value={formData.produitId} onValueChange={(value) => setFormData(prev => ({...prev, produitId: value}))}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Sélectionner un produit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.description} (Stock: {product.quantity})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="quantite">Quantité *</Label>
+              <div className="grid gap-2">
+                <Label htmlFor="phone" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Numéro de téléphone</Label>
                 <Input
-                  id="quantite"
+                  id="phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+262 692 123 456"
+                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-300 dark:border-gray-600"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="prixVente" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Prix de vente (€)</Label>
+                <Input
+                  id="prixVente"
                   type="number"
-                  min="1"
-                  value={formData.quantite}
-                  onChange={(e) => setFormData(prev => ({...prev, quantite: e.target.value}))}
-                  placeholder="1"
-                  className="mt-1"
+                  step="0.01"
+                  value={prixVente}
+                  onChange={(e) => setPrixVente(e.target.value)}
+                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-300 dark:border-gray-600"
                 />
               </div>
-
-              <div>
-                <Label>Date du prêt *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full mt-1 justify-start text-left font-normal",
-                        !selectedDatePret && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedDatePret ? format(selectedDatePret, "dd/MM/yyyy", { locale: fr }) : <span>Date du prêt</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDatePret}
-                      onSelect={setSelectedDatePret}
-                      initialFocus
-                      locale={fr}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div>
-                <Label>Date de retour prévue *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full mt-1 justify-start text-left font-normal",
-                        !selectedDateRetour && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedDateRetour ? format(selectedDateRetour, "dd/MM/yyyy", { locale: fr }) : <span>Date de retour</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDateRetour}
-                      onSelect={setSelectedDateRetour}
-                      initialFocus
-                      locale={fr}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div>
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({...prev, notes: e.target.value}))}
-                  placeholder="Informations complémentaires..."
-                  className="mt-1"
+              
+              <div className="grid gap-2">
+                <Label htmlFor="avanceRecue" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Avance reçue (€)</Label>
+                <Input
+                  id="avanceRecue"
+                  type="number"
+                  step="0.01"
+                  value={avanceRecue}
+                  onChange={(e) => setAvanceRecue(e.target.value)}
+                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-300 dark:border-gray-600"
                 />
               </div>
+            </div>
 
-              <Button 
-                type="submit" 
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                disabled={createMutation.isPending}
-              >
-                {createMutation.isPending ? 'Enregistrement...' : 'Enregistrer le Prêt'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Liste des prêts */}
-        <Card className="lg:col-span-2 bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border border-white/20 shadow-2xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full p-2">
-                <ShoppingBag className="h-4 w-4 text-white" />
-              </div>
-              Liste des Prêts
-            </CardTitle>
-            <CardDescription>Historique et suivi de tous les prêts de produits</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {prets.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 rounded-full p-6 w-24 h-24 mx-auto mb-4 flex items-center justify-center">
-                  <Package className="h-12 w-12 text-purple-500" />
+            {(prixVente || avanceRecue) && (
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">Reste à payer:</span>
+                  <span className={`font-bold text-lg ${reste <= 0 ? 'text-green-600' : 'text-orange-600'}`}>
+                    {formatCurrency(reste)}
+                  </span>
                 </div>
-                <p className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Aucun prêt enregistré</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Commencez par ajouter votre premier prêt de produit</p>
-              </div>
-            ) : (
-              <div className="rounded-lg border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-700">
-                      <TableHead className="font-bold">Emprunteur</TableHead>
-                      <TableHead className="font-bold">Produit</TableHead>
-                      <TableHead className="font-bold">Quantité</TableHead>
-                      <TableHead className="font-bold">Date Prêt</TableHead>
-                      <TableHead className="font-bold">Retour Prévu</TableHead>
-                      <TableHead className="font-bold">Statut</TableHead>
-                      <TableHead className="font-bold">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {prets.map((pret) => (
-                      <TableRow key={pret.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
-                        <TableCell className="font-medium">{pret.nomEmprunteur}</TableCell>
-                        <TableCell>{pret.nomProduit}</TableCell>
-                        <TableCell className="font-bold text-purple-600">{pret.quantite}</TableCell>
-                        <TableCell>{formatDate(pret.datePret)}</TableCell>
-                        <TableCell>{formatDate(pret.dateRetourPrevue)}</TableCell>
-                        <TableCell>{getStatutBadge(pret.statut)}</TableCell>
-                        <TableCell>
-                          {pret.statut !== 'retourne' && (
-                            <div className="flex space-x-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => updateStatutMutation.mutate({ id: pret.id, statut: 'retourne' })}
-                                className="text-green-600 border-green-200 hover:bg-green-50"
-                              >
-                                <CheckCircle className="w-3 h-3 mr-1" />
-                                Retourné
-                              </Button>
-                              {pret.statut !== 'en_retard' && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => updateStatutMutation.mutate({ id: pret.id, statut: 'en_retard' })}
-                                  className="text-red-600 border-red-200 hover:bg-red-50"
-                                >
-                                  <AlertTriangle className="w-3 h-3 mr-1" />
-                                  En retard
-                                </Button>
-                              )}
-                            </div>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Statut:</span>
+                  <span className={`text-sm font-semibold ${estPaye ? 'text-green-600' : 'text-orange-600'}`}>
+                    {estPaye ? 'Entièrement payé' : 'Paiement en cours'}
+                  </span>
+                </div>
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={loading}
+              className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Formulaire de modification de prêt */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Modifier un prêt</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="editDatePret">Date de prêt</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !datePret && "text-muted-foreground"
+                      )}
+                      disabled
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {datePret ? format(datePret, 'PP', { locale: fr }) : <span>Sélectionner une date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                </Popover>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="editDatePaiement">Date de paiement prévue</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !datePaiement && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {datePaiement ? format(datePaiement, 'PP', { locale: fr }) : <span>Sélectionner une date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={datePaiement}
+                      onSelect={setDatePaiement}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="editDescription">Description</Label>
+              <Input 
+                id="editDescription" 
+                value={description} 
+                disabled
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="editNom">Nom</Label>
+                <Input 
+                  id="editNom" 
+                  value={nom} 
+                  onChange={(e) => setNom(e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="editPhone">Numéro de téléphone</Label>
+                <Input 
+                  id="editPhone" 
+                  value={phone} 
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+262 692 123 456"
+                />
+              </div>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="editPrixVente">Prix du produit vendu</Label>
+              <Input 
+                id="editPrixVente" 
+                type="number" 
+                value={prixVente} 
+                disabled
+                className="bg-gray-100"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="editAvanceRecue">Avance reçue</Label>
+              <Input 
+                id="editAvanceRecue" 
+                type="number" 
+                value={avanceRecue} 
+                onChange={(e) => setAvanceRecue(e.target.value)}
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+              />
+            </div>
+            
+            <div className="bg-gray-50 p-3 rounded-md">
+              <div className="flex justify-between">
+                <p><strong>Reste:</strong></p>
+                <p className={reste > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
+                  {formatCurrency(reste)}
+                </p>
+              </div>
+              <div className="flex justify-between mt-1">
+                <p><strong>Statut:</strong></p>
+                <p className={estPaye ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
+                  {estPaye ? 'Tout payé' : 'Reste à payer'}
+                </p>
+              </div>
+            </div>
+            
+            <Button 
+              onClick={handleUpdate} 
+              disabled={loading || !selectedPret}
+              className="mt-2"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Enregistrer les modifications
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Formulaire d'ajout d'avance */}
+      <Dialog open={ajoutAvanceDialogOpen} onOpenChange={setAjoutAvanceDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Ajouter une avance</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {selectedPret && (
+              <>
+                <div className="bg-gray-50 p-4 rounded-md mb-2">
+                  <p><strong>Description:</strong> {selectedPret.description}</p>
+                  <p><strong>Nom:</strong> {selectedPret.nom || '-'}</p>
+                  <div className="flex justify-between mt-2">
+                    <span>Prix: {formatCurrency(selectedPret.prixVente)}</span>
+                    <span>Avance reçue: {formatCurrency(selectedPret.avanceRecue)}</span>
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span>Reste actuel: {formatCurrency(selectedPret.reste)}</span>
+                    <span className={selectedPret.estPaye ? 'text-app-green' : 'text-app-red'}>
+                      {selectedPret.estPaye ? 'Tout payé' : 'Reste à payer'}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="ajoutAvance">Montant de l'avance à ajouter</Label>
+                  <Input 
+                    id="ajoutAvance" 
+                    type="number" 
+                    value={ajoutAvance} 
+                    onChange={(e) => setAjoutAvance(e.target.value)}
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    className="text-lg"
+                  />
+                </div>
+                
+                {/* Simulation des nouveaux montants */}
+                {parseFloat(ajoutAvance) > 0 && (
+                  <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
+                    <h3 className="font-medium text-blue-700 mb-2">Après ajout de cette avance:</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <p className="text-sm text-gray-600">Avance actuelle:</p>
+                        <p className="font-medium">{formatCurrency(selectedPret.avanceRecue)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">+ Nouvelle avance:</p>
+                        <p className="font-medium text-app-green">{formatCurrency(parseFloat(ajoutAvance) || 0)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">= Total avance:</p>
+                        <p className="font-medium">{formatCurrency(selectedPret.avanceRecue + (parseFloat(ajoutAvance) || 0))}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Nouveau reste:</p>
+                        <p className={`font-medium ${nouveauReste > 0 ? 'text-app-red' : 'text-app-green'}`}>
+                          {formatCurrency(nouveauReste)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-blue-200">
+                      <p className="text-sm">
+                        <strong>Nouveau statut:</strong> 
+                        <span className={nouveauEstPaye ? 'text-app-green ml-2' : 'text-app-red ml-2'}>
+                          {nouveauEstPaye ? 'Tout payé' : 'Reste à payer'}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            
+            <Button 
+              onClick={handleAjoutAvance} 
+              disabled={loading || !ajoutAvance || parseFloat(ajoutAvance) <= 0}
+              className="mt-2 bg-app-green hover:bg-app-green/90"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Enregistrer l'avance
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialogue de recherche pour modifier un prêt */}
+      <Dialog open={searchDialogOpen} onOpenChange={setSearchDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Rechercher un prêt à modifier</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="searchPret">Description du prêt</Label>
+              <div className="relative">
+                <Input 
+                  id="searchPret" 
+                  value={searchTerm} 
+                  onChange={(e) => handleSearchPret(e.target.value)} 
+                  placeholder="Saisir au moins 3 caractères pour rechercher"
+                />
+                {searchPretResults.length > 0 && (
+                  <div className="absolute z-10 w-full bg-white border rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
+                    {searchPretResults.map((pret) => (
+                      <div 
+                        key={pret.id} 
+                        className="p-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => selectPretForEdit(pret)}
+                      >
+                        <p className="font-medium">{pret.description}</p>
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>Prix: {formatCurrency(pret.prixVente)}</span>
+                          <span>Reste: {formatCurrency(pret.reste)}</span>
+                          <span>Avance: {formatCurrency(pret.avanceRecue)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialogue de confirmation de suppression */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Confirmer la suppression</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>Êtes-vous sûr de vouloir supprimer ce prêt ?</p>
+            {selectedPret && (
+              <div className="mt-4 p-3 bg-gray-50 rounded-md">
+                <p><strong>Description:</strong> {selectedPret.description}</p>
+                <p><strong>Montant:</strong> {formatCurrency(selectedPret.prixVente)}</p>
+                <p><strong>Date:</strong> {format(new Date(selectedPret.date), 'dd/MM/yyyy')}</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={loading}
+            >
+              Annuler
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={loading}
+              className="ml-2"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
