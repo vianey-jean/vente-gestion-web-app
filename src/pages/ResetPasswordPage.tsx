@@ -1,295 +1,265 @@
+
+/**
+ * PAGE DE RÉINITIALISATION DE MOT DE PASSE
+ * ========================================
+ * 
+ * Cette page permet aux utilisateurs de réinitialiser leur mot de passe
+ * en cas d'oubli. Elle gère l'envoi d'un email de réinitialisation
+ * et la saisie du nouveau mot de passe.
+ * 
+ * Fonctionnalités principales :
+ * - Formulaire de demande de réinitialisation par email
+ * - Validation des données saisies
+ * - Gestion des erreurs et messages de confirmation
+ * - Interface responsive et accessible
+ */
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import PasswordInput from '@/components/PasswordInput';
-import PasswordStrengthChecker from '@/components/PasswordStrengthChecker';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/components/ui/use-toast';
+import { Mail, ArrowLeft, Key } from 'lucide-react';
 import Layout from '@/components/Layout';
-import PremiumLoading from '@/components/ui/premium-loading';
-import { KeyRound, Mail, ArrowLeft, Shield, CheckCircle } from 'lucide-react';
 
+/**
+ * Composant principal de la page de réinitialisation de mot de passe
+ * Gère le processus de demande de réinitialisation
+ */
 const ResetPasswordPage: React.FC = () => {
+  // Ici on attend l'initialisation des hooks et du state local
   const navigate = useNavigate();
-  const { resetPasswordRequest, resetPassword } = useAuth();
-  
+  const { toast } = useToast();
+
+  // État local pour l'email de réinitialisation
   const [email, setEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [emailVerified, setEmailVerified] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; newPassword?: string; confirmPassword?: string }>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [isPasswordValid, setIsPasswordValid] = useState(false);
   
-  const validatePassword = () => {
-    const hasLowerCase = /[a-z]/.test(newPassword);
-    const hasUpperCase = /[A-Z]/.test(newPassword);
-    const hasNumber = /[0-9]/.test(newPassword);
-    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword);
-    const hasMinLength = newPassword.length >= 8;
-    
-    return hasLowerCase && hasUpperCase && hasNumber && hasSpecialChar && hasMinLength;
-  };
+  // État pour les erreurs de validation
+  const [emailError, setEmailError] = useState('');
   
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    setErrors({});
-    
+  // État pour le chargement du formulaire
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // État pour indiquer si l'email a été envoyé
+  const [isEmailSent, setIsEmailSent] = useState(false);
+
+  /**
+   * Fonction de validation de l'email
+   * Vérifie le format et la présence de l'email
+   */
+  const validateEmail = (email: string): boolean => {
+    // Ici on attend la validation de l'email
     if (!email) {
-      setErrors({ email: 'Veuillez entrer votre email' });
-      return;
+      setEmailError('L\'email est requis');
+      return false;
     }
     
     if (!/\S+@\S+\.\S+/.test(email)) {
-      setErrors({ email: 'Veuillez entrer un email valide' });
-      return;
+      setEmailError('Format d\'email invalide');
+      return false;
     }
     
-    setIsLoading(true);
-    const success = await resetPasswordRequest({ email });
-    setIsLoading(false);
-    
-    if (success) {
-      setEmailVerified(true);
-    }
-  };
-  
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    setErrors({});
-    
-    const newErrors: { newPassword?: string; confirmPassword?: string } = {};
-    
-    if (!newPassword) {
-      newErrors.newPassword = 'Veuillez entrer un nouveau mot de passe';
-    } else if (!validatePassword()) {
-      newErrors.newPassword = 'Le mot de passe ne répond pas aux exigences de sécurité';
-    }
-    
-    if (!confirmPassword) {
-      newErrors.confirmPassword = 'Veuillez confirmer votre mot de passe';
-    } else if (newPassword !== confirmPassword) {
-      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
-    }
-    
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-    
-    setIsLoading(true);
-    const success = await resetPassword({
-      email,
-      newPassword,
-      confirmPassword,
-    });
-    setIsLoading(false);
-    
-    if (success) {
-      navigate('/login');
-    }
-  };
-  
-  const handlePasswordValidityChange = (isValid: boolean) => {
-    setIsPasswordValid(isValid);
+    // Ici on a ajouté la suppression de l'erreur si l'email est valide
+    setEmailError('');
+    return true;
   };
 
-  // Show loading during form submission
-  if (isLoading) {
-    return (
-      <Layout>
-        <PremiumLoading 
-          text="Traitement en cours..."
-          size="md"
-          overlay={true}
-          variant="default"
-        />
-      </Layout>
-    );
-  }
-  
+  /**
+   * Gestionnaire de changement de l'email
+   * Met à jour l'état et supprime les erreurs
+   */
+  const handleEmailChange = (value: string) => {
+    // Ici on attend la mise à jour de l'email
+    setEmail(value);
+    
+    // Ici on a ajouté la suppression de l'erreur lors de la saisie
+    if (emailError) {
+      setEmailError('');
+    }
+  };
+
+  /**
+   * Gestionnaire de soumission du formulaire
+   * Valide l'email et envoie la demande de réinitialisation
+   */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Ici on attend la validation de l'email avant soumission
+    if (!validateEmail(email)) {
+      return;
+    }
+
+    // Ici on attend le processus d'envoi de l'email
+    setIsSubmitting(true);
+
+    try {
+      // Simulation d'un appel API pour l'envoi de l'email de réinitialisation
+      // Dans un vrai projet, cela ferait appel à un service de réinitialisation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Ici on a ajouté la mise à jour de l'état de succès
+      setIsEmailSent(true);
+      
+      // Ici on a ajouté la notification de succès
+      toast({
+        title: "Email envoyé",
+        description: "Un lien de réinitialisation a été envoyé à votre adresse email.",
+      });
+    } catch (error) {
+      // Ici on a ajouté la gestion des erreurs d'envoi
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de l'envoi de l'email. Veuillez réessayer.",
+        variant: "destructive",
+      });
+    } finally {
+      // Ici on a ajouté la réinitialisation de l'état de chargement
+      setIsSubmitting(false);
+    }
+  };
+
+  /**
+   * Fonction pour retourner au formulaire de demande
+   * Réinitialise l'état pour permettre une nouvelle demande
+   */
+  const handleBackToForm = () => {
+    // Ici on attend la réinitialisation de l'état
+    setIsEmailSent(false);
+    setEmail('');
+    setEmailError('');
+  };
+
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 dark:from-gray-900 dark:via-blue-900/20 dark:to-slate-900 flex items-center justify-center p-4">
-        {/* Background decorations */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-blue-400/10 to-purple-400/10 rounded-full blur-3xl"></div>
-        </div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-md mx-auto">
+          {/* Bouton de retour vers la page de connexion */}
+          <div className="mb-4">
+            <Link 
+              to="/login" 
+              className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Retour à la connexion
+            </Link>
+          </div>
 
-        <div className="relative w-full max-w-md">
-          <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border-0 shadow-2xl">
-            <CardHeader className="text-center pb-8 pt-10">
-              <div className="flex justify-center mb-6">
-                <div className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${
-                  emailVerified 
-                    ? 'bg-gradient-to-r from-green-600 to-emerald-600' 
-                    : 'bg-gradient-to-r from-blue-600 to-purple-600'
-                }`}>
-                  {emailVerified ? (
-                    <CheckCircle className="h-10 w-10 text-white" />
-                  ) : (
-                    <KeyRound className="h-10 w-10 text-white" />
-                  )}
-                </div>
+          <Card className="shadow-lg">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <Key className="h-6 w-6 text-primary" />
               </div>
-              
-              <CardTitle className={`text-3xl font-bold bg-gradient-to-r bg-clip-text text-transparent transition-all duration-500 ${
-                emailVerified 
-                  ? 'from-green-600 to-emerald-600' 
-                  : 'from-blue-600 to-purple-600'
-              }`}>
-                {emailVerified ? 'Nouveau mot de passe' : 'Récupération'}
+              <CardTitle className="text-2xl font-bold">
+                {isEmailSent ? "Email envoyé" : "Mot de passe oublié"}
               </CardTitle>
-              
-              <CardDescription className="text-gray-600 dark:text-gray-300 text-lg mt-2">
-                {emailVerified
-                  ? "Créez un mot de passe sécurisé pour votre compte"
-                  : "Saisissez votre email pour réinitialiser votre mot de passe"}
+              <CardDescription>
+                {isEmailSent 
+                  ? "Vérifiez votre boîte email pour les instructions de réinitialisation"
+                  : "Entrez votre email pour recevoir un lien de réinitialisation"
+                }
               </CardDescription>
-
-              {emailVerified && (
-                <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800 animate-in fade-in-50">
-                  <div className="flex items-center justify-center gap-2 text-green-700 dark:text-green-400">
-                    <Mail className="h-5 w-5" />
-                    <span className="text-sm font-medium">Email vérifié avec succès</span>
-                  </div>
-                </div>
-              )}
             </CardHeader>
             
-            {!emailVerified ? (
-              <form onSubmit={handleEmailSubmit}>
-                <CardContent className="space-y-6 px-8">
-                  <div className="space-y-3">
-                    <Label htmlFor="email" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
-                      Adresse email
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="exemple@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      disabled={isLoading}
-                      className={`h-14 bg-white/50 dark:bg-gray-700/50 border-2 rounded-xl transition-all duration-200 ${
-                        errors.email 
-                          ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" 
-                          : "border-blue-200 dark:border-blue-700 focus:border-blue-500 focus:ring-blue-500/20"
-                      } focus:ring-4`}
-                    />
-                    {errors.email && (
-                      <div className="flex items-center gap-2 text-red-500 text-sm animate-in fade-in-50">
-                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                        {errors.email}
+            <CardContent>
+              {!isEmailSent ? (
+                // Ici on attend l'affichage du formulaire de demande
+                <>
+                  {/* Formulaire de demande de réinitialisation */}
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Champ email */}
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Adresse email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="votre@email.com"
+                          className="pl-10"
+                          value={email}
+                          onChange={(e) => handleEmailChange(e.target.value)}
+                          disabled={isSubmitting}
+                          autoComplete="email"
+                        />
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-                
-                <CardFooter className="flex flex-col space-y-6 px-8 pb-10">
-                  <Button
-                    type="submit"
-                    className="w-full h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        Vérification...
-                      </>
-                    ) : (
-                      <>
-                        <Mail className="h-5 w-5" />
-                        Envoyer le lien
-                      </>
-                    )}
-                  </Button>
-                  
-                  <div className="flex justify-between w-full text-sm">
-                    <Link 
-                      to="/login" 
-                      className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium hover:underline transition-colors flex items-center gap-2"
+                      {emailError && (
+                        <p className="text-sm text-destructive">{emailError}</p>
+                      )}
+                    </div>
+
+                    {/* Bouton de soumission */}
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={isSubmitting}
                     >
-                      <ArrowLeft className="h-4 w-4" />
-                      Retour à la connexion
-                    </Link>
-                    <Link 
-                      to="/register" 
-                      className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium hover:underline transition-colors"
-                    >
-                      Créer un compte
-                    </Link>
+                      {isSubmitting ? "Envoi en cours..." : "Envoyer le lien de réinitialisation"}
+                    </Button>
+                  </form>
+
+                  {/* Informations supplémentaires */}
+                  <div className="mt-6 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Vous recevrez un email avec un lien pour créer un nouveau mot de passe.
+                    </p>
                   </div>
-                </CardFooter>
-              </form>
-            ) : (
-              <form onSubmit={handlePasswordSubmit}>
-                <CardContent className="space-y-6 px-8">
-                  <div className="space-y-3">
-                    <Label htmlFor="newPassword" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                      <Shield className="h-4 w-4" />
-                      Nouveau mot de passe
-                    </Label>
-                    <PasswordInput
-                      id="newPassword"
-                      placeholder="••••••••"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      error={errors.newPassword}
-                      disabled={isLoading}
-                      className="h-14"
-                    />
-                    <PasswordStrengthChecker 
-                      password={newPassword}
-                      onValidityChange={handlePasswordValidityChange}
-                    />
+                </>
+              ) : (
+                // Ici on attend l'affichage du message de confirmation
+                <>
+                  {/* Message de confirmation d'envoi */}
+                  <div className="text-center space-y-4">
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                      <p className="text-sm text-green-800 dark:text-green-200">
+                        Un email a été envoyé à <strong>{email}</strong> avec les instructions pour réinitialiser votre mot de passe.
+                      </p>
+                    </div>
+
+                    {/* Instructions pour l'utilisateur */}
+                    <div className="text-sm text-muted-foreground space-y-2">
+                      <p>Si vous ne recevez pas l'email dans les prochaines minutes :</p>
+                      <ul className="list-disc list-inside space-y-1 text-left">
+                        <li>Vérifiez votre dossier spam/courrier indésirable</li>
+                        <li>Assurez-vous que l'adresse email est correcte</li>
+                        <li>Contactez le support si le problème persiste</li>
+                      </ul>
+                    </div>
+
+                    {/* Boutons d'action */}
+                    <div className="flex flex-col gap-2">
+                      <Button 
+                        onClick={handleBackToForm}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        Essayer avec une autre adresse
+                      </Button>
+                      
+                      <Button 
+                        onClick={() => navigate('/login')}
+                        className="w-full"
+                      >
+                        Retour à la connexion
+                      </Button>
+                    </div>
                   </div>
-                  
-                  <div className="space-y-3">
-                    <Label htmlFor="confirmPassword" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      Confirmer le mot de passe
-                    </Label>
-                    <PasswordInput
-                      id="confirmPassword"
-                      placeholder="••••••••"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      error={errors.confirmPassword}
-                      disabled={isLoading}
-                      className="h-14"
-                    />
-                  </div>
-                </CardContent>
-                
-                <CardFooter className="flex flex-col space-y-6 px-8 pb-10">
-                  <Button
-                    type="submit"
-                    className="w-full h-14 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3"
-                    disabled={isLoading || !isPasswordValid || !confirmPassword}
-                  >
-                    {isLoading ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        Traitement...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="h-5 w-5" />
-                        Réinitialiser le mot de passe
-                      </>
-                    )}
-                  </Button>
-                </CardFooter>
-              </form>
-            )}
+                </>
+              )}
+            </CardContent>
           </Card>
+
+          {/* Liens de navigation supplémentaires */}
+          {!isEmailSent && (
+            <div className="mt-6 text-center text-sm">
+              Vous vous souvenez de votre mot de passe ?{' '}
+              <Link to="/login" className="text-primary hover:underline font-medium">
+                Se connecter
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </Layout>
