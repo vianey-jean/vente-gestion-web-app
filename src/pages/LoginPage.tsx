@@ -131,19 +131,30 @@ const LoginPage = () => {
     setErrors({ email: '', password: '', general: '' });
 
     try {
-      // Tentative de connexion
-      await login(formData.email, formData.password);
-      
-      // Ici on a ajouté la notification de succès
-      toast({
-        title: "Connexion réussie",
-        description: "Bienvenue dans votre espace de gestion !",
-        duration: 3000,
+      // Tentative de connexion avec les credentials
+      const success = await login({
+        email: formData.email,
+        password: formData.password
       });
+      
+      if (success) {
+        // Ici on a ajouté la notification de succès
+        toast({
+          title: "Connexion réussie",
+          description: "Bienvenue dans votre espace de gestion !",
+          duration: 3000,
+        });
 
-      // Redirection vers la page d'origine ou accueil
-      const from = location.state?.from?.pathname || '/home';
-      navigate(from, { replace: true });
+        // Redirection vers la page d'origine ou accueil
+        const from = location.state?.from?.pathname || '/home';
+        navigate(from, { replace: true });
+      } else {
+        // Ici on a ajouté la gestion des erreurs de connexion
+        setErrors(prev => ({
+          ...prev,
+          general: 'Email ou mot de passe incorrect'
+        }));
+      }
       
     } catch (error) {
       // Ici on a ajouté la gestion des erreurs
