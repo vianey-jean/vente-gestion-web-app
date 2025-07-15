@@ -148,19 +148,8 @@ const RegisterPage: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Préparation des données pour l'inscription
-      const registrationData = {
-        email: formData.email,
-        password: formData.password,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        gender: formData.gender,
-        address: formData.address,
-        phone: formData.phone,
-      };
-
-      // Ici on attend l'appel à l'API d'inscription
-      await register(registrationData);
+      // Ici on a corrigé les données pour l'inscription (ajout des champs manquants)
+      await register(formData);
 
       // Ici on a ajouté la notification de succès
       toast({
@@ -419,7 +408,7 @@ const RegisterPage: React.FC = () => {
                   </Label>
                 </div>
                 {errors.acceptTerms && (
-                  <p className="text-sm text-destructive">{errors.acceptTerms as string}</p>
+                  <p className="text-sm text-destructive">{String(errors.acceptTerms)}</p>
                 )}
 
                 {/* Bouton de soumission */}
