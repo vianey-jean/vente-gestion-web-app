@@ -201,7 +201,7 @@ const Dashboard = () => {
       <Layout requireAuth>
         <PremiumLoading 
           variant="dashboard" 
-          message="Chargement du tableau de bord..." 
+          text="Chargement du tableau de bord..."
         />
       </Layout>
     );
@@ -522,7 +522,10 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   {/* Ici on attend l'intégration du tableau des ventes */}
-                  <SalesTable />
+                  <SalesTable 
+                    sales={allSales}
+                    onRowClick={(sale) => console.log('Sale clicked:', sale)}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>

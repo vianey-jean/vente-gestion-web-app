@@ -174,7 +174,7 @@ const Home = () => {
       <Layout requireAuth>
         <PremiumLoading 
           variant="dashboard" 
-          message="Chargement du tableau de bord..." 
+          text="Chargement du tableau de bord..."
         />
       </Layout>
     );
