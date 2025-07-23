@@ -7,10 +7,11 @@ import PretProduits from '@/components/dashboard/PretProduits';
 import DepenseDuMois from '@/components/dashboard/DepenseDuMois';
 import Inventaire from '@/components/dashboard/Inventaire';
 import ProfitCalculator from '@/components/dashboard/ProfitCalculator';
+import ProductsList from '@/components/dashboard/ProductsList';
 import Layout from '@/components/Layout';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ShoppingCart, Users, Package, CreditCard, TrendingUp, Sparkles, Archive, Calculator } from 'lucide-react';
+import { ShoppingCart, Users, Package, CreditCard, TrendingUp, Sparkles, Archive, Calculator, List } from 'lucide-react';
 
 const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState('ventes');
@@ -46,7 +47,7 @@ const DashboardPage = () => {
               
               <TabsList className={cn(
                 "relative grid w-full h-auto p-2 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm rounded-2xl border border-white/20",
-                isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-6 gap-2'
+                isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-7 gap-2'
               )}>
                 <TabsTrigger 
                   value="ventes" 
@@ -124,6 +125,19 @@ const DashboardPage = () => {
                 >
                   <Calculator className="h-5 w-5" />
                   <span className={isMobile ? "text-xs" : "text-sm"}>Calcul Bénéfice</span>
+                </TabsTrigger>
+                
+                <TabsTrigger 
+                  value="products-list" 
+                  className={cn(
+                    "font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-red-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105",
+                    activeTab === "products-list" 
+                      ? "text-white bg-gradient-to-r from-orange-600 to-red-600 shadow-lg scale-105" 
+                      : "text-gray-600 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-gray-700/70 hover:scale-102"
+                  )}
+                >
+                  <List className="h-5 w-5" />
+                  <span className={isMobile ? "text-xs" : "text-sm"}>Liste Produits</span>
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -211,6 +225,19 @@ const DashboardPage = () => {
                     </div>
                   </div>
                   <ProfitCalculator />
+                </TabsContent>
+                
+                <TabsContent value="products-list" className="mt-0 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 bg-gradient-to-r from-orange-600 to-red-600 rounded-xl flex items-center justify-center">
+                      <List className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Liste des Produits</h2>
+                      <p className="text-gray-600 dark:text-gray-300">Gestion complète de tous vos produits</p>
+                    </div>
+                  </div>
+                  <ProductsList />
                 </TabsContent>
               </div>
             </div>
