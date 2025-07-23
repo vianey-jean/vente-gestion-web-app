@@ -1,248 +1,151 @@
 
-/**
- * PAGE À PROPOS
- * =============
- * 
- * Cette page présente l'application de gestion de vente et ses fonctionnalités.
- * Elle fournit une interface informative avec des sections détaillées sur :
- * - Les fonctionnalités principales
- * - L'équipe de développement
- * - Les technologies utilisées
- * - Les statistiques de l'application
- * 
- * Design :
- * - Interface moderne avec animations
- * - Sections organisées en cartes
- * - Responsive design
- * - Thème sombre/clair
- */
-
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { 
-  BarChart3, 
-  ShoppingCart, 
-  TrendingUp, 
-  Users, 
-  Zap, 
-  Shield, 
-  Smartphone, 
-  Globe,
-  Code,
-  Database,
-  Paintbrush,
-  Rocket
-} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Heart, Shield, Users, Zap, Award, Target } from 'lucide-react';
 
 const AboutPage = () => {
-  // Ici on attend la définition des données de fonctionnalités
-  const features = [
-    {
-      icon: ShoppingCart,
-      title: "Gestion des Ventes",
-      description: "Suivez et gérez toutes vos transactions commerciales en temps réel"
-    },
-    {
-      icon: BarChart3,
-      title: "Analyses Avancées",
-      description: "Obtenez des insights détaillés sur vos performances commerciales"
-    },
-    {
-      icon: TrendingUp,
-      title: "Suivi des Tendances",
-      description: "Analysez les tendances de marché et adaptez votre stratégie"
-    },
-    {
-      icon: Users,
-      title: "Gestion Client",
-      description: "Maintenez des relations durables avec votre clientèle"
-    }
-  ];
-
-  // Ici on attend la définition des technologies utilisées
-  const technologies = [
-    { name: "React", category: "Frontend", color: "bg-blue-500" },
-    { name: "TypeScript", category: "Language", color: "bg-blue-600" },
-    { name: "Tailwind CSS", category: "Styling", color: "bg-cyan-500" },
-    { name: "Node.js", category: "Backend", color: "bg-green-500" },
-    { name: "Express", category: "Framework", color: "bg-gray-600" },
-    { name: "JSON Database", category: "Database", color: "bg-yellow-500" }
-  ];
-
-  // Ici on attend la définition des statistiques
-  const stats = [
-    { label: "Utilisateurs Actifs", value: "1,234", icon: Users },
-    { label: "Ventes Traitées", value: "5,678", icon: ShoppingCart },
-    { label: "Revenus Générés", value: "€89,012", icon: TrendingUp },
-    { label: "Uptime", value: "99.9%", icon: Zap }
-  ];
-
-  // Ici on attend le rendu du composant
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-slate-800">
-      <div className="container mx-auto px-4 py-8">
-        
-        {/* Ici on attend la section d'en-tête */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-            À Propos de Gestion Vente
-          </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-            Une solution complète pour la gestion de vos activités commerciales, 
-            conçue pour optimiser vos performances et simplifier vos processus.
-          </p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 mt-[80px]">
+  {/* Ton contenu */}
 
-        {/* Ici on attend la section des fonctionnalités */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {features.map((feature, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow duration-300">
-              <CardHeader className="text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg mb-4 mx-auto">
-                  <feature.icon className="h-6 w-6 text-white" />
-                </div>
-                <CardTitle className="text-lg">{feature.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-center">
-                  {feature.description}
-                </CardDescription>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
 
-        <Separator className="my-12" />
+      {/* Éléments décoratifs */}
+      <div className="absolute inset-0 overflow-hidden -z-10">
+        <div className="absolute top-10 left-10 w-64 h-64 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse"></div>
+        <div className="absolute top-32 right-10 w-64 h-64 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse delay-1000"></div>
+        <div className="absolute bottom-10 left-1/2 w-64 h-64 bg-pink-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse delay-2000"></div>
+      </div>
 
-        {/* Ici on attend la section des statistiques */}
-        <div className="mb-12">
-          <h2 className="text-3xl font-bold text-center mb-8">Nos Performances</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {stats.map((stat, index) => (
-              <Card key={index} className="text-center">
-                <CardContent className="p-6">
-                  <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-full mb-4">
-                    <stat.icon className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                    {stat.value}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {stat.label}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        <Separator className="my-12" />
-
-        {/* Ici on attend la section des technologies */}
-        <div className="mb-12">
-          <h2 className="text-3xl font-bold text-center mb-8">Technologies Utilisées</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {technologies.map((tech, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow duration-300">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className={`w-4 h-4 rounded-full ${tech.color}`}></div>
-                    <div>
-                      <h3 className="font-semibold text-lg">{tech.name}</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{tech.category}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        <Separator className="my-12" />
-
-        {/* Ici on attend la section des valeurs */}
-        <div className="mb-12">
-          <h2 className="text-3xl font-bold text-center mb-8">Nos Valeurs</h2>
-          <div className="grid md:grid-cols-3 gap-8">
+      <div className="container mx-auto px-4 py-12 relative">
+        <div className="max-w-5xl mx-auto">
+          {/* En-tête héro */}
+          <div className="text-center mb-16 animate-fade-in">
+            <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-full text-sm font-medium text-blue-800 mb-6 shadow-lg">
+              <Heart className="w-4 h-4 mr-2" />
+              Notre Histoire
+            </div>
             
-            {/* Valeur 1: Simplicité */}
-            <Card className="text-center">
-              <CardHeader>
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full mb-4 mx-auto">
-                  <Zap className="h-8 w-8 text-white" />
+            <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              À propos de Riziky-Agendas
+            </h1>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              Découvrez l'histoire, la mission et les valeurs qui nous animent dans notre quête d'excellence
+            </p>
+          </div>
+
+          <div className="grid gap-8 md:gap-12">
+            {/* Carte Mission */}
+            <Card className="overflow-hidden bg-white/70 backdrop-blur-sm border-0 shadow-2xl hover:shadow-3xl transition-all duration-500 hover:-translate-y-2">
+              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white pb-8">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                    <Target className="w-6 h-6" />
+                  </div>
+                  <CardTitle className="text-2xl">Notre Mission</CardTitle>
                 </div>
-                <CardTitle>Simplicité</CardTitle>
               </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Nous croyons que les outils de gestion doivent être intuitifs et faciles à utiliser, 
-                  permettant à chacun de se concentrer sur son métier.
-                </CardDescription>
+              <CardContent className="p-8">
+                <div className="space-y-6">
+                  <p className="text-gray-700 text-lg leading-relaxed">
+                    Chez Riziky-Agendas, notre mission est de <span className="font-semibold text-blue-600">révolutionner la gestion des rendez-vous</span> pour les professionnels et les particuliers. Nous croyons qu'une organisation optimale est la clé d'une vie professionnelle et personnelle épanouie.
+                  </p>
+                  <p className="text-gray-700 text-lg leading-relaxed">
+                    Notre application a été pensée pour être <span className="font-semibold text-indigo-600">intuitive, performante et adaptable</span> aux besoins de chacun. Que vous soyez professionnel de santé, entrepreneur, ou simplement quelqu'un qui souhaite optimiser son temps, Riziky-Agendas transforme votre quotidien.
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
-            {/* Valeur 2: Sécurité */}
-            <Card className="text-center">
-              <CardHeader>
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full mb-4 mx-auto">
-                  <Shield className="h-8 w-8 text-white" />
-                </div>
-                <CardTitle>Sécurité</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  La protection de vos données est notre priorité absolue. 
-                  Nous utilisons les dernières technologies de sécurité.
-                </CardDescription>
-              </CardContent>
-            </Card>
+            {/* Grid des fonctionnalités */}
+            <div className="grid md:grid-cols-2 gap-8">
+              <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                      <Zap className="w-5 h-5 text-white" />
+                    </div>
+                    <CardTitle className="text-xl text-green-800">Fonctionnalités Avancées</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3">
+                    {[
+                      "Interface moderne et intuitive",
+                      "Vue hebdomadaire optimisée",
+                      "Recherche intelligente instantanée", 
+                      "Notifications et rappels (Beta)",
+                      "Partage collaboratif (à venir)",
+                      "Application mobile (à venir)"
+                    ].map((feature, index) => (
+                      <li key={index} className="flex items-center gap-3 text-gray-700">
+                        <div className="w-2 h-2 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full"></div>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
 
-            {/* Valeur 3: Innovation */}
-            <Card className="text-center">
+              <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-violet-600 rounded-lg flex items-center justify-center">
+                      <Shield className="w-5 h-5 text-white" />
+                    </div>
+                    <CardTitle className="text-xl text-purple-800">Sécurité & Confidentialité</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-gray-700 leading-relaxed">
+                    La <span className="font-semibold text-purple-600">protection de vos données</span> est notre priorité absolue. Toutes vos informations sont sécurisées et ne sont jamais partagées sans votre consentement explicite.
+                  </p>
+                  <p className="text-gray-700 leading-relaxed">
+                    Nous utilisons les <span className="font-semibold text-violet-600">dernières technologies de cryptage</span> pour garantir la sécurité de vos données personnelles et professionnelles.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Carte équipe/valeurs */}
+            <Card className="bg-gradient-to-r from-orange-50 via-red-50 to-pink-50 border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
               <CardHeader>
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full mb-4 mx-auto">
-                  <Rocket className="h-8 w-8 text-white" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                    <Award className="w-5 h-5 text-white" />
+                  </div>
+                  <CardTitle className="text-xl text-red-800">Nos Valeurs</CardTitle>
                 </div>
-                <CardTitle>Innovation</CardTitle>
               </CardHeader>
               <CardContent>
-                <CardDescription>
-                  Nous évoluons constamment pour répondre aux besoins changeants 
-                  du marché et de nos utilisateurs.
-                </CardDescription>
+                <div className="grid sm:grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Users className="w-6 h-6 text-white" />
+                    </div>
+                    <h4 className="font-semibold text-gray-800 mb-2">Simplicité</h4>
+                    <p className="text-sm text-gray-600">Une expérience utilisateur fluide et intuitive</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Shield className="w-6 h-6 text-white" />
+                    </div>
+                    <h4 className="font-semibold text-gray-800 mb-2">Fiabilité</h4>
+                    <p className="text-sm text-gray-600">Une plateforme stable et sécurisée</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-gradient-to-r from-purple-400 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Zap className="w-6 h-6 text-white" />
+                    </div>
+                    <h4 className="font-semibold text-gray-800 mb-2">Innovation</h4>
+                    <p className="text-sm text-gray-600">Toujours à la pointe de la technologie</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
-        </div>
-
-        {/* Ici on attend la section de contact */}
-        <div className="text-center">
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle className="text-2xl">Prêt à Commencer ?</CardTitle>
-              <CardDescription>
-                Rejoignez les milliers d'entreprises qui font confiance à notre solution
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap justify-center gap-2 mb-6">
-                <Badge variant="secondary">Gratuit</Badge>
-                <Badge variant="secondary">Facile à utiliser</Badge>
-                <Badge variant="secondary">Support 24/7</Badge>
-                <Badge variant="secondary">Sécurisé</Badge>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Commencez dès aujourd'hui et découvrez comment notre solution peut transformer votre entreprise.
-              </p>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
   );
 };
 
-// Ici on a ajouté l'export par défaut du composant
 export default AboutPage;

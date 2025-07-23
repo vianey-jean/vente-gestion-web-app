@@ -1,402 +1,832 @@
+# RIZIKY-AGENDAS - DOCUMENTATION DU CODE
 
-# DOCUMENTATION DU CODE
+## 1. STRUCTURE DU PROJET
 
-## Table des matières
-1. [Structure du projet](#structure-du-projet)
-2. [Frontend React](#frontend-react)
-3. [Backend Node.js](#backend-nodejs)
-4. [Base de données](#base-de-données)
-5. [API Documentation](#api-documentation)
-6. [Hooks personnalisés](#hooks-personnalisés)
-7. [Services](#services)
-8. [Composants UI](#composants-ui)
-
-## Structure du projet
-
-### Arborescence générale
+### 1.1 Structure Frontend (src/)
 ```
-projet/
-├── src/                    # Code source frontend
-├── server/                 # Code source backend
-├── docs/                   # Documentation
-└── public/                 # Assets statiques
+src/
+├── components/           # Composants React réutilisables
+│   ├── ui/              # Composants UI de base (shadcn/ui)
+│   ├── ActionButtons.tsx # Boutons d'action principaux
+│   ├── AppointmentDetails.tsx # Affichage détaillé des RDV
+│   ├── AppointmentForm.tsx    # Formulaire de création/édition
+│   ├── AppointmentModal.tsx   # Modal de confirmation
+│   ├── AppointmentSelector.tsx # Sélecteur de RDV
+│   ├── AutoLogout.tsx         # Déconnexion automatique
+│   ├── CalendarAppointment.tsx # RDV dans le calendrier
+│   ├── CalendarDay.tsx        # Jour du calendrier
+│   ├── CalendarDayHeader.tsx  # En-tête jour
+│   ├── CalendarHeader.tsx     # En-tête calendrier
+│   ├── DashboardCalendar.tsx  # Calendrier principal
+│   ├── Footer.tsx             # Pied de page
+│   ├── Navbar.tsx             # Navigation
+│   ├── PasswordStrengthIndicator.tsx # Indicateur force MDP
+│   ├── SearchAppointmentForm.tsx     # Formulaire recherche
+│   └── Weekcalendar.tsx       # Vue calendrier hebdomadaire
+├── hooks/               # Hooks personnalisés
+├── lib/                 # Utilitaires et helpers
+├── pages/               # Pages de l'application
+├── services/            # Couche de services (API calls)
+└── main.tsx            # Point d'entrée React
 ```
 
-## Frontend React
+### 1.2 Structure Backend (server/)
+```
+server/
+├── data/               # Stockage JSON (mock database)
+│   ├── appointments.json # Données des rendez-vous
+│   └── users.json       # Données des utilisateurs
+├── middlewares/        # Middlewares Express
+│   ├── authMiddleware.js # Vérification authentification
+│   └── uploadMiddleware.js # Gestion uploads (future)
+├── models/             # Modèles de données
+│   ├── Appointment.js  # Modèle rendez-vous
+│   ├── Contact.js      # Modèle contact
+│   └── User.js         # Modèle utilisateur
+├── routes/             # Routes Express
+│   ├── appointements.js # Routes rendez-vous
+│   ├── contact.js      # Routes contact
+│   └── users.js        # Routes utilisateurs
+├── uploads/            # Dossier fichiers uploadés
+└── server.js           # Point d'entrée serveur
+```
 
-### Contextes (Context API)
+## 2. COMPOSANTS FRONTEND DÉTAILLÉS
 
-#### AuthContext
+### 2.1 App.tsx - Composant racine
 ```typescript
-// src/contexts/AuthContext.tsx
-interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  login: (credentials: LoginCredentials) => Promise<boolean>;
-  logout: () => void;
-  register: (data: RegistrationData) => Promise<boolean>;
+// Point d'entrée principal de l'application
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <BrowserRouter>
+        {/* Système de notifications */}
+        <Toaster />
+        <Sonner />
+        
+        <div className="min-h-screen flex flex-col">
+          <Navbar />
+          <main className="flex-1">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/a-propos" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/connexion" element={<LoginPage />} />
+              <Route path="/inscription" element={<RegisterPage />} />
+              <Route path="/mot-de-passe-oublie" element={<ForgotPasswordPage />} />
+              <Route path="/tableau-de-bord" element={<DashboardPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </main>
+          <Footer />
+        </div>
+        
+        {/* Déconnexion automatique */}
+        <AutoLogout />
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
+```
+
+**Responsabilités :**
+- Configuration globale (React Query, Router, Tooltips)
+- Layout principal avec navigation et footer
+- Système de notifications global
+- Gestion de la déconnexion automatique
+
+### 2.2 AuthService.ts - Service d'authentification
+```typescript
+export interface User {
+  id: number;
+  nom: string;
+  prenom: string;
+  email: string;
+  password: string;
+  genre: string;
+  adresse: string;
+  phone: string;
 }
-```
 
-**Fonctionnalités:**
-- Gestion de l'état d'authentification
-- Persistance du token JWT
-- Fonctions de connexion/déconnexion
-- Gestion des erreurs d'authentification
+// Variable globale pour l'utilisateur connecté
+let loggedInUser: User | null = null;
 
-#### AppContext
-```typescript
-// src/contexts/AppContext.tsx
-interface AppContextType {
-  products: Product[];
-  sales: Sale[];
-  addProduct: (product: Product) => Promise<Product | null>;
-  updateProduct: (product: Product) => Promise<Product | null>;
-  addSale: (sale: Sale) => Promise<Sale | null>;
-  refreshData: () => Promise<void>;
-}
-```
+export const AuthService = {
+  // Connexion utilisateur
+  login: async (email: string, password: string): Promise<boolean> => {
+    try {
+      const response = await api.post('/users/login', { email, password });
+      if (response.data.user) {
+        loggedInUser = response.data.user;
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        toast.success(`Bienvenue ${response.data.user.genre === 'homme' ? 'M.' : 'Mme'} ${response.data.user.nom}`);
+        return true;
+      }
+      return false;
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Email ou mot de passe erroné");
+      return false;
+    }
+  },
 
-**Fonctionnalités:**
-- État global de l'application
-- Gestion des produits et ventes
-- Synchronisation automatique des données
-- Mise à jour temps réel
+  // Inscription utilisateur
+  register: async (user: Omit<User, 'id'>): Promise<boolean> => {
+    // Validation et envoi des données
+  },
 
-### Pages principales
+  // Récupération utilisateur actuel
+  getCurrentUser: (): User | null => {
+    if (loggedInUser) return loggedInUser;
+    
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      loggedInUser = JSON.parse(storedUser);
+      return loggedInUser;
+    }
+    
+    return null;
+  },
 
-#### DashboardPage
-- **Fichier**: `src/pages/DashboardPage.tsx`
-- **Description**: Page principale du tableau de bord
-- **Composants intégrés**:
-  - `Inventaire`: Gestion des produits
-  - `VentesProduits`: Enregistrement des ventes
-  - `ProfitCalculator`: Calculateur de bénéfices
-  - `PretFamilles`: Gestion des prêts familiaux
-  - `DepenseDuMois`: Suivi des dépenses
-
-#### TendancesPage
-- **Fichier**: `src/pages/TendancesPage.tsx`
-- **Description**: Analyse des tendances et statistiques
-- **Fonctionnalités**:
-  - Graphiques de ventes
-  - Évolution des bénéfices
-  - Comparaisons mensuelles
-
-### Composants dashboard
-
-#### Inventaire
-```typescript
-// src/components/dashboard/Inventaire.tsx
-const Inventaire: React.FC = () => {
-  const { products, addProduct, updateProduct } = useApp();
-  // Logique de gestion des produits
+  // Déconnexion
+  logout: (): void => {
+    loggedInUser = null;
+    localStorage.removeItem('user');
+    toast.info("Vous êtes déconnecté");
+  }
 };
 ```
 
-**Fonctionnalités:**
-- Affichage des produits en tableau
-- Formulaire d'ajout/modification
-- Recherche et filtrage
-- Upload d'images
+**Fonctionnalités clés :**
+- Persistance avec localStorage
+- Gestion centralisée de l'état de connexion
+- Messages personnalisés selon le genre
+- Validation et gestion d'erreurs
 
-#### VentesProduits
+### 2.3 AppointmentService.ts - Service des rendez-vous
 ```typescript
-// src/components/dashboard/VentesProduits.tsx
-const VentesProduits: React.FC = () => {
-  const { sales, addSale } = useApp();
-  // Logique de gestion des ventes
+export interface Appointment {
+  id: number;
+  userId: number;
+  titre: string;
+  description: string;
+  date: string; // Format YYYY-MM-DD
+  heure: string; // Format HH:MM
+  duree: number; // Minutes
+  location: string;
+}
+
+export const AppointmentService = {
+  // Récupération de tous les rendez-vous
+  getAll: async (): Promise<Appointment[]> => {
+    const currentUser = AuthService.getCurrentUser();
+    if (!currentUser) return [];
+
+    const response = await api.get('/appointments', {
+      headers: { 'user-id': currentUser.id.toString() }
+    });
+
+    return response.data.appointments || [];
+  },
+
+  // Recherche avec minimum 3 caractères
+  search: async (query: string): Promise<Appointment[]> => {
+    if (query.length < 3) return [];
+    
+    const currentUser = AuthService.getCurrentUser();
+    if (!currentUser) return [];
+
+    const response = await api.get(`/appointments/search/${query}`, {
+      headers: { 'user-id': currentUser.id.toString() }
+    });
+
+    return response.data.appointments || [];
+  },
+
+  // Création avec notifications
+  add: async (appointment: Omit<Appointment, 'id'>): Promise<Appointment | null> => {
+    const currentUser = AuthService.getCurrentUser();
+    if (!currentUser) {
+      toast.error('Vous devez être connecté pour ajouter un rendez-vous');
+      return null;
+    }
+
+    const response = await api.post('/appointments', appointment, {
+      headers: { 'user-id': currentUser.id.toString() }
+    });
+
+    toast.success('Rendez-vous ajouté avec succès');
+    return response.data.appointment;
+  },
+
+  // Helpers pour le calendrier
+  getWeekDays: () => {
+    const today = new Date();
+    const monday = startOfWeek(today, { weekStartsOn: 1 });
+
+    return Array(7).fill(null).map((_, index) => {
+      const date = addDays(monday, index);
+      return {
+        fullDate: date,
+        dayName: format(date, 'EEEE'),
+        dayNumber: format(date, 'd'),
+        month: format(date, 'MMMM'),
+        isToday: format(date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
+      };
+    });
+  },
+
+  getHours: () => Array(14).fill(null).map((_, index) => `${index + 7}:00`)
 };
 ```
 
-**Fonctionnalités:**
-- Enregistrement des ventes
-- Sélection de produits
-- Calcul automatique des bénéfices
-- Gestion des quantités
+**Fonctionnalités principales :**
+- CRUD complet avec authentification
+- Recherche intelligente avec seuil
+- Helpers pour vue calendrier
+- Gestion d'erreurs et notifications
 
-### Hooks personnalisés
-
-#### useAutoLogout
+### 2.4 AppointmentForm.tsx - Formulaire principal
 ```typescript
-// src/hooks/use-auto-logout.tsx
-export function useAutoLogout() {
-  const { logout, isAuthenticated } = useAuth();
-  const timeoutRef = useRef<number | null>(null);
-  
-  const resetTimer = () => {
-    // Réinitialise le timer d'inactivité
+// Schema de validation Zod
+const appointmentSchema = z.object({
+  titre: z.string().min(1, "Le titre est obligatoire").max(100, "Titre trop long"),
+  description: z.string().min(1, "La description est obligatoire"),
+  date: z.string().min(1, "La date est obligatoire"),
+  heure: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format d'heure invalide"),
+  duree: z.number().min(15, "Durée minimum 15 minutes").max(480, "Durée maximum 8 heures"),
+  location: z.string().min(1, "Le lieu est obligatoire")
+});
+
+const AppointmentForm = ({ appointment, onClose, onSuccess }: Props) => {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setValue,
+    watch
+  } = useForm<AppointmentFormData>({
+    resolver: zodResolver(appointmentSchema),
+    defaultValues: appointment ? {
+      titre: appointment.titre,
+      description: appointment.description,
+      date: appointment.date,
+      heure: appointment.heure,
+      duree: appointment.duree,
+      location: appointment.location
+    } : {
+      duree: 60 // Valeur par défaut
+    }
+  });
+
+  const onSubmit = async (data: AppointmentFormData) => {
+    try {
+      if (appointment) {
+        // Mode édition
+        const success = await AppointmentService.update({ ...appointment, ...data });
+        if (success) {
+          onSuccess?.();
+          onClose();
+        }
+      } else {
+        // Mode création
+        const newAppointment = await AppointmentService.add(data);
+        if (newAppointment) {
+          onSuccess?.();
+          onClose();
+        }
+      }
+    } catch (error) {
+      toast.error("Erreur lors de la sauvegarde");
+    }
   };
-}
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* Champ titre */}
+      <div className="space-y-2">
+        <Label htmlFor="titre">Titre du rendez-vous</Label>
+        <Input
+          {...register("titre")}
+          placeholder="Ex: Réunion équipe, Consultation médecin..."
+          className="w-full"
+        />
+        {errors.titre && (
+          <p className="text-destructive text-sm">{errors.titre.message}</p>
+        )}
+      </div>
+
+      {/* Sélecteur de date avec calendrier */}
+      <div className="space-y-2">
+        <Label>Date du rendez-vous</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full justify-start text-left">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {watchedDate ? format(parseISO(watchedDate), 'PPP', { locale: fr }) : "Sélectionner une date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={watchedDate ? parseISO(watchedDate) : undefined}
+              onSelect={(date) => setValue("date", format(date!, 'yyyy-MM-dd'))}
+              disabled={(date) => date < new Date()}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+        {errors.date && (
+          <p className="text-destructive text-sm">{errors.date.message}</p>
+        )}
+      </div>
+
+      {/* Autres champs... */}
+    </form>
+  );
+};
 ```
 
-**Fonctionnalités:**
-- Déconnexion automatique après 10 minutes d'inactivité
-- Écoute des événements utilisateur
-- Nettoyage automatique des timers
+**Caractéristiques techniques :**
+- Validation avec Zod et React Hook Form
+- Calendrier interactif avec date-fns
+- Mode création/édition unifié
+- Interface accessible et responsive
 
-#### useRealtimeSync
+### 2.5 AutoLogout.tsx - Déconnexion automatique
 ```typescript
-// src/hooks/use-realtime-sync.ts
-export const useRealtimeSync = (options: RealtimeSyncOptions = {}) => {
-  const { refreshData } = useApp();
-  // Logique de synchronisation
+const TIMEOUT_DURATION = 5 * 60 * 1000; // 5 minutes
+
+const AutoLogout = () => {
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      
+      timeoutId = setTimeout(() => {
+        const user = AuthService.getCurrentUser();
+        if (user) {
+          AuthService.logout();
+          navigate('/connexion');
+          toast.info('Session expirée. Veuillez vous reconnecter.', {
+            duration: 5000,
+          });
+        }
+      }, TIMEOUT_DURATION);
+    };
+    
+    // Événements qui réinitialisent le timer
+    const events = ['mousedown', 'keydown', 'scroll', 'mousemove'];
+    events.forEach(event => document.addEventListener(event, resetTimer));
+    
+    resetTimer(); // Initialiser
+    
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach(event => document.removeEventListener(event, resetTimer));
+    };
+  }, [navigate]);
+  
+  return null; // Composant invisible
 };
 ```
 
-**Fonctionnalités:**
-- Synchronisation périodique des données
-- Détection de l'activité de l'onglet
-- Debouncing des appels
-- Gestion des erreurs
+**Fonctionnement :**
+- Timer de 5 minutes d'inactivité
+- Détection d'activité (souris, clavier, scroll)
+- Déconnexion automatique avec redirection
+- Nettoyage approprié des listeners
 
-## Backend Node.js
+## 3. BACKEND DÉTAILLÉ
 
-### Structure des routes
-
-#### Routes d'authentification
+### 3.1 server.js - Serveur principal
 ```javascript
-// server/routes/auth.js
-router.post('/login', (req, res) => {
-  // Logique de connexion
-});
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const dotenv = require('dotenv');
+const path = require('path');
+const fs = require('fs');
 
-router.post('/register', (req, res) => {
-  // Logique d'inscription
-});
-```
+dotenv.config();
 
-#### Routes produits
-```javascript
-// server/routes/products.js
-router.get('/', async (req, res) => {
-  // Récupération des produits
-});
+const app = express();
 
-router.post('/', authMiddleware, async (req, res) => {
-  // Création d'un produit
-});
-```
+// Middlewares globaux
+app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-### Modèles de données
-
-#### Product Model
-```javascript
-// server/models/Product.js
-class Product {
-  static getAll() {
-    // Récupère tous les produits
-  }
-  
-  static create(productData) {
-    // Crée un nouveau produit
-  }
-  
-  static update(id, productData) {
-    // Met à jour un produit
-  }
+// Servir les fichiers uploadés
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
 }
+app.use('/uploads', express.static(uploadsDir));
+
+// Routes
+const usersRoutes = require('./routes/users');
+const appointmentsRoutes = require('./routes/appointements');
+const contactRoutes = require('./routes/contact');
+
+app.use('/api/users', usersRoutes);
+app.use('/api/appointments', appointmentsRoutes);
+app.use('/api/contact', contactRoutes);
+
+// Route de santé
+app.get('/', (req, res) => {
+  res.json({ message: 'Bienvenue sur l\'API de Riziky-Agendas' });
+});
+
+// Gestion 404
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route non trouvée' });
+});
+
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log(`Serveur démarré sur le port ${PORT}`);
+});
 ```
 
-#### Sale Model
+### 3.2 models/Appointment.js - Modèle rendez-vous
 ```javascript
-// server/models/Sale.js
-class Sale {
-  static getByMonthYear(month, year) {
-    // Récupère les ventes par mois/année
-  }
-  
-  static create(saleData) {
-    // Crée une nouvelle vente
-    // Mise à jour automatique du stock
-  }
-}
-```
+const fs = require('fs');
+const path = require('path');
 
-### Middleware
+const dataPath = path.join(__dirname, '../data/appointments.json');
 
-#### Authentification
-```javascript
-// server/middleware/auth.js
-const authMiddleware = (req, res, next) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-  
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
+class Appointment {
+  // Sauvegarde des données dans le fichier JSON
+  static saveData(data) {
+    fs.writeFileSync(dataPath, JSON.stringify(data, null, 2));
   }
-  
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    res.status(401).json({ message: 'Invalid token' });
-  }
-};
-```
 
-#### Synchronisation
-```javascript
-// server/middleware/sync.js
-class SyncManager {
-  static clients = new Map();
-  
-  static addClient(clientId, sendEvent) {
-    this.clients.set(clientId, sendEvent);
+  // Chargement des données depuis le fichier
+  static loadData() {
+    try {
+      if (fs.existsSync(dataPath)) {
+        const data = fs.readFileSync(dataPath, 'utf8');
+        return JSON.parse(data);
+      }
+      return [];
+    } catch (error) {
+      console.error('Erreur lecture appointments:', error);
+      return [];
+    }
   }
-  
-  static notifyClients(event, data) {
-    this.clients.forEach(sendEvent => {
-      sendEvent(event, data);
+
+  // Créer un nouvel ID
+  static generateId() {
+    const appointments = this.loadData();
+    return appointments.length > 0 ? Math.max(...appointments.map(a => a.id)) + 1 : 1;
+  }
+
+  // Sauvegarder un rendez-vous
+  static save(appointmentData) {
+    try {
+      const appointments = this.loadData();
+      
+      // Vérifier les conflits d'horaire
+      const hasConflict = appointments.some(existing => 
+        existing.userId === appointmentData.userId &&
+        existing.date === appointmentData.date &&
+        existing.heure === appointmentData.heure &&
+        existing.id !== appointmentData.id
+      );
+
+      if (hasConflict) {
+        return { 
+          success: false, 
+          message: 'Un rendez-vous existe déjà à cette date et heure' 
+        };
+      }
+
+      const newAppointment = {
+        id: this.generateId(),
+        ...appointmentData,
+        createdAt: new Date().toISOString()
+      };
+
+      appointments.push(newAppointment);
+      this.saveData(appointments);
+
+      return { success: true, appointment: newAppointment };
+    } catch (error) {
+      return { success: false, message: 'Erreur lors de la sauvegarde' };
+    }
+  }
+
+  // Récupérer les rendez-vous d'un utilisateur
+  static getByUserId(userId) {
+    const appointments = this.loadData();
+    return appointments.filter(appointment => appointment.userId === parseInt(userId));
+  }
+
+  // Recherche textuelle
+  static search(query, userId) {
+    const appointments = this.getByUserId(userId);
+    const searchTerm = query.toLowerCase();
+
+    return appointments.filter(appointment =>
+      appointment.titre.toLowerCase().includes(searchTerm) ||
+      appointment.description.toLowerCase().includes(searchTerm) ||
+      appointment.location.toLowerCase().includes(searchTerm)
+    );
+  }
+
+  // Récupérer les rendez-vous d'une semaine
+  static getByWeek(startDate, endDate, userId) {
+    const appointments = this.getByUserId(userId);
+    
+    return appointments.filter(appointment => {
+      const appointmentDate = appointment.date;
+      return appointmentDate >= startDate && appointmentDate <= endDate;
     });
   }
+
+  // Mettre à jour un rendez-vous
+  static update(id, updateData) {
+    try {
+      const appointments = this.loadData();
+      const index = appointments.findIndex(a => a.id === parseInt(id));
+
+      if (index === -1) {
+        return { success: false, message: 'Rendez-vous non trouvé' };
+      }
+
+      // Vérifier les conflits (exclure le rendez-vous actuel)
+      const hasConflict = appointments.some(existing => 
+        existing.userId === updateData.userId &&
+        existing.date === (updateData.date || appointments[index].date) &&
+        existing.heure === (updateData.heure || appointments[index].heure) &&
+        existing.id !== parseInt(id)
+      );
+
+      if (hasConflict) {
+        return { 
+          success: false, 
+          message: 'Un rendez-vous existe déjà à cette date et heure' 
+        };
+      }
+
+      appointments[index] = {
+        ...appointments[index],
+        ...updateData,
+        updatedAt: new Date().toISOString()
+      };
+
+      this.saveData(appointments);
+      return { success: true, appointment: appointments[index] };
+    } catch (error) {
+      return { success: false, message: 'Erreur lors de la mise à jour' };
+    }
+  }
+
+  // Supprimer un rendez-vous
+  static delete(id) {
+    try {
+      const appointments = this.loadData();
+      const filteredAppointments = appointments.filter(a => a.id !== parseInt(id));
+
+      if (appointments.length === filteredAppointments.length) {
+        return { success: false, message: 'Rendez-vous non trouvé' };
+      }
+
+      this.saveData(filteredAppointments);
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: 'Erreur lors de la suppression' };
+    }
+  }
 }
+
+module.exports = Appointment;
 ```
 
-## Base de données
+**Fonctionnalités clés :**
+- CRUD complet avec persistance JSON
+- Vérification des conflits d'horaire
+- Recherche textuelle multi-critères
+- Filtrage par utilisateur et période
+- Gestion d'erreurs robuste
 
-### Fichiers JSON
-- `products.json`: Stockage des produits
-- `sales.json`: Stockage des ventes
-- `users.json`: Stockage des utilisateurs
-- `pretfamilles.json`: Prêts familiaux
-- `pretproduits.json`: Prêts produits
-- `depensedumois.json`: Dépenses mensuelles
+### 3.3 middlewares/authMiddleware.js - Authentification
+```javascript
+const User = require('../models/User');
 
-### Structure des données
+// Middleware pour vérifier l'authentification
+const isAuthenticated = (req, res, next) => {
+  const userId = req.headers['user-id'];
 
-#### Produit
-```json
-{
-  "id": "1",
-  "description": "Laptop",
-  "purchasePrice": 500,
-  "quantity": 10,
-  "imageUrl": "/uploads/laptop.jpg"
-}
+  if (!userId) {
+    return res.status(401).json({ error: 'Token d\'authentification requis' });
+  }
+
+  const user = User.getById(parseInt(userId));
+
+  if (!user) {
+    return res.status(401).json({ error: 'Utilisateur non trouvé ou session expirée' });
+  }
+
+  // Attacher l'utilisateur à la requête
+  req.user = user;
+  next();
+};
+
+module.exports = { isAuthenticated };
 ```
 
-#### Vente
-```json
-{
-  "id": "1",
-  "date": "2024-04-15",
-  "productId": "1",
-  "description": "Laptop",
-  "sellingPrice": 800,
-  "quantitySold": 1,
-  "purchasePrice": 500,
-  "profit": 300
-}
-```
+**Sécurité :**
+- Vérification systématique de l'utilisateur
+- Blocage des requêtes non authentifiées
+- Attachment de l'utilisateur au context de la requête
 
-## API Documentation
+## 4. SYSTÈME DE NOTIFICATIONS EMAIL
 
-### Endpoints Produits
+### 4.1 Configuration SMTP
+```javascript
+// Dans routes/appointements.js
+const sendAppointmentNotification = async (action, appointment, user) => {
+  try {
+    const transporter = nodemailer.createTransporter({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
 
-#### GET /api/products
-- **Description**: Récupère tous les produits
-- **Authentification**: Non requise
-- **Réponse**: Array de produits
+    let subject, html;
+    
+    switch (action) {
+      case 'create':
+        subject = `[Riziky-Agendas] Nouveau rendez-vous: ${appointment.titre}`;
+        html = `
+          <h2>Nouveau rendez-vous créé</h2>
+          <p>Bonjour ${user.prenom},</p>
+          <p>Votre rendez-vous <strong>${appointment.titre}</strong> a été créé avec succès.</p>
+          <div style="margin: 20px 0; padding: 15px; border-left: 4px solid #4CAF50; background-color: #f8f8f8;">
+            <p><strong>Date:</strong> ${appointment.date}</p>
+            <p><strong>Heure:</strong> ${appointment.heure}</p>
+            <p><strong>Durée:</strong> ${appointment.duree} minutes</p>
+            <p><strong>Lieu:</strong> ${appointment.location}</p>
+            <p><strong>Description:</strong> ${appointment.description}</p>
+          </div>
+          <p>L'équipe Riziky-Agendas</p>
+        `;
+        break;
+      // Autres cas...
+    }
 
-#### POST /api/products
-- **Description**: Crée un nouveau produit
-- **Authentification**: Requise
-- **Body**:
-```json
-{
-  "description": "string",
-  "purchasePrice": "number",
-  "quantity": "number"
-}
-```
+    await transporter.sendMail({
+      from: `"Riziky-Agendas" <${process.env.SMTP_USER}>`,
+      to: user.email,
+      subject,
+      html,
+    });
 
-### Endpoints Ventes
-
-#### GET /api/sales/by-month
-- **Description**: Récupère les ventes par mois
-- **Authentification**: Requise
-- **Paramètres**: `month`, `year`
-
-#### POST /api/sales
-- **Description**: Crée une nouvelle vente
-- **Authentification**: Requise
-- **Body**:
-```json
-{
-  "date": "string",
-  "productId": "string",
-  "sellingPrice": "number",
-  "quantitySold": "number"
-}
-```
-
-## Services
-
-### authService
-```typescript
-// src/service/api.ts
-export const authService = {
-  login: async (credentials: LoginCredentials) => {
-    // Logique de connexion
-  },
-  
-  register: async (data: RegistrationData) => {
-    // Logique d'inscription
+    return true;
+  } catch (error) {
+    console.error('Erreur envoi email:', error);
+    return false;
   }
 };
 ```
 
-### productService
+**Fonctionnalités :**
+- Templates HTML professionnels
+- Support multi-actions (création, modification, suppression)
+- Configuration flexible SMTP
+- Gestion d'erreurs avec logs
+
+## 5. UTILISATION DES HOOKS ET STATE MANAGEMENT
+
+### 5.1 React Query pour le cache
 ```typescript
-export const productService = {
-  getProducts: async () => {
-    // Récupération des produits
+// Utilisation typique dans un composant
+const {
+  data: appointments,
+  isLoading,
+  error,
+  refetch
+} = useQuery({
+  queryKey: ['appointments'],
+  queryFn: AppointmentService.getAll,
+  staleTime: 5 * 60 * 1000, // Cache 5 minutes
+  cacheTime: 10 * 60 * 1000, // Garde en mémoire 10 minutes
+});
+
+// Mutation pour création/modification
+const createMutation = useMutation({
+  mutationFn: AppointmentService.add,
+  onSuccess: () => {
+    queryClient.invalidateQueries(['appointments']);
+    toast.success('Rendez-vous créé !');
   },
-  
-  addProduct: async (product: Omit<Product, 'id'>) => {
-    // Ajout d'un produit
+  onError: (error) => {
+    toast.error('Erreur création');
   }
+});
+```
+
+### 5.2 State local avec useState
+```typescript
+// Gestion d'état des modales
+const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+const [activeAppointment, setActiveAppointment] = useState<Appointment | null>(null);
+
+// État de recherche
+const [searchQuery, setSearchQuery] = useState('');
+const [searchResults, setSearchResults] = useState<Appointment[]>([]);
+
+// Debounce pour la recherche
+useEffect(() => {
+  const timer = setTimeout(async () => {
+    if (searchQuery.length >= 3) {
+      const results = await AppointmentService.search(searchQuery);
+      setSearchResults(results);
+    } else {
+      setSearchResults([]);
+    }
+  }, 300);
+
+  return () => clearTimeout(timer);
+}, [searchQuery]);
+```
+
+## 6. PATTERNS DE DÉVELOPPEMENT UTILISÉS
+
+### 6.1 Composition de composants
+```typescript
+// Calendrier composé de sous-composants
+<div className="calendar-container">
+  <CalendarHeader onWeekChange={handleWeekChange} />
+  <CalendarDayHeader days={weekDays} />
+  <div className="calendar-grid">
+    {weekDays.map(day => (
+      <CalendarDay
+        key={day.fullDate.toISOString()}
+        day={day}
+        appointments={getDayAppointments(day)}
+        onAppointmentClick={handleAppointmentClick}
+      />
+    ))}
+  </div>
+</div>
+```
+
+### 6.2 Props drilling évité avec React Query
+```typescript
+// Pas besoin de passer les données en props
+// Chaque composant accède directement aux données mises en cache
+const AppointmentList = () => {
+  const { data: appointments } = useQuery(['appointments'], AppointmentService.getAll);
+  
+  return (
+    <div>
+      {appointments?.map(appointment => 
+        <AppointmentCard key={appointment.id} appointment={appointment} />
+      )}
+    </div>
+  );
 };
 ```
 
-## Composants UI
+### 6.3 Error Boundaries pattern (à implémenter)
+```typescript
+class AppointmentErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
-### Composants Shadcn/UI
-- **Button**: Boutons stylisés
-- **Card**: Cartes de contenu
-- **Dialog**: Modales
-- **Form**: Formulaires
-- **Table**: Tableaux de données
-- **Toast**: Notifications
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
 
-### Composants personnalisés
-- **StatCard**: Carte de statistiques
-- **ModernButton**: Bouton moderne avec animations
-- **RealtimeStatus**: Indicateur de statut temps réel
+  componentDidCatch(error, errorInfo) {
+    console.error('Appointment Error:', error, errorInfo);
+    // Envoyer vers service de monitoring
+  }
 
-## Tests et Validation
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-fallback">
+          <h2>Oops! Une erreur est survenue</h2>
+          <button onClick={() => this.setState({ hasError: false })}>
+            Réessayer
+          </button>
+        </div>
+      );
+    }
 
-### Validation des données
-- Validation côté client avec React Hook Form
-- Validation côté serveur pour tous les endpoints
-- Sanitisation des entrées utilisateur
-
-### Gestion d'erreurs
-- Composant ErrorBoundary pour les erreurs React
-- Middleware de gestion d'erreurs Express
-- Logging structuré des erreurs
-
-## Optimisations
-
-### Performance
-- Lazy loading des composants
-- Mémorisation avec React.memo
-- Debouncing des recherches
-- Pagination des données
-
-### Sécurité
-- Hashage des mots de passe avec bcrypt
-- Tokens JWT avec expiration
-- Validation stricte des données
-- Protection CORS configurée
+    return this.props.children;
+  }
+}
+```

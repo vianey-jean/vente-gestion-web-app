@@ -1,438 +1,444 @@
 
-/**
- * PAGE D'INSCRIPTION UTILISATEUR
- * =============================
- * 
- * Cette page permet aux nouveaux utilisateurs de créer un compte.
- * Elle gère la validation des données, l'affichage des erreurs,
- * et redirige vers la page de connexion après inscription réussie.
- * 
- * Fonctionnalités principales :
- * - Formulaire d'inscription avec validation
- * - Gestion des erreurs de validation
- * - Confirmation de mot de passe
- * - Acceptation des conditions d'utilisation
- * - Redirection automatique après inscription
- */
+import { useState, useEffect } from 'react';
+import { Navigate, Link, useNavigate } from 'react-router-dom';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Eye, EyeOff, User, Mail, MapPin, Phone, Shield, Sparkles, UserPlus } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AuthService } from '@/services/AuthService';
+import { toast } from 'sonner';
+import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
 
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from '@/components/ui/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { Eye, EyeOff, UserPlus, Mail, Lock, User, MapPin, Phone } from 'lucide-react';
-import Layout from '@/components/Layout';
-import type { RegistrationData } from '@/types';
+const formSchema = z.object({
+  nom: z.string().min(2, { message: "Le nom doit contenir au moins 2 caractères" }),
+  prenom: z.string().min(2, { message: "Le prénom doit contenir au moins 2 caractères" }),
+  email: z.string().email({ message: "Format d'email invalide" }),
+  password: z.string()
+    .min(8, { message: "Le mot de passe doit contenir au moins 8 caractères" })
+    .regex(/[A-Z]/, "Le mot de passe doit contenir au moins une majuscule")
+    .regex(/[a-z]/, "Le mot de passe doit contenir au moins une minuscule")
+    .regex(/[0-9]/, "Le mot de passe doit contenir au moins un chiffre")
+    .regex(/[!@#$%^&*(),.?":{}|<>]/, "Le mot de passe doit contenir au moins un caractère spécial"),
+  confirmPassword: z.string(),
+  genre: z.string(),
+  adresse: z.string().min(5, { message: "L'adresse doit contenir au moins 5 caractères" }),
+  phone: z.string().min(10, { message: "Le numéro de téléphone doit contenir au moins 10 caractères" }),
+  acceptTerms: z.boolean().refine(val => val === true, { message: "Vous devez accepter les conditions d'utilisation" })
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Les mots de passe ne correspondent pas",
+  path: ["confirmPassword"],
+});
 
-/**
- * Composant principal de la page d'inscription
- * Gère le formulaire d'inscription et la validation des données
- */
-const RegisterPage: React.FC = () => {
-  // Ici on attend l'initialisation des hooks et du state local
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { register } = useAuth();
+type FormValues = z.infer<typeof formSchema>;
 
-  // État local pour les données du formulaire
-  const [formData, setFormData] = useState<RegistrationData>({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    firstName: '',
-    lastName: '',
-    gender: 'male',
-    address: '',
-    phone: '',
-    acceptTerms: false,
-  });
-
-  // État pour la gestion de l'affichage des mots de passe
+const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
-  // État pour les erreurs de validation
-  const [errors, setErrors] = useState<Partial<RegistrationData>>({});
-  
-  // État pour le chargement du formulaire
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEmailChecking, setIsEmailChecking] = useState(false);
+  const [isEmailAvailable, setIsEmailAvailable] = useState(true);
+  const [isPasswordValid, setIsPasswordValid] = useState(false);
+  const currentUser = AuthService.getCurrentUser();
+  const navigate = useNavigate();
+  
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      nom: "",
+      prenom: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      genre: "homme",
+      adresse: "",
+      phone: "",
+      acceptTerms: false
+    },
+  });
 
-  /**
-   * Fonction de validation des données du formulaire
-   * Vérifie tous les champs requis et leurs formats
-   */
-  const validateForm = (): boolean => {
-    // Ici on attend la validation de tous les champs du formulaire
-    const newErrors: Partial<RegistrationData> = {};
+  // Email validation with debounce
+  useEffect(() => {
+    const email = form.watch('email');
+    let debounceTimer: NodeJS.Timeout;
 
-    // Validation de l'email
-    if (!formData.email) {
-      newErrors.email = 'L\'email est requis';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Format d\'email invalide';
+    const checkEmail = async () => {
+      if (!email || !email.includes('@')) return;
+
+      setIsEmailChecking(true);
+      try {
+        const emailExists = await AuthService.checkEmail(email);
+        setIsEmailAvailable(!emailExists);
+        if (emailExists) {
+          form.setError('email', {
+            type: 'manual',
+            message: 'Cet email est déjà utilisé'
+          });
+          toast.error('Cet email est déjà utilisé');
+        } else {
+          form.clearErrors('email');
+        }
+      } catch (error) {
+        console.error('Erreur lors de la vérification de l\'email:', error);
+      } finally {
+        setIsEmailChecking(false);
+      }
+    };
+
+    if (email) {
+      debounceTimer = setTimeout(checkEmail, 500);
     }
 
-    // Validation du mot de passe
-    if (!formData.password) {
-      newErrors.password = 'Le mot de passe est requis';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Le mot de passe doit contenir au moins 6 caractères';
-    }
-
-    // Validation de la confirmation du mot de passe
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'La confirmation du mot de passe est requise';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
-    }
-
-    // Validation des champs obligatoires
-    if (!formData.firstName) newErrors.firstName = 'Le prénom est requis';
-    if (!formData.lastName) newErrors.lastName = 'Le nom est requis';
-    if (!formData.address) newErrors.address = 'L\'adresse est requise';
-    if (!formData.phone) newErrors.phone = 'Le téléphone est requis';
-
-    // Validation de l'acceptation des conditions
-    if (!formData.acceptTerms) {
-      newErrors.acceptTerms = 'Vous devez accepter les conditions d\'utilisation' as any;
-    }
-
-    // Ici on a ajouté la mise à jour des erreurs
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return () => clearTimeout(debounceTimer);
+  }, [form.watch('email')]);
+  
+  // Gestionnaire pour vérifier la validité du mot de passe
+  const handlePasswordValidityChange = (isValid: boolean) => {
+    setIsPasswordValid(isValid);
   };
-
-  /**
-   * Gestionnaire de changement des champs du formulaire
-   * Met à jour l'état local avec les nouvelles valeurs
-   */
-  const handleInputChange = (field: keyof RegistrationData, value: string | boolean) => {
-    // Ici on attend la mise à jour des données du formulaire
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-
-    // Ici on a ajouté la suppression de l'erreur pour le champ modifié
-    if (errors[field]) {
-      setErrors(prev => ({
-        ...prev,
-        [field]: undefined
-      }));
-    }
-  };
-
-  /**
-   * Gestionnaire de soumission du formulaire
-   * Valide les données et effectue l'inscription
-   */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Ici on attend la validation du formulaire avant soumission
-    if (!validateForm()) {
-      toast({
-        title: "Erreur de validation",
-        description: "Veuillez corriger les erreurs dans le formulaire",
-        variant: "destructive",
-      });
+  
+  const onSubmit = async (values: FormValues) => {
+    if (!isEmailAvailable) {
+      toast.error('Cet email est déjà utilisé');
       return;
     }
 
-    // Ici on attend le processus d'inscription
     setIsSubmitting(true);
-
+    
     try {
-      // Ici on a corrigé les données pour l'inscription (ajout des champs manquants)
-      await register(formData);
-
-      // Ici on a ajouté la notification de succès
-      toast({
-        title: "Inscription réussie",
-        description: "Votre compte a été créé avec succès. Vous pouvez maintenant vous connecter.",
-      });
-
-      // Ici on a ajouté la redirection vers la page de connexion
-      navigate('/login');
-    } catch (error) {
-      // Ici on a ajouté la gestion des erreurs d'inscription
-      toast({
-        title: "Erreur d'inscription",
-        description: "Une erreur est survenue lors de l'inscription. Veuillez réessayer.",
-        variant: "destructive",
-      });
+      const user = {
+        nom: values.nom,
+        prenom: values.prenom,
+        email: values.email,
+        password: values.password,
+        genre: values.genre,
+        adresse: values.adresse,
+        phone: values.phone
+      };
+      
+      const result = await AuthService.register(user);
+      
+      if (result) {
+        toast.success(`Bienvenue ${values.prenom} ${values.nom} !`);
+        navigate('/');
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Une erreur s'est produite lors de l'inscription");
     } finally {
-      // Ici on a ajouté la réinitialisation de l'état de chargement
       setIsSubmitting(false);
     }
   };
+  
+  if (currentUser) {
+    return <Navigate to="/" />;
+  }
 
+  const isFormDisabled = !isEmailAvailable || isEmailChecking || isSubmitting || !isPasswordValid;
+  
   return (
-    <Layout>
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-md mx-auto">
-          {/* En-tête de la page d'inscription */}
-          <Card className="shadow-lg">
-            <CardHeader className="text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                <UserPlus className="h-6 w-6 text-primary" />
+    <div className="mt-[80px] min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-emerald-400/20 to-teal-400/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/4 right-1/4 w-60 h-60 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-3xl animate-bounce" style={{ animationDuration: '6s' }}></div>
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-2xl mb-4 relative">
+            <UserPlus className="w-8 h-8 text-white" />
+            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl"></div>
+          </div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">
+            Inscription
+          </h1>
+          <p className="text-gray-600">Créez votre compte en quelques étapes</p>
+        </div>
+
+        <div className="backdrop-blur-xl bg-white/80 shadow-2xl border-0 relative overflow-hidden rounded-2xl">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-white/20 to-transparent"></div>
+          
+          <div className="relative z-10 p-6">
+            <div className="text-center mb-6">
+              <div className="flex items-center justify-center gap-2">
+                <Sparkles className="w-5 h-5 text-emerald-500" />
+                <h2 className="text-xl font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                  Vos informations
+                </h2>
+                <Sparkles className="w-5 h-5 text-teal-500" />
               </div>
-              <CardTitle className="text-2xl font-bold">Inscription</CardTitle>
-              <CardDescription>
-                Créez votre compte pour accéder au tableau de bord
-              </CardDescription>
-            </CardHeader>
+            </div>
             
-            <CardContent>
-              {/* Formulaire d'inscription */}
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Section informations personnelles */}
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Champ prénom */}
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">Prénom *</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="firstName"
-                        type="text"
-                        placeholder="Votre prénom"
-                        className="pl-10"
-                        value={formData.firstName}
-                        onChange={(e) => handleInputChange('firstName', e.target.value)}
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                    {errors.firstName && (
-                      <p className="text-sm text-destructive">{errors.firstName}</p>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="nom"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                          <User className="w-3 h-3 text-emerald-500" />
+                          Nom
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Votre nom" 
+                            className="h-10 bg-white/50 backdrop-blur-sm border border-gray-200/50 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200/50 transition-all duration-300 rounded-lg text-sm"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
                     )}
-                  </div>
-
-                  {/* Champ nom */}
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Nom *</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="lastName"
-                        type="text"
-                        placeholder="Votre nom"
-                        className="pl-10"
-                        value={formData.lastName}
-                        onChange={(e) => handleInputChange('lastName', e.target.value)}
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                    {errors.lastName && (
-                      <p className="text-sm text-destructive">{errors.lastName}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Champ email */}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="votre@email.com"
-                      className="pl-10"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                  {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email}</p>
-                  )}
-                </div>
-
-                {/* Section mots de passe */}
-                <div className="grid grid-cols-1 gap-4">
-                  {/* Champ mot de passe */}
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Mot de passe *</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Votre mot de passe"
-                        className="pl-10 pr-10"
-                        value={formData.password}
-                        onChange={(e) => handleInputChange('password', e.target.value)}
-                        disabled={isSubmitting}
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2"
-                        onClick={() => setShowPassword(!showPassword)}
-                        disabled={isSubmitting}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </button>
-                    </div>
-                    {errors.password && (
-                      <p className="text-sm text-destructive">{errors.password}</p>
-                    )}
-                  </div>
-
-                  {/* Champ confirmation mot de passe */}
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirmer le mot de passe *</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="confirmPassword"
-                        type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Confirmez votre mot de passe"
-                        className="pl-10 pr-10"
-                        value={formData.confirmPassword}
-                        onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                        disabled={isSubmitting}
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        disabled={isSubmitting}
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </button>
-                    </div>
-                    {errors.confirmPassword && (
-                      <p className="text-sm text-destructive">{errors.confirmPassword}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Section informations additionnelles */}
-                <div className="space-y-4">
-                  {/* Sélection du genre */}
-                  <div className="space-y-2">
-                    <Label>Genre *</Label>
-                    <RadioGroup
-                      value={formData.gender}
-                      onValueChange={(value) => handleInputChange('gender', value)}
-                      className="flex space-x-4"
-                      disabled={isSubmitting}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="male" id="male" />
-                        <Label htmlFor="male">Homme</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="female" id="female" />
-                        <Label htmlFor="female">Femme</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="other" id="other" />
-                        <Label htmlFor="other">Autre</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  {/* Champ adresse */}
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Adresse *</Label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="address"
-                        type="text"
-                        placeholder="Votre adresse"
-                        className="pl-10"
-                        value={formData.address}
-                        onChange={(e) => handleInputChange('address', e.target.value)}
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                    {errors.address && (
-                      <p className="text-sm text-destructive">{errors.address}</p>
-                    )}
-                  </div>
-
-                  {/* Champ téléphone */}
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Téléphone *</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="Votre numéro de téléphone"
-                        className="pl-10"
-                        value={formData.phone}
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                    {errors.phone && (
-                      <p className="text-sm text-destructive">{errors.phone}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Case à cocher conditions d'utilisation */}
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="acceptTerms"
-                    checked={formData.acceptTerms}
-                    onCheckedChange={(checked) => handleInputChange('acceptTerms', !!checked)}
-                    disabled={isSubmitting}
                   />
-                  <Label htmlFor="acceptTerms" className="text-sm">
-                    J'accepte les{' '}
-                    <Link to="/terms" className="text-primary hover:underline">
-                      conditions d'utilisation
-                    </Link>{' '}
-                    et la{' '}
-                    <Link to="/privacy" className="text-primary hover:underline">
-                      politique de confidentialité
-                    </Link>
-                  </Label>
+                  
+                  <FormField
+                    control={form.control}
+                    name="prenom"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                          <User className="w-3 h-3 text-teal-500" />
+                          Prénom
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Votre prénom" 
+                            className="h-10 bg-white/50 backdrop-blur-sm border border-gray-200/50 focus:border-teal-400 focus:ring-2 focus:ring-teal-200/50 transition-all duration-300 rounded-lg text-sm"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-                {errors.acceptTerms && (
-                  <p className="text-sm text-destructive">{String(errors.acceptTerms)}</p>
-                )}
-
-                {/* Bouton de soumission */}
+                
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                        <Mail className="w-3 h-3 text-emerald-500" />
+                        Email
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input 
+                            type="email" 
+                            placeholder="votre@email.com" 
+                            className={`h-10 pl-8 bg-white/50 backdrop-blur-sm border transition-all duration-300 rounded-lg text-sm ${
+                              !isEmailAvailable ? "border-red-300 focus:border-red-400 focus:ring-red-200/50" : "border-gray-200/50 focus:border-emerald-400 focus:ring-emerald-200/50"
+                            }`}
+                            {...field} 
+                          />
+                          <Mail className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
+                          {isEmailChecking && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              <div className="animate-spin h-3 w-3 border-2 border-emerald-500 border-t-transparent rounded-full"></div>
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="genre"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-medium text-gray-700">Genre</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-10 bg-white/50 backdrop-blur-sm border border-gray-200/50 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200/50 transition-all duration-300 rounded-lg text-sm">
+                            <SelectValue placeholder="Sélectionnez votre genre" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="bg-white/95 backdrop-blur-xl border-gray-200/50">
+                          <SelectItem value="homme">Homme</SelectItem>
+                          <SelectItem value="femme">Femme</SelectItem>
+                          <SelectItem value="autre">Autre</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="adresse"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-teal-500" />
+                        Adresse
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input 
+                            placeholder="123 Rue de Paris, 75001 Paris" 
+                            className="h-10 pl-8 bg-white/50 backdrop-blur-sm border border-gray-200/50 focus:border-teal-400 focus:ring-2 focus:ring-teal-200/50 transition-all duration-300 rounded-lg text-sm"
+                            {...field} 
+                          />
+                          <MapPin className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                        <Phone className="w-3 h-3 text-emerald-500" />
+                        Téléphone
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input 
+                            placeholder="0612345678" 
+                            className="h-10 pl-8 bg-white/50 backdrop-blur-sm border border-gray-200/50 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200/50 transition-all duration-300 rounded-lg text-sm"
+                            {...field} 
+                          />
+                          <Phone className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                        <Shield className="w-3 h-3 text-emerald-500" />
+                        Mot de passe
+                      </FormLabel>
+                      <div className="relative">
+                        <FormControl>
+                          <Input 
+                            type={showPassword ? "text" : "password"} 
+                            className="h-10 pl-8 pr-10 bg-white/50 backdrop-blur-sm border border-gray-200/50 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200/50 transition-all duration-300 rounded-lg text-sm"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <Shield className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-gray-100 rounded transition-colors"
+                        >
+                          {showPassword ? <EyeOff className="w-3 h-3 text-gray-400" /> : <Eye className="w-3 h-3 text-gray-400" />}
+                        </button>
+                      </div>
+                      <PasswordStrengthIndicator 
+                        password={field.value} 
+                        onValidityChange={handlePasswordValidityChange}
+                      />
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-medium text-gray-700">Confirmer le mot de passe</FormLabel>
+                      <div className="relative">
+                        <FormControl>
+                          <Input 
+                            type={showConfirmPassword ? "text" : "password"} 
+                            className="h-10 pl-8 pr-10 bg-white/50 backdrop-blur-sm border border-gray-200/50 focus:border-teal-400 focus:ring-2 focus:ring-teal-200/50 transition-all duration-300 rounded-lg text-sm"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <Shield className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
+                        <div 
+                          className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer p-0.5 hover:bg-gray-100 rounded transition-colors"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                          {showConfirmPassword ? <EyeOff className="w-3 h-3 text-gray-400" /> : <Eye className="w-3 h-3 text-gray-400" />}
+                        </div>
+                      </div>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="acceptTerms"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg p-3 bg-gradient-to-r from-emerald-50/50 to-teal-50/50 border border-emerald-200/30">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="text-xs text-gray-700">
+                          J'accepte les conditions d'utilisation et la politique de confidentialité
+                        </FormLabel>
+                        <FormMessage className="text-xs" />
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                
                 <Button 
                   type="submit" 
-                  className="w-full" 
-                  disabled={isSubmitting}
+                  disabled={isFormDisabled} 
+                  className="w-full h-11 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
-                  {isSubmitting ? "Inscription en cours..." : "S'inscrire"}
+                  {isSubmitting ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      Inscription en cours...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <UserPlus className="w-4 h-4" />
+                      S'inscrire
+                    </div>
+                  )}
                 </Button>
+                
+                <div className="text-center mt-4">
+                  <p className="text-xs text-gray-600">
+                    Déjà inscrit ?{" "}
+                    <Link to="/connexion" className="font-medium text-emerald-600 hover:text-emerald-700 transition-colors">
+                      Se connecter
+                    </Link>
+                  </p>
+                </div>
               </form>
-
-              {/* Lien vers la page de connexion */}
-              <div className="mt-6 text-center text-sm">
-                Vous avez déjà un compte ?{' '}
-                <Link to="/login" className="text-primary hover:underline font-medium">
-                  Se connecter
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+            </Form>
+          </div>
         </div>
       </div>
-    </Layout>
+    </div>
   );
 };
 
