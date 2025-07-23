@@ -29,7 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { ModernTable, ModernTableHeader, ModernTableRow, ModernTableHead, ModernTableCell, TableBody } from '@/components/dashboard/forms/ModernTable';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { useToast } from '@/hooks/use-toast';
-import api from '@/service/api';
+import { productService } from '@/service/api';
 
 // ============================================
 // INTERFACES ET TYPES
@@ -158,8 +158,8 @@ const ProductsList: React.FC = () => {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/products');
-      setProducts(response.data);
+      const products = await productService.getProducts();
+      setProducts(products);
     } catch (error) {
       console.error('Erreur lors du chargement des produits:', error);
       toast({
@@ -191,7 +191,7 @@ const ProductsList: React.FC = () => {
         quantity: parseInt(formData.quantity)
       };
 
-      await api.post('/products', productData);
+      await productService.addProduct(productData);
       
       toast({
         title: "Succès",
@@ -219,12 +219,13 @@ const ProductsList: React.FC = () => {
 
     try {
       const productData = {
+        id: editingProduct.id,
         description: formData.description,
         purchasePrice: parseFloat(formData.purchasePrice),
         quantity: parseInt(formData.quantity)
       };
 
-      await api.put(`/products/${editingProduct.id}`, productData);
+      await productService.updateProduct(productData);
       
       toast({
         title: "Succès",
@@ -249,7 +250,7 @@ const ProductsList: React.FC = () => {
    */
   const handleDeleteProduct = async (productId: string) => {
     try {
-      await api.delete(`/products/${productId}`);
+      await productService.deleteProduct(productId);
       
       toast({
         title: "Succès",
