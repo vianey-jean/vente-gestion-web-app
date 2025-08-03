@@ -1,4 +1,53 @@
 
+/**
+ * ============================================================================
+ * SERVEUR BACKEND PRINCIPAL - RIZIKY AGENDAS API
+ * ============================================================================
+ * 
+ * Ce fichier configure et lance le serveur Express.js qui gère toute la logique backend
+ * de l'application Riziky Agendas. Il fournit une API RESTful complète.
+ * 
+ * FONCTIONNALITÉS SERVEUR :
+ * - API RESTful pour la gestion des rendez-vous
+ * - Système d'authentification et gestion des utilisateurs
+ * - Gestion des clients avec CRUD complet
+ * - Service de messagerie avec notifications en temps réel
+ * - Upload de fichiers avec validation
+ * - WebSocket pour les mises à jour en temps réel
+ * - Service SMS pour les rappels (simulation)
+ * 
+ * MIDDLEWARE CONFIGURÉS :
+ * - CORS pour les requêtes cross-origin
+ * - Body parser pour JSON
+ * - Middleware d'authentification custom
+ * - Gestion des fichiers statiques
+ * - Upload de fichiers avec Multer
+ * 
+ * ROUTES API :
+ * - /api/users : Gestion des utilisateurs et authentification
+ * - /api/appointments : CRUD des rendez-vous
+ * - /api/clients : Gestion des clients
+ * - /api/contact : Service de contact et messagerie
+ * - /api/messages : Gestion des messages reçus
+ * - /api/sms : Service d'envoi de SMS
+ * 
+ * WEBSOCKET :
+ * - Notifications en temps réel
+ * - Synchronisation des données entre clients
+ * - Mise à jour automatique des messages
+ * 
+ * SÉCURITÉ :
+ * - Middleware d'authentification
+ * - Validation des données
+ * - Protection CORS configurée
+ * - Gestion sécurisée des uploads
+ * 
+ * @author Riziky Agendas Team
+ * @version 1.0.0
+ * @lastModified 2024
+ * @port 3001 (par défaut)
+ */
+
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
