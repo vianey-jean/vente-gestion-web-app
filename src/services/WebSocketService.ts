@@ -17,15 +17,11 @@ class WebSocketService {
   }
 
   private connect() {
-    // Récupération de l'URL de base depuis les variables d'environnement
     const BASE_URL = (import.meta as any).env.VITE_API_BASE_URL;
     
-    // Configuration de la connexion Socket.IO avec l'URL correcte
     this.socket = io(BASE_URL, {
-      transports: ['websocket', 'polling'], // Utilise WebSocket en priorité, puis polling en fallback
-      timeout: 20000, // Timeout de 20 secondes
-      autoConnect: true, // Connexion automatique
-      forceNew: false, // Réutilise la connexion existante si possible
+      transports: ['websocket', 'polling'],
+      timeout: 20000,
     });
 
     this.socket.on('connect', () => {

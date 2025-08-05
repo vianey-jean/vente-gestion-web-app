@@ -10,10 +10,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   register: (user: Omit<User, 'id'>) => Promise<boolean>;
   logout: () => void;
-  resetPassword: (email: string, newPassword: string, code: string) => Promise<boolean>;
+  resetPassword: (email: string, newPassword: string) => Promise<boolean>;
   resetPasswordRequest: (email: string) => Promise<boolean>;
-  requestResetCode: (email: string) => Promise<boolean>;
-  verifyResetCode: (email: string, code: string) => Promise<boolean>;
   checkEmail: (email: string) => Promise<boolean>;
 }
 
@@ -75,10 +73,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
-  const resetPassword = async (email: string, newPassword: string, code: string): Promise<boolean> => {
+  const resetPassword = async (email: string, newPassword: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const result = await AuthService.resetPassword(email, newPassword, code);
+      const result = await AuthService.resetPassword(email, newPassword);
       setIsLoading(false);
       return result;
     } catch (error) {
@@ -97,32 +95,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return result;
     } catch (error) {
       console.error('AuthContext: Erreur lors de la demande de réinitialisation:', error);
-      setIsLoading(false);
-      return false;
-    }
-  };
-
-  const requestResetCode = async (email: string): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      const result = await AuthService.requestResetCode(email);
-      setIsLoading(false);
-      return result;
-    } catch (error) {
-      console.error('AuthContext: Erreur lors de la demande de code:', error);
-      setIsLoading(false);
-      return false;
-    }
-  };
-
-  const verifyResetCode = async (email: string, code: string): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      const result = await AuthService.verifyResetCode(email, code);
-      setIsLoading(false);
-      return result;
-    } catch (error) {
-      console.error('AuthContext: Erreur lors de la vérification du code:', error);
       setIsLoading(false);
       return false;
     }
@@ -147,8 +119,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     resetPassword,
     resetPasswordRequest,
-    requestResetCode,
-    verifyResetCode,
     checkEmail
   };
 

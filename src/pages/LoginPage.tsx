@@ -283,19 +283,12 @@ const LoginPage = () => {
                               <AlertCircle className="h-4 w-4" />
                               <AlertDescription>{loginError}</AlertDescription>
                             </Alert>
-                            <div className="text-center space-y-2">
+                            <div className="text-center">
                               <Link
                                 to="/mot-de-passe-oublie"
                                 className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors group"
                               >
                                 <KeyRound className="w-4 h-4 group-hover:rotate-12 transition-transform duration-300" />
-                                Changer le mot de passe
-                              </Link>
-                              <p className="text-xs text-gray-500">ou</p>
-                              <Link
-                                to="/mot-de-passe-oublie"
-                                className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
-                              >
                                 Mot de passe oublié ?
                               </Link>
                             </div>

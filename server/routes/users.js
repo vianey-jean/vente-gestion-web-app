@@ -44,144 +44,17 @@ router.post('/login', (req, res) => {
   return res.json({ message: 'Connexion réussie', user: { ...user, password: undefined } });
 });
 
-// Importation du service d'email
-const { sendVerificationEmail } = require('../services/emailService');
-
-// Stockage temporaire des codes de vérification (en production, utiliser Redis ou base de données)
-const verificationCodes = new Map();
-
-// Route pour demander un code de réinitialisation
-router.post('/request-reset-code', async (req, res) => {
-  const { email } = req.body;
-  
-  if (!email) {
-    return res.status(400).json({ error: 'Email requis' });
-  }
-  
-  // Vérifier si l'email existe
-  const user = User.getByEmail(email);
-  if (!user) {
-    return res.status(404).json({ error: 'Aucun compte associé à cet email' });
-  }
-  
-  // Générer un code de 6 chiffres
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  
-  // Stocker le code avec expiration de 24h
-  verificationCodes.set(email, {
-    code: code,
-    expiration: Date.now() + 24 * 60 * 60 * 1000, // 24 heures
-    attempts: 0
-  });
-  
-  try {
-    // Envoyer le code par email
-    const emailSent = await sendVerificationEmail(email, code);
-    
-    if (emailSent) {
-      console.log(`Code de vérification envoyé à ${email}: ${code}`);
-      return res.json({ 
-        message: 'Code de vérification envoyé par email',
-        success: true 
-      });
-    } else {
-      // En cas d'échec d'envoi, log le code pour le développement
-      console.log(`Code de vérification (email failed) pour ${email}: ${code}`);
-      return res.json({ 
-        message: 'Code de vérification généré (vérifiez les logs serveur)',
-        success: true 
-      });
-    }
-  } catch (error) {
-    console.error('Erreur lors de l\'envoi de l\'email:', error);
-    // En cas d'erreur, log le code pour permettre les tests
-    console.log(`Code de vérification (erreur email) pour ${email}: ${code}`);
-    return res.json({ 
-      message: 'Code généré - vérifiez les logs serveur',
-      success: true 
-    });
-  }
-});
-
-// Route pour vérifier le code de réinitialisation
-router.post('/verify-reset-code', (req, res) => {
-  const { email, code } = req.body;
-  
-  if (!email || !code) {
-    return res.status(400).json({ error: 'Email et code requis' });
-  }
-  
-  const stored = verificationCodes.get(email);
-  
-  if (!stored) {
-    return res.status(400).json({ error: 'Aucun code trouvé pour cet email' });
-  }
-  
-  // Vérifier l'expiration
-  if (Date.now() > stored.expiration) {
-    verificationCodes.delete(email);
-    return res.status(400).json({ error: 'Le code a expiré' });
-  }
-  
-  // Limiter les tentatives
-  if (stored.attempts >= 3) {
-    verificationCodes.delete(email);
-    return res.status(400).json({ error: 'Trop de tentatives. Demandez un nouveau code.' });
-  }
-  
-  if (stored.code !== code) {
-    stored.attempts++;
-    return res.status(400).json({ error: 'Code incorrect' });
-  }
-  
-  // Code valide
-  stored.verified = true;
-  return res.json({ 
-    message: 'Code vérifié avec succès',
-    success: true 
-  });
-});
-
-// Route pour la réinitialisation du mot de passe avec vérification
+// Route pour la réinitialisation du mot de passe
 router.post('/reset-password', (req, res) => {
-  const { email, newPassword, code } = req.body;
+  const { email, newPassword } = req.body;
   
-  if (!email || !newPassword || !code) {
-    return res.status(400).json({ error: 'Email, nouveau mot de passe et code requis' });
-  }
-  
-  const stored = verificationCodes.get(email);
-  
-  if (!stored || !stored.verified) {
-    return res.status(400).json({ error: 'Code non vérifié ou expiré' });
-  }
-  
-  // Vérifier que le nouveau mot de passe respecte les critères
-  const hasLowerCase = /[a-z]/.test(newPassword);
-  const hasUpperCase = /[A-Z]/.test(newPassword);
-  const hasNumber = /[0-9]/.test(newPassword);
-  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword);
-  const hasMinLength = newPassword.length >= 8;
-  
-  if (!hasLowerCase || !hasUpperCase || !hasNumber || !hasSpecialChar || !hasMinLength) {
-    return res.status(400).json({ 
-      error: 'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial' 
-    });
-  }
-  
-  // Vérifier que le nouveau mot de passe est différent de l'ancien
-  const user = User.getByEmail(email);
-  if (user && user.password === newPassword) {
-    return res.status(400).json({ 
-      error: 'Le nouveau mot de passe est identique à l\'ancien. Veuillez en choisir un autre.' 
-    });
+  if (!email || !newPassword) {
+    return res.status(400).json({ error: 'Email et nouveau mot de passe requis' });
   }
   
   const result = User.updatePassword(email, newPassword);
   
   if (result.success) {
-    // Nettoyer le code utilisé
-    verificationCodes.delete(email);
     return res.json({ message: 'Mot de passe mis à jour avec succès' });
   } else {
     return res.status(400).json({ error: result.message });
