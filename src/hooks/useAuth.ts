@@ -17,6 +17,9 @@ interface UseAuthReturn {
   readonly register: (userData: Omit<User, 'id'>) => Promise<boolean>;
   readonly logout: () => void;
   readonly resetPassword: (email: string, newPassword: string) => Promise<boolean>;
+  readonly requestPasswordReset: (email: string) => Promise<boolean>;
+  readonly verifyResetCode: (email: string, code: string) => Promise<boolean>;
+  readonly checkEmail: (email: string) => Promise<boolean>;
 }
 
 /**
@@ -60,12 +63,36 @@ export const useAuth = (): UseAuthReturn => {
     return await AuthService.resetPassword(email, newPassword);
   }, []);
 
+  /**
+   * Fonction de demande de réinitialisation de mot de passe
+   */
+  const requestPasswordReset = useCallback(async (email: string): Promise<boolean> => {
+    return await AuthService.requestPasswordReset(email);
+  }, []);
+
+  /**
+   * Fonction de vérification de code de réinitialisation
+   */
+  const verifyResetCode = useCallback(async (email: string, code: string): Promise<boolean> => {
+    return await AuthService.verifyResetCode(email, code);
+  }, []);
+
+  /**
+   * Fonction de vérification d'email
+   */
+  const checkEmail = useCallback(async (email: string): Promise<boolean> => {
+    return await AuthService.checkEmail(email);
+  }, []);
+
   return {
     user,
     isAuthenticated: user !== null,
     login,
     register,
     logout,
-    resetPassword
+    resetPassword,
+    requestPasswordReset,
+    verifyResetCode,
+    checkEmail
   };
 };

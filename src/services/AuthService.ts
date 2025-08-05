@@ -100,6 +100,55 @@ export const AuthService = {
   },
 
   /**
+   * Demander un code de réinitialisation de mot de passe
+   * @param email - Email de l'utilisateur
+   * @returns Promise<boolean> True si code envoyé, false sinon
+   */
+  requestPasswordReset: async (email: string): Promise<boolean> => {
+    try {
+      const response = await api.post('/users/forgot-password', { email });
+      
+      if (response.data.success) {
+        toast.success("Un code de vérification a été envoyé à votre email", {
+          className: "bg-indigo-700 text-white border-indigo-600"
+        });
+        return true;
+      }
+      return false;
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Erreur lors de l'envoi du code", {
+        className: "bg-indigo-700 text-white border-indigo-600"
+      });
+      return false;
+    }
+  },
+
+  /**
+   * Vérifier le code de réinitialisation
+   * @param email - Email de l'utilisateur
+   * @param code - Code de vérification
+   * @returns Promise<boolean> True si code valide, false sinon
+   */
+  verifyResetCode: async (email: string, code: string): Promise<boolean> => {
+    try {
+      const response = await api.post('/users/verify-reset-code', { email, code });
+      
+      if (response.data.success) {
+        toast.success("Code vérifié avec succès", {
+          className: "bg-indigo-700 text-white border-indigo-600"
+        });
+        return true;
+      }
+      return false;
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Code invalide ou expiré", {
+        className: "bg-indigo-700 text-white border-indigo-600"
+      });
+      return false;
+    }
+  },
+
+  /**
    * Fonction de réinitialisation du mot de passe
    * Permet à un utilisateur de changer son mot de passe
    * @param email - Email de l'utilisateur

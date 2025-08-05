@@ -289,7 +289,7 @@ const LoginPage = () => {
                                 className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors group"
                               >
                                 <KeyRound className="w-4 h-4 group-hover:rotate-12 transition-transform duration-300" />
-                                Mot de passe oublié ?
+                                Changer le mot de passe
                               </Link>
                             </div>
                           </div>

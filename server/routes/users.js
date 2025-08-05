@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const { isAuthenticated } = require('../middlewares/authMiddleware');
+const { sendVerificationCode, verifyCode } = require('../services/emailService');
 
 // Route pour l'inscription d'un utilisateur
 router.post('/register', (req, res) => {
@@ -44,12 +45,79 @@ router.post('/login', (req, res) => {
   return res.json({ message: 'Connexion réussie', user: { ...user, password: undefined } });
 });
 
-// Route pour la réinitialisation du mot de passe
+// Route pour demander un code de réinitialisation
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ error: 'Email requis' });
+  }
+  
+  // Vérifier si l'email existe
+  const user = User.getByEmail(email);
+  if (!user) {
+    return res.status(404).json({ error: 'Aucun compte trouvé avec cet email' });
+  }
+  
+  // Envoyer le code de vérification
+  const result = await sendVerificationCode(email);
+  
+  if (result.success) {
+    return res.json({ success: true, message: 'Code de vérification envoyé' });
+  } else {
+    return res.status(500).json({ error: 'Erreur lors de l\'envoi de l\'email' });
+  }
+});
+
+// Route pour vérifier le code de vérification
+router.post('/verify-reset-code', (req, res) => {
+  const { email, code } = req.body;
+  
+  if (!email || !code) {
+    return res.status(400).json({ error: 'Email et code requis' });
+  }
+  
+  const result = verifyCode(email, code);
+  
+  if (result.valid) {
+    return res.json({ success: true, message: 'Code vérifié avec succès' });
+  } else {
+    return res.status(400).json({ error: result.message });
+  }
+});
+
+// Route pour la réinitialisation du mot de passe (après vérification du code)
 router.post('/reset-password', (req, res) => {
   const { email, newPassword } = req.body;
   
   if (!email || !newPassword) {
     return res.status(400).json({ error: 'Email et nouveau mot de passe requis' });
+  }
+  
+  // Vérifier l'utilisateur existe
+  const user = User.getByEmail(email);
+  if (!user) {
+    return res.status(404).json({ error: 'Utilisateur non trouvé' });
+  }
+  
+  // Vérifier que le nouveau mot de passe est différent de l'ancien
+  if (user.password === newPassword) {
+    return res.status(400).json({ 
+      error: 'Erreur : le nouveau mot de passe est identique à l\'ancien. Veuillez en choisir un autre.' 
+    });
+  }
+  
+  // Valider la force du nouveau mot de passe
+  const hasLowerCase = /[a-z]/.test(newPassword);
+  const hasUpperCase = /[A-Z]/.test(newPassword);
+  const hasNumber = /[0-9]/.test(newPassword);
+  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword);
+  const hasMinLength = newPassword.length >= 8;
+  
+  if (!hasLowerCase || !hasUpperCase || !hasNumber || !hasSpecialChar || !hasMinLength) {
+    return res.status(400).json({ 
+      error: 'Le nouveau mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial' 
+    });
   }
   
   const result = User.updatePassword(email, newPassword);

@@ -11,7 +11,8 @@ interface AuthContextType {
   register: (user: Omit<User, 'id'>) => Promise<boolean>;
   logout: () => void;
   resetPassword: (email: string, newPassword: string) => Promise<boolean>;
-  resetPasswordRequest: (email: string) => Promise<boolean>;
+  requestPasswordReset: (email: string) => Promise<boolean>;
+  verifyResetCode: (email: string, code: string) => Promise<boolean>;
   checkEmail: (email: string) => Promise<boolean>;
 }
 
@@ -86,15 +87,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const resetPasswordRequest = async (email: string): Promise<boolean> => {
+  const requestPasswordReset = async (email: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      // Simuler une requête de réinitialisation
-      const result = await AuthService.checkEmail(email);
+      const result = await AuthService.requestPasswordReset(email);
       setIsLoading(false);
       return result;
     } catch (error) {
       console.error('AuthContext: Erreur lors de la demande de réinitialisation:', error);
+      setIsLoading(false);
+      return false;
+    }
+  };
+
+  const verifyResetCode = async (email: string, code: string): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      const result = await AuthService.verifyResetCode(email, code);
+      setIsLoading(false);
+      return result;
+    } catch (error) {
+      console.error('AuthContext: Erreur lors de la vérification du code:', error);
       setIsLoading(false);
       return false;
     }
@@ -118,7 +131,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     register,
     logout,
     resetPassword,
-    resetPasswordRequest,
+    requestPasswordReset,
+    verifyResetCode,
     checkEmail
   };
 

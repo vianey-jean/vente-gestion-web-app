@@ -41,60 +41,60 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Eye, EyeOff, Mail, Shield, KeyRound, Sparkles, RotateCcw } from 'lucide-react';
+import { Eye, EyeOff, Mail, Shield, KeyRound, Sparkles, RotateCcw, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AuthService } from '@/services/AuthService';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
 
-// Schéma de validation pour l'email
+// Schémas de validation
 const emailSchema = z.object({
-  email: z.string().email({
-    message: "Veuillez entrer une adresse email valide.",
-  }),
+  email: z.string().email("Veuillez entrer une adresse email valide."),
 });
 
-// Schéma de validation pour le mot de passe avec critères de complexité
+const codeSchema = z.object({
+  code: z.string().length(6, "Le code doit contenir 6 chiffres.").regex(/^\d{6}$/, "Le code doit contenir uniquement des chiffres."),
+});
+
 const passwordSchema = z.object({
-  password: z.string().min(8, {
-    message: "Le mot de passe doit contenir au moins 8 caractères.",
-  }).refine((password) => /[A-Z]/.test(password), {
-    message: "Le mot de passe doit contenir au moins une lettre majuscule.",
-  }).refine((password) => /[a-z]/.test(password), {
-    message: "Le mot de passe doit contenir au moins une lettre minuscule.",
-  }).refine((password) => /[0-9]/.test(password), {
-    message: "Le mot de passe doit contenir au moins un chiffre.",
-  }).refine((password) => /[!@#$%^&*(),.?":{}|<>]/.test(password), {
-    message: "Le mot de passe doit contenir au moins un caractère spécial.",
-  }),
+  password: z.string()
+    .min(8, "Le mot de passe doit contenir au moins 8 caractères.")
+    .regex(/[A-Z]/, "Doit contenir au moins une majuscule")
+    .regex(/[a-z]/, "Doit contenir au moins une minuscule")
+    .regex(/[0-9]/, "Doit contenir au moins un chiffre")
+    .regex(/[^A-Za-z0-9]/, "Doit contenir au moins un caractère spécial"),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Les mots de passe ne correspondent pas.",
   path: ["confirmPassword"],
 });
 
-// Composant de réinitialisation de mot de passe
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [step, setStep] = useState<'email' | 'password'>('email');
+  const [step, setStep] = useState<'email' | 'code' | 'password'>('email');
   const [isPasswordValid, setIsPasswordValid] = useState(false);
   
   const navigate = useNavigate();
+  const { requestPasswordReset, verifyResetCode, resetPassword } = useAuth();
   
-  // Formulaire pour l'email
+  // Formulaires
   const emailForm = useForm<z.infer<typeof emailSchema>>({
     resolver: zodResolver(emailSchema),
     defaultValues: { email: "" },
   });
   
-  // Formulaire pour le mot de passe
+  const codeForm = useForm<z.infer<typeof codeSchema>>({
+    resolver: zodResolver(codeSchema),
+    defaultValues: { code: "" },
+  });
+  
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
     resolver: zodResolver(passwordSchema),
     defaultValues: {
@@ -107,13 +107,23 @@ const ForgotPasswordPage = () => {
   const onSubmitEmail = async (values: z.infer<typeof emailSchema>) => {
     setIsSubmitting(true);
     try {
-      const emailExists = await AuthService.checkEmail(values.email);
-      
-      if (emailExists) {
+      const success = await requestPasswordReset(values.email);
+      if (success) {
         setEmail(values.email);
+        setStep('code');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Soumission du formulaire de code
+  const onSubmitCode = async (values: z.infer<typeof codeSchema>) => {
+    setIsSubmitting(true);
+    try {
+      const success = await verifyResetCode(email, values.code);
+      if (success) {
         setStep('password');
-      } else {
-        toast.error("Cette adresse email n'est pas enregistrée");
       }
     } finally {
       setIsSubmitting(false);
@@ -129,10 +139,8 @@ const ForgotPasswordPage = () => {
   const onSubmitPassword = async (values: z.infer<typeof passwordSchema>) => {
     setIsSubmitting(true);
     try {
-      const success = await AuthService.resetPassword(email, values.password);
-      
+      const success = await resetPassword(email, values.password);
       if (success) {
-        toast.success("Mot de passe réinitialisé avec succès");
         navigate('/connexion');
       }
     } finally {
@@ -173,7 +181,7 @@ const ForgotPasswordPage = () => {
             <div className="flex items-center justify-center gap-2 mb-2">
               <Sparkles className="w-5 h-5 text-orange-500" />
               <CardTitle className="text-2xl bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                {step === 'email' ? 'Votre email' : 'Nouveau mot de passe'}
+                {step === 'email' ? 'Votre email' : step === 'code' ? 'Code de vérification' : 'Nouveau mot de passe'}
               </CardTitle>
               <Sparkles className="w-5 h-5 text-red-500" />
             </div>
@@ -214,15 +222,79 @@ const ForgotPasswordPage = () => {
                     {isSubmitting ? (
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        Vérification en cours...
+                        Envoi du code...
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <RotateCcw className="w-4 h-4" />
-                        Continuer
+                        <Mail className="w-4 h-4" />
+                        Envoyer le code
                       </div>
                     )}
                   </Button>
+                </form>
+              </Form>
+            ) : step === 'code' ? (
+              <Form {...codeForm}>
+                <form onSubmit={codeForm.handleSubmit(onSubmitCode)} className="space-y-6">
+                  <div className="p-4 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200/50 rounded-xl mb-4">
+                    <p className="text-sm text-gray-700 flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-orange-500" />
+                      Un code de vérification a été envoyé à <span className="font-medium text-orange-600">{email}</span>
+                    </p>
+                  </div>
+                  
+                  <FormField
+                    control={codeForm.control}
+                    name="code"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        <FormLabel className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                          <Hash className="w-4 h-4 text-orange-500" />
+                          Code de vérification (6 chiffres)
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input 
+                              placeholder="123456" 
+                              className="pl-12 h-12 bg-white/50 backdrop-blur-sm border-2 border-gray-200/50 focus:border-orange-400 focus:ring-2 focus:ring-orange-200/50 transition-all duration-300 rounded-xl text-center text-lg tracking-widest"
+                              maxLength={6}
+                              {...field} 
+                            />
+                            <Hash className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="flex gap-3">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setStep('email')} 
+                      className="flex-1 h-12"
+                    >
+                      Retour
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      className="flex-1 h-12 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]" 
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          Vérification...
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Shield className="w-4 h-4" />
+                          Vérifier
+                        </div>
+                      )}
+                    </Button>
+                  </div>
                 </form>
               </Form>
             ) : (
