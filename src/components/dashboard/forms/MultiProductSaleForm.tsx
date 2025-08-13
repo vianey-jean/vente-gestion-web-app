@@ -7,11 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useApp } from '@/contexts/AppContext';
 import { Product, SaleProduct, Sale } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Package, Euro } from 'lucide-react';
+import { Plus, Trash2, Package, Euro, Edit3 } from 'lucide-react';
 import ProductSearchInput from '../ProductSearchInput';
 import SaleQuantityInput from './SaleQuantityInput';
 import ClientSearchInput from '../ClientSearchInput';
 import { calculateSaleProfit } from './utils/saleCalculations';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 import axios from 'axios';
 
 interface MultiProductSaleFormProps {
@@ -52,6 +53,8 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
     isAdvanceProduct: false
   }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'sale' | 'product', index?: number } | null>(null);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:10000';
 
@@ -136,10 +139,56 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
     }]);
   };
 
-  // Supprimer un produit
-  const removeProduct = (index: number) => {
-    if (formProducts.length > 1) {
-      setFormProducts(prev => prev.filter((_, i) => i !== index));
+  // Confirmer suppression d'un produit
+  const handleDeleteProduct = (index: number) => {
+    setDeleteTarget({ type: 'product', index });
+    setDeleteDialogOpen(true);
+  };
+
+  // Confirmer suppression de toute la vente
+  const handleDeleteSale = () => {
+    setDeleteTarget({ type: 'sale' });
+    setDeleteDialogOpen(true);
+  };
+
+  // Exécuter la suppression confirmée
+  const executeDelete = async () => {
+    if (!deleteTarget) return;
+
+    setIsSubmitting(true);
+    try {
+      if (deleteTarget.type === 'product' && deleteTarget.index !== undefined) {
+        // Supprimer un produit individuel
+        if (formProducts.length > 1) {
+          setFormProducts(prev => prev.filter((_, i) => i !== deleteTarget.index));
+          toast({
+            title: "Produit supprimé",
+            description: "Le produit a été retiré de la vente",
+            className: "notification-success",
+          });
+        }
+      } else if (deleteTarget.type === 'sale' && editSale && deleteSale) {
+        // Supprimer toute la vente
+        const success = await deleteSale(editSale.id);
+        if (success) {
+          toast({
+            title: "Succès",
+            description: "La vente a été supprimée avec succès",
+            className: "notification-success",
+          });
+          onClose();
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la suppression",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -480,7 +529,7 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
                         type="button"
                         variant="destructive"
                         size="sm"
-                        onClick={() => removeProduct(index)}
+                        onClick={() => handleDeleteProduct(index)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -606,36 +655,12 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
               <Button
                 type="button"
                 variant="destructive"
-                onClick={async () => {
-                  if (deleteSale && editSale) {
-                    setIsSubmitting(true);
-                    try {
-                      const success = await deleteSale(editSale.id);
-                      if (success) {
-                        toast({
-                          title: "Succès",
-                          description: "La vente a été supprimée avec succès",
-                          variant: "default",
-                          className: "notification-success",
-                        });
-                        onClose();
-                      }
-                    } catch (error) {
-                      toast({
-                        title: "Erreur",
-                        description: "Une erreur est survenue lors de la suppression",
-                        variant: "destructive",
-                      });
-                    } finally {
-                      setIsSubmitting(false);
-                    }
-                  }
-                }}
+                onClick={handleDeleteSale}
                 disabled={isSubmitting}
                 className="mr-auto"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
-                Supprimer
+                Supprimer toute la vente
               </Button>
             )}
             
@@ -658,6 +683,27 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Dialog de confirmation de suppression */}
+      <ConfirmDeleteDialog
+        isOpen={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setDeleteTarget(null);
+        }}
+        onConfirm={executeDelete}
+        title={
+          deleteTarget?.type === 'sale' 
+            ? "Supprimer toute la vente" 
+            : "Supprimer ce produit"
+        }
+        description={
+          deleteTarget?.type === 'sale'
+            ? "Êtes-vous sûr de vouloir supprimer définitivement cette vente complète ? Cette action est irréversible."
+            : "Êtes-vous sûr de vouloir supprimer ce produit de la vente ? Cette action est irréversible."
+        }
+        isSubmitting={isSubmitting}
+      />
     </Dialog>
   );
 };
