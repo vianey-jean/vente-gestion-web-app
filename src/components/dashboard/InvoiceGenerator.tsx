@@ -60,7 +60,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ isOpen, onClose }) 
     setShowSaleDetails(true);
   };
 
-  // === GÉNÉRATION DE LA FACTURE PDF ===
+// === GÉNÉRATION DE LA FACTURE PDF ===
 const generateInvoicePDF = (sale: Sale) => {
   if (!sale.clientName) {
     toast({
@@ -118,25 +118,22 @@ const generateInvoicePDF = (sale: Sale) => {
   doc.text('10 Allée des Beryls Bleus', leftX, infoY + 8);
   doc.text('97400 Saint-Denis, La Réunion', leftX, infoY + 16);
   doc.text('Tél: 0692 19 87 01', leftX, infoY + 24);
-  doc.text('SIRET : 123 456 789 00010', leftX, infoY + 32); // Remplacer par vrai SIRET
+  doc.text('SIRET : 123 456 789 00010', leftX, infoY + 32);
 
   doc.setFont('helvetica', 'bold');
   doc.text('Facture n°', rightX, infoY);
   doc.setFont('helvetica', 'normal');
-  doc.text(invoiceNumber, rightX, infoY + 8);
+  doc.text(invoiceNumber || '', rightX, infoY + 8);
 
-doc.setFont('helvetica', 'bold');
-doc.text('Date :', rightX, infoY + 20);
-doc.setFont('helvetica', 'normal');
-// Affiche la date juste après "Date :" sur la même ligne, avec un petit espace
-doc.text(date.toLocaleDateString('fr-FR'), rightX + 25, infoY + 20);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Date :', rightX, infoY + 20);
+  doc.setFont('helvetica', 'normal');
+  doc.text(date.toLocaleDateString('fr-FR'), rightX + 25, infoY + 20);
 
-doc.setFont('helvetica', 'bold');
-doc.text('Échéance :', rightX, infoY + 30);
-doc.setFont('helvetica', 'normal');
-// Affiche la date d'échéance juste après "Échéance :" sur la même ligne
-doc.text(dueDate.toLocaleDateString('fr-FR'), rightX + 25, infoY + 30);
-
+  doc.setFont('helvetica', 'bold');
+  doc.text('Échéance :', rightX, infoY + 30);
+  doc.setFont('helvetica', 'normal');
+  doc.text(dueDate.toLocaleDateString('fr-FR'), rightX + 25, infoY + 30);
 
   // === INFOS CLIENT ===
   const clientY = 120;
@@ -154,7 +151,7 @@ doc.text(dueDate.toLocaleDateString('fr-FR'), rightX + 25, infoY + 30);
   doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
-  doc.text(sale.clientName, 25, clientY + 22);
+  doc.text(sale.clientName || '', 25, clientY + 22);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
@@ -173,27 +170,72 @@ doc.text(dueDate.toLocaleDateString('fr-FR'), rightX + 25, infoY + 30);
   doc.text('PRIX UNIT.', 130, tableY + 8);
   doc.text('MONTANT EUR', 160, tableY + 8);
 
-  const rowY = tableY + 12;
-  doc.setFillColor(255, 255, 255);
-  doc.rect(20, rowY, pageWidth - 40, 15, 'F');
-  doc.setDrawColor(220, 220, 220);
-  doc.rect(20, rowY, pageWidth - 40, 15, 'S');
+  // Gestion des produits multiples ou simple
+  const products = sale.products && sale.products.length > 0 
+    ? sale.products 
+    : [{
+        productId: sale.productId || '',
+        description: sale.description || '',
+        quantitySold: sale.quantitySold || 0,
+        purchasePrice: sale.purchasePrice || 0,
+        sellingPrice: sale.sellingPrice || 0,
+        profit: sale.profit || 0
+      }];
 
-  doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-  doc.setFont('helvetica', 'normal');
-  doc.text(sale.description, 25, rowY + 9);
-  doc.text(sale.quantitySold.toString(), 115, rowY + 9);
-  const unitPrice = sale.quantitySold > 0 ? sale.sellingPrice / sale.quantitySold : sale.sellingPrice;
-  doc.text(formatEuro(unitPrice), 135, rowY + 9);
-  doc.text(formatEuro(sale.sellingPrice), 165, rowY + 9);
+  let currentRowY = tableY + 12;
+  const rowHeight = 12;
+  let totalAmount = 0;
+
+  products.forEach((product, index) => {
+    // Vérification des valeurs pour éviter NaN
+    const quantity = typeof product.quantitySold === 'number' ? product.quantitySold : 0;
+    const sellingPrice = typeof product.sellingPrice === 'number' ? product.sellingPrice : 0;
+    const unitPrice = quantity > 0 ? sellingPrice / quantity : sellingPrice;
+    
+    // Ligne de produit
+    doc.setFillColor(255, 255, 255);
+    doc.rect(20, currentRowY, pageWidth - 40, rowHeight, 'F');
+    doc.setDrawColor(220, 220, 220);
+    doc.rect(20, currentRowY, pageWidth - 40, rowHeight, 'S');
+
+    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    
+    // Description avec retour à la ligne si trop longue
+    const description = product.description || '';
+    const maxDescriptionWidth = 80;
+    const lines = doc.splitTextToSize(description, maxDescriptionWidth);
+    
+    if (lines.length > 1) {
+      lines.forEach((line: string, lineIndex: number) => {
+        doc.text(line, 25, currentRowY + 8 + (lineIndex * 4));
+      });
+      // Ajuster la hauteur de la ligne si nécessaire
+      if (lines.length > 2) {
+        currentRowY += (lines.length - 2) * 4;
+      }
+    } else {
+      doc.text(description, 25, currentRowY + 8);
+    }
+    
+    // Quantité, prix unitaire et montant
+    doc.text(quantity.toString(), 115, currentRowY + 8);
+    doc.text(formatEuro(unitPrice), 135, currentRowY + 8);
+    doc.text(formatEuro(sellingPrice), 165, currentRowY + 8);
+    
+    totalAmount += sellingPrice;
+    currentRowY += rowHeight;
+  });
 
   // === TOTAUX + TVA + PAIEMENT ===
-  const totalsY = rowY + 35;
+  const totalsY = currentRowY + 20;
   const totalsX = pageWidth - 100;
 
   doc.setFontSize(10);
+  doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
   doc.text('Sous-total HT:', totalsX - 30, totalsY);
-  doc.text(formatEuro(sale.sellingPrice), totalsX + 15, totalsY);
+  doc.text(formatEuro(totalAmount), totalsX + 15, totalsY);
   doc.line(totalsX - 30, totalsY + 3, totalsX + 35, totalsY + 3);
 
   doc.text('TVA (0%):', totalsX - 30, totalsY + 10);
@@ -205,7 +247,7 @@ doc.text(dueDate.toLocaleDateString('fr-FR'), rightX + 25, infoY + 30);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('Total TTC:', totalsX - 30, totalsY + 23);
-  doc.text(formatEuro(sale.sellingPrice), totalsX + 15, totalsY + 23);
+  doc.text(formatEuro(totalAmount), totalsX + 15, totalsY + 23);
 
 // === INFOS DE PAIEMENT ===
 const paymentY = totalsY + 45;
@@ -370,7 +412,12 @@ doc.line(20, footerY, pageWidth - 20, footerY);
                                   <Calendar className="h-4 w-4" />
                                   {new Date(sale.date).toLocaleDateString('fr-FR')}
                                 </div>
-                                <div className="text-sm font-medium text-gray-700">{sale.description}</div>
+                                 <div className="text-sm font-medium text-gray-700">
+                                   {sale.products && sale.products.length > 0 
+                                     ? `${sale.products.length} produit${sale.products.length > 1 ? 's' : ''}`
+                                     : sale.description
+                                   }
+                                 </div>
                                 {sale.clientPhone && (
                                   <div className="flex items-center gap-2 text-sm text-gray-500">
                                     <Phone className="h-4 w-4" />
@@ -378,14 +425,20 @@ doc.line(20, footerY, pageWidth - 20, footerY);
                                   </div>
                                 )}
                               </div>
-                              <div className="text-right">
-                                <div className="text-lg font-bold text-emerald-600">
-                                  {formatEuro(sale.sellingPrice)}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  Qté: {sale.quantitySold}
-                                </div>
-                              </div>
+                               <div className="text-right">
+                                 <div className="text-lg font-bold text-emerald-600">
+                                   {sale.products && sale.products.length > 0 
+                                     ? formatEuro(sale.totalSellingPrice || 0)
+                                     : formatEuro(sale.sellingPrice || 0)
+                                   }
+                                 </div>
+                                 <div className="text-sm text-gray-500">
+                                   Qté: {sale.products && sale.products.length > 0 
+                                     ? sale.products.reduce((sum, p) => sum + (p.quantitySold || 0), 0)
+                                     : (sale.quantitySold || 0)
+                                   }
+                                 </div>
+                               </div>
                             </div>
                           </CardContent>
                         </Card>
@@ -449,43 +502,71 @@ doc.line(20, footerY, pageWidth - 20, footerY);
                 </CardContent>
               </Card>
 
-              {/* Détails du produit */}
-              <Card className="border-2 border-gradient-to-r from-emerald-200 to-teal-200">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2 text-emerald-700">
-                    <CreditCard className="h-5 w-5" />
-                    Détails du Produit
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Date</Label>
-                      <div className="text-lg font-semibold">{new Date(selectedSale.date).toLocaleDateString('fr-FR')}</div>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Quantité</Label>
-                      <div className="text-lg font-semibold">{selectedSale.quantitySold}</div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Produit</Label>
-                    <div className="text-lg font-semibold">{selectedSale.description}</div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Prix Total</Label>
-                      <div className="text-xl font-bold text-emerald-600">{formatEuro(selectedSale.sellingPrice)}</div>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium text-gray-600">Bénéfice</Label>
-                      <div className="text-xl font-bold text-purple-600">{formatEuro(selectedSale.profit)}</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+               {/* Détails du produit */}
+               <Card className="border-2 border-gradient-to-r from-emerald-200 to-teal-200">
+                 <CardHeader className="pb-3">
+                   <CardTitle className="text-lg flex items-center gap-2 text-emerald-700">
+                     <CreditCard className="h-5 w-5" />
+                     Détails de la Vente
+                   </CardTitle>
+                 </CardHeader>
+                 <CardContent className="space-y-4">
+                   <div className="grid grid-cols-2 gap-4">
+                     <div>
+                       <Label className="text-sm font-medium text-gray-600">Date</Label>
+                       <div className="text-lg font-semibold">{new Date(selectedSale.date).toLocaleDateString('fr-FR')}</div>
+                     </div>
+                     <div>
+                       <Label className="text-sm font-medium text-gray-600">Quantité Total</Label>
+                       <div className="text-lg font-semibold">
+                         {selectedSale.products && selectedSale.products.length > 0 
+                           ? selectedSale.products.reduce((sum, p) => sum + (p.quantitySold || 0), 0)
+                           : (selectedSale.quantitySold || 0)
+                         }
+                       </div>
+                     </div>
+                   </div>
+                   
+                   <div>
+                     <Label className="text-sm font-medium text-gray-600">
+                       {selectedSale.products && selectedSale.products.length > 0 ? 'Produits' : 'Produit'}
+                     </Label>
+                     {selectedSale.products && selectedSale.products.length > 0 ? (
+                       <div className="space-y-2">
+                         {selectedSale.products.map((product, index) => (
+                           <div key={index} className="text-sm bg-gray-50 p-2 rounded">
+                             <div className="font-medium">{product.description}</div>
+                             <div className="text-gray-600">Qté: {product.quantitySold} - {formatEuro(product.sellingPrice || 0)}</div>
+                           </div>
+                         ))}
+                       </div>
+                     ) : (
+                       <div className="text-lg font-semibold">{selectedSale.description}</div>
+                     )}
+                   </div>
+                   
+                   <div className="grid grid-cols-2 gap-4">
+                     <div>
+                       <Label className="text-sm font-medium text-gray-600">Prix Total</Label>
+                       <div className="text-xl font-bold text-emerald-600">
+                         {selectedSale.products && selectedSale.products.length > 0 
+                           ? formatEuro(selectedSale.totalSellingPrice || 0)
+                           : formatEuro(selectedSale.sellingPrice || 0)
+                         }
+                       </div>
+                     </div>
+                     <div>
+                       <Label className="text-sm font-medium text-gray-600">Bénéfice</Label>
+                       <div className="text-xl font-bold text-purple-600">
+                         {selectedSale.products && selectedSale.products.length > 0 
+                           ? formatEuro(selectedSale.totalProfit || 0)
+                           : formatEuro(selectedSale.profit || 0)
+                         }
+                       </div>
+                     </div>
+                   </div>
+                 </CardContent>
+               </Card>
 
               {/* Bouton de génération de facture */}
               <div className="flex justify-center pt-4">
