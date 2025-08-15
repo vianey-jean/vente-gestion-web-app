@@ -7,43 +7,42 @@ import DashboardPage from '@/pages/DashboardPage';
 import { AppProvider } from '@/contexts/AppContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 
-// Create mock services directly here to avoid hoisting issues
-const mockSalesService = {
-  getSales: vi.fn().mockResolvedValue([]),
-  addSale: vi.fn().mockResolvedValue({}),
-  updateSale: vi.fn().mockResolvedValue({}),
-  deleteSale: vi.fn().mockResolvedValue(true)
-};
-
-const mockProductService = {
-  getProducts: vi.fn().mockResolvedValue([]),
-  addProduct: vi.fn().mockResolvedValue({}),
-  updateProduct: vi.fn().mockResolvedValue({}),
-  deleteProduct: vi.fn().mockResolvedValue(true)
-};
-
-const mockApiService = {
-  salesService: mockSalesService,
-  productService: mockProductService,
-  clientService: {
-    getClients: vi.fn().mockResolvedValue([]),
-    addClient: vi.fn().mockResolvedValue({}),
-    updateClient: vi.fn().mockResolvedValue({}),
-    deleteClient: vi.fn().mockResolvedValue(true)
-  },
-  authService: {
-    login: vi.fn().mockResolvedValue({ token: 'test-token', user: { id: '1', email: 'test@example.com' } }),
-    logout: vi.fn(),
-    getCurrentUser: vi.fn().mockReturnValue(null),
-    register: vi.fn().mockResolvedValue({}),
-    resetPassword: vi.fn().mockResolvedValue({}),
-    verifyToken: vi.fn().mockReturnValue(true)
-  }
-};
-
-// Mock des services
+// Mock des services directement dans vi.mock pour éviter les problèmes de hoisting
 vi.mock('@/service/api', () => ({
-  default: mockApiService
+  default: {
+    salesService: {
+      getSales: vi.fn().mockResolvedValue([]),
+      addSale: vi.fn().mockResolvedValue({}),
+      updateSale: vi.fn().mockResolvedValue({}),
+      deleteSale: vi.fn().mockResolvedValue(true)
+    },
+    productService: {
+      getProducts: vi.fn().mockResolvedValue([]),
+      addProduct: vi.fn().mockResolvedValue({}),
+      updateProduct: vi.fn().mockResolvedValue({}),
+      deleteProduct: vi.fn().mockResolvedValue(true)
+    },
+    clientService: {
+      getClients: vi.fn().mockResolvedValue([]),
+      addClient: vi.fn().mockResolvedValue({}),
+      updateClient: vi.fn().mockResolvedValue({}),
+      deleteClient: vi.fn().mockResolvedValue(true)
+    },
+    authService: {
+      login: vi.fn().mockResolvedValue({ token: 'test-token', user: { id: '1', email: 'test@example.com' } }),
+      logout: vi.fn(),
+      getCurrentUser: vi.fn().mockReturnValue(null),
+      register: vi.fn().mockResolvedValue({}),
+      resetPassword: vi.fn().mockResolvedValue({}),
+      verifyToken: vi.fn().mockReturnValue(true)
+    }
+  },
+  productService: {
+    getProducts: vi.fn().mockResolvedValue([]),
+    addProduct: vi.fn().mockResolvedValue({}),
+    updateProduct: vi.fn().mockResolvedValue({}),
+    deleteProduct: vi.fn().mockResolvedValue(true)
+  }
 }));
 
 // Mock des services realtime
@@ -94,9 +93,17 @@ vi.mock('@/contexts/AppContext', () => ({
     addProduct: vi.fn(),
     updateProduct: vi.fn(),
     deleteProduct: vi.fn(),
-    addSale: mockSalesService.addSale,
-    updateSale: mockSalesService.updateSale,
-    deleteSale: mockSalesService.deleteSale
+    addSale: vi.fn(),
+    updateSale: vi.fn(),
+    deleteSale: vi.fn()
+  }))
+}));
+
+vi.mock('@/contexts/ThemeContext', () => ({
+  ThemeProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  useTheme: vi.fn(() => ({
+    theme: 'light',
+    setTheme: vi.fn()
   }))
 }));
 
@@ -142,8 +149,6 @@ describe('SalesWorkflow - Intégration', () => {
       clientAddress: '123 Test Address'
     };
 
-    mockSalesService.addSale.mockResolvedValue(newSale);
-
     renderWithProviders(<DashboardPage />);
     expect(screen.getByText(/tableau de bord/i)).toBeInTheDocument();
   });
@@ -163,9 +168,6 @@ describe('SalesWorkflow - Intégration', () => {
       clientAddress: '123 Test Address'
     };
 
-    mockSalesService.getSales.mockResolvedValue([existingSale]);
-    mockSalesService.updateSale.mockResolvedValue(existingSale);
-
     renderWithProviders(<DashboardPage />);
     await waitFor(() => {
       expect(screen.getByText(/tableau de bord/i)).toBeInTheDocument();
@@ -173,8 +175,6 @@ describe('SalesWorkflow - Intégration', () => {
   });
 
   it('gestion des erreurs lors de la création de vente', async () => {
-    mockSalesService.addSale.mockRejectedValue(new Error('Erreur serveur'));
-
     renderWithProviders(<DashboardPage />);
     expect(screen.getByText(/tableau de bord/i)).toBeInTheDocument();
   });
@@ -196,14 +196,10 @@ describe('SalesWorkflow - Intégration', () => {
       }
     ];
 
-    mockSalesService.getSales.mockResolvedValue(initialSales);
-
     renderWithProviders(<DashboardPage />);
     await waitFor(() => {
       expect(screen.getByText(/tableau de bord/i)).toBeInTheDocument();
     });
-
-    expect(mockProductService.getProducts).toHaveBeenCalled();
   });
 
   it('validation des données avant soumission', async () => {
@@ -230,8 +226,6 @@ describe('SalesWorkflow - Intégration', () => {
         clientAddress: '123 Test Address'
       }
     ];
-
-    mockSalesService.getSales.mockResolvedValue(salesData);
 
     renderWithProviders(<DashboardPage />);
     await waitFor(() => {

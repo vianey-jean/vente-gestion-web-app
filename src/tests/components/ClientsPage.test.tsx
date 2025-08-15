@@ -7,41 +7,36 @@ import ClientsPage from '@/pages/ClientsPage';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { AppProvider } from '@/contexts/AppContext';
 
-// Create mock services directly here to avoid hoisting issues
-const mockClientService = {
-  getClients: vi.fn().mockResolvedValue([]),
-  addClient: vi.fn().mockResolvedValue({}),
-  updateClient: vi.fn().mockResolvedValue({}),
-  deleteClient: vi.fn().mockResolvedValue(true)
-};
-
-const mockApiService = {
-  salesService: {
-    getSales: vi.fn().mockResolvedValue([]),
-    addSale: vi.fn().mockResolvedValue({}),
-    updateSale: vi.fn().mockResolvedValue({}),
-    deleteSale: vi.fn().mockResolvedValue(true)
-  },
-  productService: {
-    getProducts: vi.fn().mockResolvedValue([]),
-    addProduct: vi.fn().mockResolvedValue({}),
-    updateProduct: vi.fn().mockResolvedValue({}),
-    deleteProduct: vi.fn().mockResolvedValue(true)
-  },
-  clientService: mockClientService,
-  authService: {
-    login: vi.fn().mockResolvedValue({ token: 'test-token', user: { id: '1', email: 'test@example.com' } }),
-    logout: vi.fn(),
-    getCurrentUser: vi.fn().mockReturnValue(null),
-    register: vi.fn().mockResolvedValue({}),
-    resetPassword: vi.fn().mockResolvedValue({}),
-    verifyToken: vi.fn().mockReturnValue(true)
-  }
-};
-
-// Mock des services avec les mocks créés directement ici
+// Mock des services directement dans vi.mock pour éviter les problèmes de hoisting
 vi.mock('@/service/api', () => ({
-  default: mockApiService
+  default: {
+    salesService: {
+      getSales: vi.fn().mockResolvedValue([]),
+      addSale: vi.fn().mockResolvedValue({}),
+      updateSale: vi.fn().mockResolvedValue({}),
+      deleteSale: vi.fn().mockResolvedValue(true)
+    },
+    productService: {
+      getProducts: vi.fn().mockResolvedValue([]),
+      addProduct: vi.fn().mockResolvedValue({}),
+      updateProduct: vi.fn().mockResolvedValue({}),
+      deleteProduct: vi.fn().mockResolvedValue(true)
+    },
+    clientService: {
+      getClients: vi.fn().mockResolvedValue([]),
+      addClient: vi.fn().mockResolvedValue({}),
+      updateClient: vi.fn().mockResolvedValue({}),
+      deleteClient: vi.fn().mockResolvedValue(true)
+    },
+    authService: {
+      login: vi.fn().mockResolvedValue({ token: 'test-token', user: { id: '1', email: 'test@example.com' } }),
+      logout: vi.fn(),
+      getCurrentUser: vi.fn().mockReturnValue(null),
+      register: vi.fn().mockResolvedValue({}),
+      resetPassword: vi.fn().mockResolvedValue({}),
+      verifyToken: vi.fn().mockReturnValue(true)
+    }
+  }
 }));
 
 // Mock du hook useClientSync
@@ -93,7 +88,15 @@ vi.mock('@/contexts/AppContext', () => ({
     isLoading: false,
     addClient: vi.fn(),
     updateClient: vi.fn(),
-    deleteClient: mockClientService.deleteClient
+    deleteClient: vi.fn()
+  }))
+}));
+
+vi.mock('@/contexts/ThemeContext', () => ({
+  ThemeProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  useTheme: vi.fn(() => ({
+    theme: 'light',
+    setTheme: vi.fn()
   }))
 }));
 
