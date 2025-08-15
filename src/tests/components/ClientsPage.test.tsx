@@ -40,16 +40,37 @@ const mockApiService = {
 };
 
 // Mock des services avec les mocks créés directement ici
-vi.mock('@/service/api', () => mockApiService);
+vi.mock('@/service/api', () => ({
+  default: mockApiService
+}));
 
 // Mock du hook useClientSync
 vi.mock('@/hooks/useClientSync', () => ({
   useClientSync: vi.fn(() => ({
     clients: [],
     isLoading: false,
-    searchClients: vi.fn(() => []),
+    searchClients: vi.fn((query: string) => []),
     refetch: vi.fn()
   }))
+}));
+
+// Mock des hooks de messages
+vi.mock('@/hooks/use-messages', () => ({
+  useMessages: vi.fn(() => ({
+    messages: [],
+    isLoading: false,
+    sendMessage: vi.fn(),
+    markAsRead: vi.fn()
+  }))
+}));
+
+// Mock des services realtime
+vi.mock('@/services/realtimeService', () => ({
+  realtimeService: {
+    connect: vi.fn(),
+    addDataListener: vi.fn(() => vi.fn()),
+    addSyncListener: vi.fn(() => vi.fn())
+  }
 }));
 
 // Mock des hooks

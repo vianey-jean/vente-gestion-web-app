@@ -42,9 +42,36 @@ const mockApiService = {
 };
 
 // Mock des services
-vi.mock('@/service/api', () => mockApiService);
+vi.mock('@/service/api', () => ({
+  default: mockApiService
+}));
 
-// Mock des hooks
+// Mock des services realtime
+vi.mock('@/services/realtime/RealtimeService', () => ({
+  default: class MockRealtimeService {
+    connect() {}
+    addDataListener() { return () => {}; }
+    addSyncListener() { return () => {}; }
+  }
+}));
+
+vi.mock('@/services/realtimeService', () => ({
+  realtimeService: {
+    connect: vi.fn(),
+    addDataListener: vi.fn(() => vi.fn()),
+    addSyncListener: vi.fn(() => vi.fn())
+  }
+}));
+
+// Mock des hooks de messages
+vi.mock('@/hooks/use-messages', () => ({
+  useMessages: vi.fn(() => ({
+    messages: [],
+    isLoading: false,
+    sendMessage: vi.fn(),
+    markAsRead: vi.fn()
+  }))
+}));
 vi.mock('@/contexts/AuthContext', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   useAuth: vi.fn(() => ({
