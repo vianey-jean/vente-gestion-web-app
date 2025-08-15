@@ -26,7 +26,7 @@ vi.mock('axios', () => ({
 const useClientSync = () => ({
   clients: [],
   isLoading: false,
-  searchClients: vi.fn(() => []),
+  searchClients: vi.fn((query: string) => []),
   refetch: vi.fn()
 });
 
