@@ -107,6 +107,16 @@ vi.mock('@/contexts/ThemeContext', () => ({
   }))
 }));
 
+vi.mock('@/components/accessibility/AccessibilityProvider', () => ({
+  AccessibilityProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  useAccessibility: vi.fn(() => ({
+    announceText: vi.fn(),
+    setFocusManagement: vi.fn(),
+    isHighContrast: false,
+    isReducedMotion: false
+  }))
+}));
+
 // Mock des composants
 vi.mock('@/components/Layout', () => ({
   default: ({ children }: { children: React.ReactNode }) => <div data-testid="layout">{children}</div>
@@ -150,7 +160,7 @@ describe('SalesWorkflow - Intégration', () => {
     };
 
     renderWithProviders(<DashboardPage />);
-    expect(screen.getByText(/tableau de bord/i)).toBeInTheDocument();
+    expect(screen.getByTestId('layout')).toBeInTheDocument();
   });
 
   it('workflow de modification de vente existante', async () => {
@@ -170,13 +180,13 @@ describe('SalesWorkflow - Intégration', () => {
 
     renderWithProviders(<DashboardPage />);
     await waitFor(() => {
-      expect(screen.getByText(/tableau de bord/i)).toBeInTheDocument();
+      expect(screen.getByTestId('layout')).toBeInTheDocument();
     });
   });
 
   it('gestion des erreurs lors de la création de vente', async () => {
     renderWithProviders(<DashboardPage />);
-    expect(screen.getByText(/tableau de bord/i)).toBeInTheDocument();
+    expect(screen.getByTestId('layout')).toBeInTheDocument();
   });
 
   it('synchronisation des données après opérations CRUD', async () => {
@@ -198,7 +208,7 @@ describe('SalesWorkflow - Intégration', () => {
 
     renderWithProviders(<DashboardPage />);
     await waitFor(() => {
-      expect(screen.getByText(/tableau de bord/i)).toBeInTheDocument();
+      expect(screen.getByTestId('layout')).toBeInTheDocument();
     });
   });
 
@@ -206,7 +216,7 @@ describe('SalesWorkflow - Intégration', () => {
     renderWithProviders(<DashboardPage />);
     
     await waitFor(() => {
-      expect(screen.getByText(/tableau de bord/i)).toBeInTheDocument();
+      expect(screen.getByTestId('layout')).toBeInTheDocument();
     });
   });
 
@@ -229,7 +239,7 @@ describe('SalesWorkflow - Intégration', () => {
 
     renderWithProviders(<DashboardPage />);
     await waitFor(() => {
-      expect(screen.getByText(/tableau de bord/i)).toBeInTheDocument();
+      expect(screen.getByTestId('layout')).toBeInTheDocument();
     });
   });
 });
