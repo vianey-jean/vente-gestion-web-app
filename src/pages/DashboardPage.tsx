@@ -8,6 +8,7 @@ import DepenseDuMois from '@/components/dashboard/DepenseDuMois';
 import Inventaire from '@/components/dashboard/Inventaire';
 import ProfitCalculator from '@/components/dashboard/ProfitCalculator';
 import Layout from '@/components/Layout';
+import ProtectedPageWrapper from '@/components/auth/ProtectedPageWrapper';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ShoppingCart, Users, Package, CreditCard, TrendingUp, Sparkles, Archive, Calculator } from 'lucide-react';

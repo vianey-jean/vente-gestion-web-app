@@ -27,6 +27,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import Layout from '@/components/Layout';
+import ProtectedPageWrapper from '@/components/auth/ProtectedPageWrapper';
 import { fr } from 'date-fns/locale';
 import { Input } from '@/components/ui/input';
 import PremiumLoading from '@/components/ui/premium-loading';
@@ -115,9 +116,10 @@ const MessagesPage: React.FC = () => {
 
   return (
     <Layout>
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-blue-900 dark:to-indigo-900">
-      <div className="container mx-auto px-6 py-8">
-        {/* Header Premium */}
+      <ProtectedPageWrapper>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-blue-900 dark:to-indigo-900">
+          <div className="container mx-auto px-6 py-8">
+            {/* Header Premium */}
         <div className="text-center mb-10">
           <div className="relative inline-block mb-6">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full blur-2xl opacity-20"></div>
@@ -370,9 +372,9 @@ const MessagesPage: React.FC = () => {
               </Card>
             )}
           </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </ProtectedPageWrapper>
     </Layout>
   );
 };

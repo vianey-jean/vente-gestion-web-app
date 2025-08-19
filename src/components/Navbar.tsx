@@ -19,7 +19,8 @@ import {
   TrendingUp, 
   Users,
   MessageSquare,
-  ChevronDown
+  ChevronDown,
+  Shield
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -73,6 +74,13 @@ const Navbar: React.FC = () => {
                       <Users className="mr-2 h-4 w-4 text-purple-600 group-hover:scale-110 transition-transform" />
                       <p className="text-purple-600 bg-transparent">Clients</p>
                     </Link>
+
+                    {user?.role === 'admin' && (
+                      <Link to="/admin" className="group inline-flex items-center px-4 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all duration-200">
+                        <Shield className="mr-2 h-4 w-4 text-orange-600 group-hover:scale-110 transition-transform" />
+                        <p className="text-orange-600 bg-transparent">Administration</p>
+                      </Link>
+                    )}
                   </>
                 )}
 
@@ -198,11 +206,23 @@ const Navbar: React.FC = () => {
                         size="sm" 
                         className="h-10 w-10 p-0 rounded-xl border-2 border-purple-200 text-purple-600 hover:bg-purple-500 hover:text-white hover:border-purple-500"
                       >
-                        <Users className="h-4 w-4" />
+                      <Users className="h-4 w-4" />
+                    </Button>
+                  </Link>
+
+                  {user?.role === 'admin' && (
+                    <Link to="/admin">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-10 w-10 p-0 rounded-xl border-2 border-orange-200 text-orange-600 hover:bg-orange-500 hover:text-white hover:border-orange-500"
+                      >
+                        <Shield className="h-4 w-4" />
                       </Button>
                     </Link>
+                  )}
 
-                    <Link to="/messages" className="relative">
+                  <Link to="/messages" className="relative">
                       <Button 
                         variant="outline" 
                         size="sm" 

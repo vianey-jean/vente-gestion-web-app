@@ -19,12 +19,25 @@ class EncryptionService {
   // Décrypter les données
   static decrypt(encryptedText) {
     if (!encryptedText || typeof encryptedText !== 'string') return encryptedText;
+    
+    // Si le texte ne semble pas être crypté (ne contient pas de caractères cryptés), le retourner tel quel
+    if (!encryptedText.includes('U2FsdGVkX1') && !encryptedText.match(/^[A-Za-z0-9+/]+=*$/)) {
+      return encryptedText;
+    }
+    
     try {
       const bytes = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
       const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-      return decrypted || encryptedText;
+      
+      // Si le décryptage échoue ou retourne une chaîne vide, retourner le texte original
+      if (!decrypted || decrypted.length === 0) {
+        return encryptedText;
+      }
+      
+      return decrypted;
     } catch (error) {
       console.error('Erreur de décryptage:', error);
+      // Retourner le texte original en cas d'erreur
       return encryptedText;
     }
   }

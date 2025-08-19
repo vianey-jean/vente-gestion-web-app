@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Layout from '@/components/Layout';
+import ProtectedPageWrapper from '@/components/auth/ProtectedPageWrapper';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
@@ -980,8 +981,9 @@ const TendancesPage = () => {
               </div>
             </TabsContent>
           </Tabs>
+          </div>
         </div>
-      </div>
+      </ProtectedPageWrapper>
     </Layout>
   );
 };

@@ -6,8 +6,10 @@ import { useToast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
 import { ConfirmationCodeModal } from '@/components/auth/ConfirmationCodeModal';
 import { useConfirmationCheck } from '@/hooks/useConfirmationCheck';
+import AdminDataManager from '@/components/admin/AdminDataManager';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import axios from 'axios';
-import { Lock, Unlock, Users, Shield, Key } from 'lucide-react';
+import { Lock, Unlock, Users, Shield, Key, Database } from 'lucide-react';
 
 interface LockedAccount {
   userId: string;
@@ -156,9 +158,22 @@ const AdminPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Comptes verrouillés */}
-          <Card>
+        <Tabs defaultValue="security" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="security" className="flex items-center gap-2">
+              <Shield className="w-4 h-4" />
+              Sécurité
+            </TabsTrigger>
+            <TabsTrigger value="data" className="flex items-center gap-2">
+              <Database className="w-4 h-4" />
+              Gestion des Données
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="security">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Comptes verrouillés */}
+              <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Lock className="w-5 h-5" />
@@ -263,7 +278,13 @@ const AdminPage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="data">
+            <AdminDataManager />
+          </TabsContent>
+        </Tabs>
 
         <ConfirmationCodeModal
           isOpen={showConfirmationModal}

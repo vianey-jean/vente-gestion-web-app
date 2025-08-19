@@ -14,6 +14,7 @@ import Footer from '@/components/Footer';
 import ScrollToTop from '@/components/ScrollToTop';
 import ConfirmDeleteDialog from '@/components/dashboard/forms/ConfirmDeleteDialog';
 import Layout from '@/components/Layout';
+import ProtectedPageWrapper from '@/components/auth/ProtectedPageWrapper';
 import PremiumLoading from '@/components/ui/premium-loading';
 
 interface Client {
