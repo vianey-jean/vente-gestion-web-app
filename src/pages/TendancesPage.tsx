@@ -401,8 +401,9 @@ const TendancesPage = () => {
 
   return (
     <Layout requireAuth>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-slate-900">
-        <div className="container mx-auto px-4 py-8">
+      <ProtectedPageWrapper>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-slate-900">
+          <div className="container mx-auto px-4 py-8">
           {/* Hero Header */}
           <div className="text-center mb-12">
             <div className="inline-flex items-center px-4 py-2 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-full text-emerald-600 dark:text-emerald-400 text-sm font-medium mb-6 border border-emerald-200 dark:border-emerald-800">

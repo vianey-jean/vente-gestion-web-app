@@ -120,7 +120,7 @@ const MessagesPage: React.FC = () => {
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-blue-900 dark:to-indigo-900">
           <div className="container mx-auto px-6 py-8">
             {/* Header Premium */}
-        <div className="text-center mb-10">
+            <div className="text-center mb-10">
           <div className="relative inline-block mb-6">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full blur-2xl opacity-20"></div>
             <h1 className="relative text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
@@ -143,6 +143,7 @@ const MessagesPage: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
         </div>
 
         <div className="grid lg:grid-cols-5 gap-8 max-w-8xl mx-auto">
