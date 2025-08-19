@@ -134,13 +134,14 @@ describe('ClientsPage', () => {
 
   it('affiche la page des clients', () => {
     renderWithProviders(<ClientsPage />);
-    // Test if the page renders without errors - the layout component is rendered
-    expect(screen.getByTestId('layout')).toBeInTheDocument();
+    // Test if the page renders without errors - check for main content
+    expect(screen.getByText('Votre Empire Clientèle vous attend')).toBeInTheDocument();
   });
 
   it('affiche le message quand il n\'y a pas de clients', () => {
     renderWithProviders(<ClientsPage />);
-    // Test if the page renders without errors - the layout component is rendered
-    expect(screen.getByTestId('layout')).toBeInTheDocument();
+    // Test if empty state message is displayed
+    expect(screen.getByText('Votre Empire Clientèle vous attend')).toBeInTheDocument();
+    expect(screen.getByText('Créer votre Premier Client Élite')).toBeInTheDocument();
   });
 });
