@@ -1,0 +1,41 @@
+[
+  {
+    "daily": {
+      "date": "2025-08-24",
+      "count": 14,
+      "uniqueVisitors": [
+        "visitor_1756044905983_2lcpl0rda",
+        "visitor_1756044905986_6ppjrwsfl",
+        "visitor_1756044934456_f0e1tsnd7",
+        "visitor_1756044934458_vikefy760",
+        "visitor_1756044934460_lol5hh151",
+        "::ffff:127.0.0.1_TW96aWxsYS81LjAgKFdp",
+        "visitor_1756044962930_qbbx6che6",
+        "visitor_1756044962933_c5fg1e59k",
+        "visitor_1756044962935_i2uxq4b3l",
+        "visitor_1756044991405_csq0ie3dg",
+        "visitor_1756044991406_h8p2rrlix",
+        "visitor_1756045019878_kmxpii0ad",
+        "visitor_1756045019881_mfvgqdr2v",
+        "visitor_1756045019883_mot0ipdli"
+      ]
+    },
+    "weekly": {
+      "week": 34,
+      "year": 2025,
+      "count": 9
+    },
+    "monthly": {
+      "month": 7,
+      "year": 2025,
+      "count": 9
+    },
+    "yearly": {
+      "year": 2025,
+      "count": 243
+    },
+    "currentViewing": 1,
+    "lastVisit": "2025-08-24T14:16:46.395Z",
+    "onlineUsers": []
+  }
+]
