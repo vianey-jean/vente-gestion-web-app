@@ -80,7 +80,7 @@ const TendancesPage = () => {
     }
     // Ancien format single-produit
     else if (sale.sellingPrice !== undefined && sale.quantitySold !== undefined) {
-      const revenue = sale.sellingPrice ;
+      const revenue = sale.sellingPrice * sale.quantitySold;
       const quantity = sale.quantitySold;
       const profit = sale.profit || 0;
       
