@@ -112,23 +112,10 @@ const FlashSaleBanner: React.FC = () => {
     return () => clearInterval(timer);
   }, [activeFlashSales]);
 
-  if (isLoading) {
-    return (
-      <div className="my-6 space-y-4">
-        {[1, 2].map((i) => (
-          <div key={i} className="animate-pulse bg-gray-200 dark:bg-gray-700 h-32 rounded-xl"></div>
-        ))}
-      </div>
-    );
-  }
-
-  if (activeFlashSales.length === 0) {
-    return null;
-  }
-
+  // Calculate active sales
   const activeSales = activeFlashSales.filter(sale => !expiredSales.has(sale.id));
 
-  // Auto-carousel effect
+  // Auto-carousel effect - Always call useEffect, but conditionally set up interval
   useEffect(() => {
     if (activeSales.length <= 1) return;
 
@@ -142,6 +129,16 @@ const FlashSaleBanner: React.FC = () => {
   const handleDotClick = (index: number) => {
     setCurrentIndex(index);
   };
+
+  if (isLoading) {
+    return (
+      <div className="my-6 space-y-4">
+        {[1, 2].map((i) => (
+          <div key={i} className="animate-pulse bg-gray-200 dark:bg-gray-700 h-32 rounded-xl"></div>
+        ))}
+      </div>
+    );
+  }
 
   if (activeSales.length === 0) {
     return null;
