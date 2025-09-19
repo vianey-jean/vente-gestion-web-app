@@ -43,6 +43,12 @@ const SalesNotification: React.FC = () => {
   const [lastCheckTime, setLastCheckTime] = useState<string>(new Date().toISOString());
   const [isStatsVisible, setIsStatsVisible] = useState(false);
   const [hasNewSale, setHasNewSale] = useState(false);
+  const [previousStats, setPreviousStats] = useState<OrderStats>({
+    today: 0,
+    week: 0,
+    month: 0,
+    year: 0
+  });
 
   useEffect(() => {
     // Ne pas afficher si pas admin ou pas sur la page d'accueil
@@ -56,9 +62,28 @@ const SalesNotification: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           
-          // Mettre à jour les statistiques de commandes
+          // Vérifier si les statistiques ont changé
           if (data.orderStats) {
+            const statsChanged = 
+              data.orderStats.today !== previousStats.today ||
+              data.orderStats.week !== previousStats.week ||
+              data.orderStats.month !== previousStats.month ||
+              data.orderStats.year !== previousStats.year;
+
+            if (statsChanged && (previousStats.today > 0 || previousStats.week > 0 || previousStats.month > 0 || previousStats.year > 0)) {
+              console.log('Changement détecté dans les statistiques:', data.orderStats);
+              setHasNewSale(true);
+              setIsStatsVisible(true);
+              
+              // Masquer après 5 secondes
+              setTimeout(() => {
+                setHasNewSale(false);
+                setIsStatsVisible(false);
+              }, 5000);
+            }
+            
             setOrderStats(data.orderStats);
+            setPreviousStats(data.orderStats);
           }
           
           if (data.notification) {
@@ -81,14 +106,14 @@ const SalesNotification: React.FC = () => {
       }
     };
 
-    // Vérifier les nouvelles ventes toutes les secondes pour une réactivité maximale
-    const interval = setInterval(checkForNewSales, 1000);
+    // Vérifier les nouvelles ventes toutes les 2 secondes pour une synchronisation continue
+    const interval = setInterval(checkForNewSales, 2000);
 
     // Vérification initiale
     checkForNewSales();
 
     return () => clearInterval(interval);
-  }, [isAdmin, location.pathname, lastCheckTime]);
+  }, [isAdmin, location.pathname, lastCheckTime, previousStats.today, previousStats.week, previousStats.month, previousStats.year]);
 
   // Ne pas afficher si pas admin ou pas sur la page d'accueil
   if (!isAdmin || location.pathname !== '/') {
