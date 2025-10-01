@@ -10,6 +10,13 @@ import { cardsAPI } from '@/services/cards';
 interface CreditCardFormProps {
   onSuccess: () => void;
   onSaveCard?: (cardData: any) => void;
+  orderData?: {
+    shippingAddress: any;
+    cartItems: any[];
+    promoDetails?: any;
+    deliveryPrice: number;
+    taxAmount: number;
+  };
 }
 
 const detectCardType = (number: string) => {
@@ -39,7 +46,7 @@ const isValidLuhn = (number: string) => {
   return sum % 10 === 0;
 };
 
-const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess, onSaveCard }) => {
+const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess, onSaveCard, orderData }) => {
   const [cardNumber, setCardNumber] = useState('');
   const [cardType, setCardType] = useState('Inconnue');
   const [cardName, setCardName] = useState('');
@@ -125,19 +132,48 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess, onSaveCard }
     setLoading(true);
 
     try {
+      let cardId: string;
+      
       if (saveCard) {
-        await cardsAPI.addCard({ cardNumber, cardName, expiryDate, cvv });
+        cardId = await cardsAPI.addCard({ cardNumber, cardName, expiryDate, cvv }, true);
         toast.success("Carte sauvegardée");
+      } else {
+        // Créer une carte temporaire pour le paiement
+        cardId = await cardsAPI.addCard({ cardNumber, cardName, expiryDate, cvv }, false);
       }
-      setTimeout(() => {
-        setLoading(false);
-        toast.success("Paiement accepté");
+      
+      console.log('💳 Traitement du paiement avec la carte:', cardId);
+      
+      // Calculer le montant total
+      const amount = orderData ? 
+        orderData.cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0) +
+        orderData.deliveryPrice +
+        orderData.taxAmount -
+        (orderData.promoDetails?.discount || 0)
+        : 0;
+      
+      console.log('💰 Montant total:', amount);
+      
+      // Traiter le paiement
+      const paymentResult = await cardsAPI.processPayment({
+        cardId,
+        amount,
+        orderData
+      });
+      
+      console.log('✅ Paiement traité:', paymentResult);
+      
+      if (paymentResult.success) {
+        toast.success('Paiement effectué avec succès !');
         onSuccess();
-      }, 1500);
+      } else {
+        toast.error('Échec du paiement');
+        setLoading(false);
+      }
     } catch (error) {
       console.error(error);
       setLoading(false);
-      toast.error("Erreur lors du paiement");
+      toast.error("Erreur lors du traitement du paiement");
     }
   };
 

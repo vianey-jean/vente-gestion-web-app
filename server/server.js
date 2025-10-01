@@ -93,9 +93,13 @@ app.use('/api/sales-notifications', require('./routes/sales-notifications'));
 app.use('/api/visitors', require('./routes/visitors'));
 app.use('/api/pub-layout', require('./routes/pub-layout'));
 app.use('/api/site-settings', require('./routes/site-settings'));
+app.use('/api/payment-modes', require('./routes/payment-modes'));
 app.use('/api/data-sync', require('./routes/data-sync'));
 app.use('/api/admin-chat', require('./routes/admin-chat'));
 app.use('/api/client-chat', require('./routes/client-chat'));
+
+// Route pour les cartes bancaires
+console.log('🎴 Chargement de la route /api/cards');
 app.use('/api/cards', require('./routes/cards'));
 app.use('/api/profile-images', require('./routes/profile-images'));
 app.use('/api/chat-files', require('./routes/chat-files'));

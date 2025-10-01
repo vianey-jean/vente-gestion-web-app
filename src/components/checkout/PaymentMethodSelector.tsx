@@ -11,9 +11,16 @@ import { toast } from '@/components/ui/sonner';
 
 interface PaymentMethodSelectorProps {
   onPaymentSuccess: () => void;
+  orderData?: {
+    shippingAddress: any;
+    cartItems: any[];
+    promoDetails?: any;
+    deliveryPrice: number;
+    taxAmount: number;
+  };
 }
 
-const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({ onPaymentSuccess }) => {
+const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({ onPaymentSuccess, orderData }) => {
   const [selectedCardId, setSelectedCardId] = useState<string>('');
   const [activeTab, setActiveTab] = useState('saved');
   const [hasSavedCards, setHasSavedCards] = useState(false);
@@ -49,17 +56,46 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({ onPayment
     }
 
     try {
-      const card = await cardsAPI.getCard(selectedCardId);
-      console.log('Paiement avec carte sauvegardée:', card.id);
+      console.log('🎯 Début du paiement avec carte sauvegardée:', selectedCardId);
       
-      // Simuler le paiement
-      setTimeout(() => {
-        toast.success("Paiement accepté avec la carte sauvegardée");
+      // Calculer le montant total (en centimes pour Stripe)
+      const subtotal = orderData?.cartItems?.reduce((sum, item) => {
+        const price = item.price || 0;
+        const quantity = item.quantity || 0;
+        return sum + (price * quantity);
+      }, 0) || 0;
+      
+      const deliveryPrice = orderData?.deliveryPrice || 0;
+      const taxAmount = orderData?.taxAmount || 0;
+      const discount = orderData?.promoDetails?.discount || 0;
+      
+      const amount = Math.round((subtotal + deliveryPrice + taxAmount - discount) * 100); // Convertir en centimes
+      
+      console.log('💰 Détails:', { subtotal, deliveryPrice, taxAmount, discount, amount });
+      
+      // Rediriger vers Stripe pour le paiement
+      toast.info('Redirection vers Stripe pour validation du paiement...');
+      
+      const paymentResult = await cardsAPI.processPayment({
+        cardId: selectedCardId,
+        amount,
+        orderData
+      });
+      
+      console.log('✅ Paiement traité:', paymentResult);
+      
+      if (paymentResult.success && paymentResult.checkoutUrl) {
+        // Rediriger vers la page de paiement Stripe
+        window.location.href = paymentResult.checkoutUrl;
+      } else if (paymentResult.success) {
+        toast.success('Paiement effectué avec succès !');
         onPaymentSuccess();
-      }, 1500);
+      } else {
+        toast.error('Échec du paiement');
+      }
     } catch (error) {
       console.error('Erreur lors du paiement:', error);
-      toast.error('Erreur lors du paiement');
+      toast.error('Erreur lors du traitement du paiement');
     }
   };
 
@@ -103,6 +139,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({ onPayment
                 checkSavedCards();
                 onPaymentSuccess();
               }}
+              orderData={orderData}
             />
           </TabsContent>
         </Tabs>

@@ -21,9 +21,6 @@ export interface CardData {
 }
 
 class CardsAPI {
-  createPaymentIntent(p0: { cardId: string; }): { clientSecret: any; } | PromiseLike<{ clientSecret: any; }> {
-    throw new Error('Method not implemented.');
-  }
   private getAuthHeaders() {
     const token = localStorage.getItem('authToken'); // Utiliser 'authToken' au lieu de 'token'
     return {
@@ -66,6 +63,28 @@ class CardsAPI {
     await axios.delete(`${API_BASE_URL}/api/cards/${cardId}`, {
       headers: this.getAuthHeaders()
     });
+  }
+
+  async processPayment(data: { 
+    cardId: string; 
+    amount: number;
+    orderData?: any;
+  }): Promise<{ 
+    success: boolean; 
+    paymentId?: string; 
+    status: string;
+    message: string;
+    checkoutUrl?: string;
+  }> {
+    console.log('📤 Envoi de la requête de paiement vers:', `${API_BASE_URL}/api/cards/process-payment`);
+    console.log('📋 Data:', data);
+    
+    const response = await axios.post(`${API_BASE_URL}/api/cards/process-payment`, data, {
+      headers: this.getAuthHeaders()
+    });
+    
+    console.log('✅ Réponse paiement:', response.data);
+    return response.data;
   }
 }
 

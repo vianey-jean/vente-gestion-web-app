@@ -20,6 +20,7 @@ const dataFiles = [
   'categories.json',
   'visitors.json',
   'sales-notifications.json',
+  'cartes-bancaires.json',
 ];
 
 const initializeDataFiles = (req, res, next) => {

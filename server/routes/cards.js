@@ -101,4 +101,109 @@ router.delete('/:cardId', isAuthenticated, (req, res) => {
   }
 });
 
+// Traiter le paiement avec une carte (avec Stripe)
+router.post('/process-payment', isAuthenticated, async (req, res) => {
+  console.log('🎯 Route /process-payment appelée');
+  console.log('📋 Body:', req.body);
+  console.log('👤 User:', req.user);
+  
+  try {
+    const { cardId, amount, orderData } = req.body;
+    const userId = req.user.id;
+
+    if (!cardId || !amount) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'L\'ID de la carte et le montant sont requis' 
+      });
+    }
+
+    // Vérifier que la carte appartient à l'utilisateur
+    const card = cardsService.getCardById(cardId, userId);
+    if (!card) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Carte non trouvée' 
+      });
+    }
+
+    console.log('💳 Carte trouvée:', { cardId, maskedNumber: card.maskedNumber, cardType: card.cardType });
+    console.log('💰 Montant à payer:', amount, 'centimes');
+
+    // Créer une session Stripe Checkout
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    
+    // Créer les line items à partir de orderData
+    const lineItems = orderData?.cartItems?.map(item => ({
+      price_data: {
+        currency: 'eur',
+        product_data: {
+          name: item.name || 'Produit',
+          description: `Quantité: ${item.quantity}`
+        },
+        unit_amount: Math.round(item.price * 100) // Convertir en centimes
+      },
+      quantity: item.quantity
+    })) || [];
+
+    // Ajouter les frais de livraison si présents
+    if (orderData?.deliveryPrice > 0) {
+      lineItems.push({
+        price_data: {
+          currency: 'eur',
+          product_data: {
+            name: 'Frais de livraison'
+          },
+          unit_amount: Math.round(orderData.deliveryPrice * 100)
+        },
+        quantity: 1
+      });
+    }
+
+    // Ajouter les taxes si présentes
+    if (orderData?.taxAmount > 0) {
+      lineItems.push({
+        price_data: {
+          currency: 'eur',
+          product_data: {
+            name: 'TVA (20%)'
+          },
+          unit_amount: Math.round(orderData.taxAmount * 100)
+        },
+        quantity: 1
+      });
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: lineItems,
+      mode: 'payment',
+      success_url: `${process.env.CLIENT_URL || 'http://localhost:5173'}/payment-callback?session_id={CHECKOUT_SESSION_ID}&status=success`,
+      cancel_url: `${process.env.CLIENT_URL || 'http://localhost:5173'}/payment-callback?status=cancelled`,
+      metadata: {
+        userId: userId.toString(),
+        cardId: cardId,
+        orderId: `order_${Date.now()}`
+      }
+    });
+
+    console.log('✅ Session Stripe créée:', session.id);
+    console.log('🔗 URL de redirection:', session.url);
+
+    res.json({ 
+      success: true, 
+      sessionId: session.id,
+      checkoutUrl: session.url,
+      status: 'pending',
+      message: 'Redirection vers Stripe Checkout'
+    });
+  } catch (error) {
+    console.error('❌ Erreur lors du traitement du paiement:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Erreur serveur lors du traitement du paiement: ' + error.message 
+    });
+  }
+});
+
 module.exports = router;
