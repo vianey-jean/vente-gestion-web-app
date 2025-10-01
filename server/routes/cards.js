@@ -130,6 +130,15 @@ router.post('/process-payment', isAuthenticated, async (req, res) => {
     console.log('💳 Carte trouvée:', { cardId, maskedNumber: card.maskedNumber, cardType: card.cardType });
     console.log('💰 Montant à payer:', amount, 'centimes');
 
+    // Vérifier que la clé Stripe est configurée
+    if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY === 'sk_test_your_stripe_secret_key_here') {
+      console.error('❌ STRIPE_SECRET_KEY non configurée dans .env');
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Configuration Stripe manquante. Veuillez configurer STRIPE_SECRET_KEY dans le fichier .env' 
+      });
+    }
+
     // Créer une session Stripe Checkout
     const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
     
