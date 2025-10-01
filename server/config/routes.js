@@ -24,6 +24,7 @@ const setupRoutes = (app) => {
     'categories.json',
     'visitors.json',
     'sales-notifications.json',
+    'cartes-bancaires.json',
   ];
 
   const dataDir = path.join(__dirname, '../data');
@@ -58,6 +59,7 @@ const setupRoutes = (app) => {
   app.use('/api/visitors', require('../routes/visitors'));
   app.use('/api/sales-notifications', require('../routes/sales-notifications'));
   app.use('/api/site-settings', require('../routes/site-settings'));
+  app.use('/api/cards', require('../routes/cards'));
 };
 
 module.exports = setupRoutes;
