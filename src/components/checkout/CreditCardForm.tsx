@@ -144,15 +144,15 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess, onSaveCard, 
       
       console.log('💳 Traitement du paiement avec la carte:', cardId);
       
-      // Calculer le montant total
-      const amount = orderData ? 
-        orderData.cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0) +
+      // Calculer le montant total en centimes pour Stripe
+      const amount = orderData ? Math.round(
+        (orderData.cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0) +
         orderData.deliveryPrice +
         orderData.taxAmount -
-        (orderData.promoDetails?.discount || 0)
-        : 0;
+        (orderData.promoDetails?.discount || 0)) * 100 // Convertir en centimes
+      ) : 0;
       
-      console.log('💰 Montant total:', amount);
+      console.log('💰 Montant total:', amount, 'centimes');
       
       // Traiter le paiement
       const paymentResult = await cardsAPI.processPayment({
@@ -163,17 +163,22 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess, onSaveCard, 
       
       console.log('✅ Paiement traité:', paymentResult);
       
-      if (paymentResult.success) {
+      if (paymentResult.success && paymentResult.checkoutUrl) {
+        // Rediriger vers la page de paiement Stripe
+        toast.success('Redirection vers Stripe...');
+        window.location.href = paymentResult.checkoutUrl;
+      } else if (paymentResult.success) {
         toast.success('Paiement effectué avec succès !');
         onSuccess();
       } else {
-        toast.error('Échec du paiement');
+        toast.error(paymentResult.message || 'Échec du paiement');
         setLoading(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       setLoading(false);
-      toast.error("Erreur lors du traitement du paiement");
+      const errorMessage = error?.response?.data?.message || error?.message || "Erreur lors du traitement du paiement";
+      toast.error(errorMessage);
     }
   };
 

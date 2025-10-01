@@ -135,7 +135,7 @@ router.post('/process-payment', isAuthenticated, async (req, res) => {
       console.error('❌ STRIPE_SECRET_KEY non configurée dans .env');
       return res.status(500).json({ 
         success: false, 
-        message: 'Configuration Stripe manquante. Veuillez configurer STRIPE_SECRET_KEY dans le fichier .env' 
+        message: 'Configuration Stripe manquante. Veuillez configurer STRIPE_SECRET_KEY dans le fichier .env du serveur' 
       });
     }
 
@@ -183,6 +183,8 @@ router.post('/process-payment', isAuthenticated, async (req, res) => {
       });
     }
 
+    console.log('📦 Line items:', JSON.stringify(lineItems, null, 2));
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: lineItems,
@@ -210,7 +212,7 @@ router.post('/process-payment', isAuthenticated, async (req, res) => {
     console.error('❌ Erreur lors du traitement du paiement:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Erreur serveur lors du traitement du paiement: ' + error.message 
+      message: error.message || 'Erreur serveur lors du traitement du paiement'
     });
   }
 });
