@@ -96,8 +96,18 @@ const PretProduitsGrouped: React.FC = () => {
     try {
       setLoading(true);
       const data = await pretProduitService.getPretProduits();
-      setPrets(data);
-      groupPretsByPerson(data);
+      
+      // Initialiser le champ paiements pour les prêts qui n'en ont pas
+      const dataWithPaiements = data.map(pret => ({
+        ...pret,
+        paiements: pret.paiements || (pret.avanceRecue > 0 ? [{
+          date: pret.date,
+          montant: pret.avanceRecue
+        }] : [])
+      }));
+      
+      setPrets(dataWithPaiements);
+      groupPretsByPerson(dataWithPaiements);
     } catch (error) {
       console.error('Erreur lors du chargement des prêts produits', error);
       toast({
@@ -202,11 +212,14 @@ const PretProduitsGrouped: React.FC = () => {
     try {
       setLoading(true);
       
-      // Créer l'historique des paiements si une avance initiale est présente
+      // Créer l'historique des paiements avec la date actuelle du jour
+      const aujourdHui = new Date();
+      const dateAujourdhui = format(aujourdHui, 'yyyy-MM-dd');
+      
       const paiements = [];
       if (parseFloat(avanceRecue) > 0) {
         paiements.push({
-          date: format(datePret, 'yyyy-MM-dd'),
+          date: dateAujourdhui,
           montant: parseFloat(avanceRecue)
         });
       }
@@ -276,11 +289,17 @@ const PretProduitsGrouped: React.FC = () => {
       const nouveauReste = selectedPret.prixVente - nouvelleAvanceRecue;
       const nouveauEstPaye = nouveauReste <= 0;
       
-      // Ajouter le nouveau paiement à l'historique
+      // Récupérer la date actuelle du jour depuis l'ordinateur
+      const aujourdHui = new Date();
+      const dateAujourdhui = format(aujourdHui, 'yyyy-MM-dd');
+      
+      // Ajouter le nouveau paiement à l'historique avec la date du jour
       const nouveauPaiement = {
-        date: format(new Date(), 'yyyy-MM-dd'),
+        date: dateAujourdhui,
         montant: parseFloat(ajoutAvance)
       };
+      
+      // Initialiser le tableau de paiements s'il n'existe pas
       const paiementsExistants = selectedPret.paiements || [];
       const nouveauxPaiements = [...paiementsExistants, nouveauPaiement];
       
@@ -291,9 +310,12 @@ const PretProduitsGrouped: React.FC = () => {
         estPaye: nouveauEstPaye,
         paiements: nouveauxPaiements
       };
+      
+      console.log('Mise à jour du prêt avec les paiements:', updatedPret);
+      
       await pretProduitService.updatePretProduit(selectedPret.id, updatedPret);
       await fetchPrets();
-      toast({ title: 'Succès', description: 'Avance ajoutée avec succès', variant: 'default', className: 'notification-success' });
+      toast({ title: 'Succès', description: `Avance de ${formatCurrency(parseFloat(ajoutAvance))} ajoutée avec succès`, variant: 'default', className: 'notification-success' });
       setAjoutAvance('');
       setSelectedPret(null);
       setAjoutAvanceDialogOpen(false);
