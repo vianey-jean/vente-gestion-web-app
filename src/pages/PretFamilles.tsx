@@ -1,10 +1,8 @@
-
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import PretFamillesPage from './PretFamillesPage';
 
 const PretFamilles: React.FC = () => {
-  // Redirige vers la page Dashboard qui contient la gestion des prêts familles
-  return <Navigate to="/" replace />;
+  return <PretFamillesPage />;
 };
 
 export default PretFamilles;
