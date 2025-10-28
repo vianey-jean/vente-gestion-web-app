@@ -625,26 +625,42 @@ const PretProduitsGrouped: React.FC = () => {
                     
                     {group.phone && (
                       <div className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
-                        <Phone className="h-4 w-4" />
-                        <span className="text-sm">{group.phone}</span>
+                        <Phone className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-bold text-blue-600">{group.phone}</span>
                       </div>
                     )}
 
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                    <span className="text-sm  font-bold text-orange-500 dark:text-orange-400">
                       {group.prets.length} prêt{group.prets.length > 1 ? 's' : ''}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-6">
-                    <div className="text-right">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Total à payer</p>
-                      <p className="text-lg font-bold text-orange-600">{formatCurrency(group.totalReste)}</p>
-                    </div>
+                    <motion.div className="text-right">
+                    <p className="text-sm text-gray-500 font-bold dark:text-gray-400">
+                      Total Reste à payer
+                    </p>
+                    <motion.p
+                      key={group.totalReste}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.7, ease: "easeOut" }}
+                      className={`text-lg font-bold ${
+                        group.totalReste === 0
+                          ? 'text-green-600 dark:text-green-400'
+                          : group.totalReste > 0
+                          ? 'text-red-600 dark:text-red-400'
+                          : 'text-orange-600 dark:text-orange-400'
+                      }`}
+                    >
+                      {formatCurrency(group.totalReste)}
+                    </motion.p>
+                  </motion.div>
                     
                     <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold ${
                       group.allPaid 
                         ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                        : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                        : 'bg-red-300 text-red-800 dark:bg-red-900/30 dark:text-red-600'
                     }`}>
                       {group.allPaid ? (
                         <>
