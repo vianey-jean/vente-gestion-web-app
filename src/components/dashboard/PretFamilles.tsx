@@ -13,41 +13,96 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   CalendarIcon, Loader2, Wallet, CreditCard, Plus, ArrowUp, ArrowDown,
   Receipt, HandCoins, DollarSign, Sparkles, Award, Users, TrendingDown, TrendingUp, Eye,
-  Edit, Trash2
+  Edit2, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { usePretFamilleContext } from '@/contexts/PretFamilleContext';
+import { pretFamilleService } from '@/service/api';
 import { PretFamille } from '@/types';
 import PremiumLoading from '@/components/ui/premium-loading';
+import { realtimeService } from '@/services/realtimeService';
+import ConfirmDeleteDialog from '@/components/dashboard/forms/ConfirmDeleteDialog';
 
 const PretFamilles: React.FC = () => {
-  const { 
-    prets, 
-    loading, 
-    addRemboursement, 
-    updateRemboursement, 
-    deleteRemboursement, 
-    createPret, 
-    searchByName 
-  } = usePretFamilleContext();
-
+  const [prets, setPrets] = useState<PretFamille[]>([]);
+  const [loading, setLoading] = useState(false);
   const [remboursementDialogOpen, setRemboursementDialogOpen] = useState(false);
   const [demandePretDialogOpen, setDemandePretDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [editRemboursementDialogOpen, setEditRemboursementDialogOpen] = useState(false);
+  const [confirmDeleteDialogOpen, setConfirmDeleteDialogOpen] = useState(false);
+  const [remboursementIndexToDelete, setRemboursementIndexToDelete] = useState<number>(-1);
+  const [selectedPretToDelete, setSelectedPretToDelete] = useState<PretFamille | null>(null);
+  const [deletePretDialogOpen, setDeletePretDialogOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [searchResults, setSearchResults] = useState<PretFamille[]>([]);
   const [selectedPret, setSelectedPret] = useState<PretFamille | null>(null);
   const [selectedPretForDetail, setSelectedPretForDetail] = useState<PretFamille | null>(null);
   const [selectedRemboursementIndex, setSelectedRemboursementIndex] = useState<number>(-1);
+  const [editMontantRemboursement, setEditMontantRemboursement] = useState('');
   const [montantRemboursement, setMontantRemboursement] = useState('');
-  const [editMontant, setEditMontant] = useState('');
+  const [montantRemboursementError, setMontantRemboursementError] = useState('');
+  const [editMontantError, setEditMontantError] = useState('');
   const [nouvNom, setNouvNom] = useState('');
   const [nouvPretTotal, setNouvPretTotal] = useState('');
   const [nouvDate, setNouvDate] = useState<Date>(new Date());
+  const [nouvSearchResults, setNouvSearchResults] = useState<PretFamille[]>([]);
+  const [selectedFamilleForPret, setSelectedFamilleForPret] = useState<PretFamille | null>(null);
 
   const { toast } = useToast();
 
+  useEffect(() => {
+    const fetchPrets = async () => {
+      try {
+        setLoading(true);
+        const data = await pretFamilleService.getPretFamilles();
+        // Initialiser remboursements si non présent
+        const pretsWithRemboursements = data.map(pret => ({
+          ...pret,
+          remboursements: pret.remboursements || []
+        }));
+        setPrets(pretsWithRemboursements);
+      } catch (error) {
+        console.error('Erreur lors du chargement des prêts', error);
+        toast({
+          title: 'Erreur',
+          description: 'Impossible de charger les prêts familles',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPrets();
+  }, [toast]);
+
+  // Synchronisation en temps réel pour les prêts familles
+  useEffect(() => {
+    const unsubscribe = realtimeService.addDataListener((data) => {
+      if (data.pretFamilles) {
+        console.log('📡 Mise à jour temps réel des prêts familles:', data.pretFamilles);
+        const pretsWithRemboursements = data.pretFamilles.map((pret: PretFamille) => ({
+          ...pret,
+          remboursements: pret.remboursements || []
+        }));
+        setPrets(pretsWithRemboursements);
+        
+        // Mettre à jour le prêt sélectionné pour les détails si nécessaire
+        if (selectedPretForDetail) {
+          const updatedSelectedPret = pretsWithRemboursements.find(
+            (p: PretFamille) => p.id === selectedPretForDetail.id
+          );
+          if (updatedSelectedPret) {
+            setSelectedPretForDetail(updatedSelectedPret);
+          }
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [selectedPretForDetail]);
 
   const totalPret = prets.reduce((sum, pret) => sum + pret.pretTotal, 0);
   const totalSolde = prets.reduce((sum, pret) => sum + pret.soldeRestant, 0);
@@ -55,8 +110,13 @@ const PretFamilles: React.FC = () => {
   const handleSearch = async (text: string) => {
     setSearchText(text);
     if (text.length >= 3) {
-      const results = await searchByName(text);
-      setSearchResults(results);
+      try {
+        const results = await pretFamilleService.searchByName(text);
+        setSearchResults(results);
+      } catch (error) {
+        console.error('Erreur lors de la recherche', error);
+        setSearchResults([]);
+      }
     } else {
       setSearchResults([]);
     }
@@ -66,6 +126,56 @@ const PretFamilles: React.FC = () => {
     setSelectedPret(pret);
     setSearchText(pret.nom);
     setSearchResults([]);
+    setMontantRemboursement('');
+    setMontantRemboursementError('');
+  };
+
+  // Validation du montant de remboursement
+  const validateMontantRemboursement = (montant: string) => {
+    if (!selectedPret) {
+      setMontantRemboursementError('');
+      return false;
+    }
+
+    const montantNum = parseFloat(montant);
+    if (isNaN(montantNum) || montantNum <= 0) {
+      setMontantRemboursementError('');
+      return false;
+    }
+
+    if (montantNum > selectedPret.soldeRestant) {
+      setMontantRemboursementError(`Ne dépasse pas ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(selectedPret.soldeRestant)}`);
+      return false;
+    }
+
+    setMontantRemboursementError('');
+    return true;
+  };
+
+  // Validation du montant de modification de remboursement
+  const validateEditMontant = (montant: string) => {
+    if (!selectedPretForDetail || selectedRemboursementIndex < 0) {
+      setEditMontantError('');
+      return false;
+    }
+
+    const montantNum = parseFloat(montant);
+    if (isNaN(montantNum) || montantNum < 0) {
+      setEditMontantError('');
+      return false;
+    }
+
+    const montantActuel = selectedPretForDetail.remboursements?.[selectedRemboursementIndex]?.montant || 0;
+    const resteAPayer = selectedPretForDetail.soldeRestant;
+    const maxMontant = resteAPayer + montantActuel;
+
+    if (montantNum > maxMontant) {
+      setEditMontantError(`Ne dépasse pas ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(maxMontant)}`);
+      return false;
+    }
+
+    setEditMontantError('');
+    return true;
   };
 
   const handleRemboursement = async () => {
@@ -78,23 +188,70 @@ const PretFamilles: React.FC = () => {
       return;
     }
 
-    const montant = parseFloat(montantRemboursement);
-    if (montant > selectedPret.soldeRestant) {
-      toast({
-        title: 'Erreur',
-        description: 'Le montant de remboursement ne peut pas être supérieur au solde restant',
-        variant: 'destructive',
-      });
+    if (!validateMontantRemboursement(montantRemboursement)) {
       return;
     }
 
-    const success = await addRemboursement(selectedPret.id, montant);
-    if (success) {
+    const montant = parseFloat(montantRemboursement);
+
+    try {
+      setLoading(true);
+      const dateAujourdhui = new Date().toISOString().split('T')[0];
+      const nouveauRemboursement = {
+        date: dateAujourdhui,
+        montant: montant
+      };
+      
+      const rembourssementsActuels = selectedPret.remboursements || [];
+      const updatedPret: PretFamille = {
+        ...selectedPret,
+        soldeRestant: selectedPret.soldeRestant - montant,
+        dernierRemboursement: montant,
+        dateRemboursement: dateAujourdhui,
+        remboursements: [...rembourssementsActuels, nouveauRemboursement]
+      };
+      await pretFamilleService.updatePretFamille(selectedPret.id, updatedPret);
+      const updatedPrets = await pretFamilleService.getPretFamilles();
+      const pretsWithRemboursements = updatedPrets.map(pret => ({
+        ...pret,
+        remboursements: pret.remboursements || []
+      }));
+      setPrets(pretsWithRemboursements);
+      toast({ title: 'Succès', description: 'Remboursement enregistré', variant: 'default', className: 'notification-success' });
       setSelectedPret(null);
       setSearchText('');
       setMontantRemboursement('');
+      setMontantRemboursementError('');
       setRemboursementDialogOpen(false);
+    } catch (error) {
+      console.error('Erreur remboursement', error);
+      toast({ title: 'Erreur', description: 'Impossible d\'enregistrer le remboursement', variant: 'destructive' });
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleNouvNomSearch = async (text: string) => {
+    setNouvNom(text);
+    setSelectedFamilleForPret(null);
+    
+    if (text.length >= 3) {
+      try {
+        const results = await pretFamilleService.searchByName(text);
+        setNouvSearchResults(results);
+      } catch (error) {
+        console.error('Erreur lors de la recherche', error);
+        setNouvSearchResults([]);
+      }
+    } else {
+      setNouvSearchResults([]);
+    }
+  };
+
+  const selectFamilleForPret = (pret: PretFamille) => {
+    setSelectedFamilleForPret(pret);
+    setNouvNom(pret.nom);
+    setNouvSearchResults([]);
   };
 
   const handleDemandePret = async () => {
@@ -107,58 +264,256 @@ const PretFamilles: React.FC = () => {
       return;
     }
 
-    const success = await createPret(nouvNom, parseFloat(nouvPretTotal), nouvDate);
-    if (success) {
+    try {
+      setLoading(true);
+      const dateAujourdhui = format(nouvDate, 'yyyy-MM-dd');
+      
+      // Si une famille existante a été sélectionnée, on ajoute au prêt existant
+      if (selectedFamilleForPret) {
+        const nouveauMontant = parseFloat(nouvPretTotal);
+        const updatedPret: PretFamille = {
+          ...selectedFamilleForPret,
+          pretTotal: selectedFamilleForPret.pretTotal + nouveauMontant,
+          soldeRestant: selectedFamilleForPret.soldeRestant + nouveauMontant,
+          dateRemboursement: dateAujourdhui
+        };
+        await pretFamilleService.updatePretFamille(selectedFamilleForPret.id, updatedPret);
+        toast({ title: 'Succès', description: `Prêt de ${nouveauMontant}€ ajouté à ${selectedFamilleForPret.nom}`, variant: 'default', className: 'notification-success' });
+      } else {
+        // Sinon, on crée un nouveau prêt
+        const newPret: Omit<PretFamille, 'id'> = {
+          nom: nouvNom,
+          pretTotal: parseFloat(nouvPretTotal),
+          soldeRestant: parseFloat(nouvPretTotal),
+          dernierRemboursement: 0,
+          dateRemboursement: dateAujourdhui,
+          remboursements: []
+        };
+        await pretFamilleService.addPretFamille(newPret);
+        toast({ title: 'Succès', description: 'Nouveau prêt créé', variant: 'default', className: 'notification-success' });
+      }
+      
+      const updatedPrets = await pretFamilleService.getPretFamilles();
+      const pretsWithRemboursements = updatedPrets.map(pret => ({
+        ...pret,
+        remboursements: pret.remboursements || []
+      }));
+      setPrets(pretsWithRemboursements);
       setNouvNom('');
       setNouvPretTotal('');
       setNouvDate(new Date());
+      setSelectedFamilleForPret(null);
+      setNouvSearchResults([]);
       setDemandePretDialogOpen(false);
+    } catch (error) {
+      console.error('Erreur demande de prêt', error);
+      toast({ title: 'Erreur', description: 'Impossible d\'enregistrer la demande de prêt', variant: 'destructive' });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEditRemboursement = (remboursementIndex: number) => {
+  const openEditRemboursementDialog = (remboursementIndex: number) => {
     if (!selectedPretForDetail) return;
+    
     setSelectedRemboursementIndex(remboursementIndex);
-    setEditMontant(selectedPretForDetail.remboursements[remboursementIndex].montant.toString());
+    const remboursement = selectedPretForDetail.remboursements?.[remboursementIndex];
+    if (remboursement) {
+      setEditMontantRemboursement(remboursement.montant.toString());
+    }
+    setEditMontantError('');
     setEditRemboursementDialogOpen(true);
   };
 
-  const handleUpdateRemboursement = async () => {
+  const handleEditRemboursement = async () => {
     if (!selectedPretForDetail || selectedRemboursementIndex < 0) return;
-    if (!editMontant || parseFloat(editMontant) <= 0) {
+    if (!editMontantRemboursement || parseFloat(editMontantRemboursement) < 0) {
       toast({ title: 'Erreur', description: 'Veuillez saisir un montant valide', variant: 'destructive' });
       return;
     }
 
-    const success = await updateRemboursement(
-      selectedPretForDetail.id, 
-      selectedRemboursementIndex, 
-      parseFloat(editMontant)
-    );
-    
-    if (success) {
-      // Rafraîchir les détails du prêt sélectionné
-      const updatedPret = prets.find(p => p.id === selectedPretForDetail.id);
-      if (updatedPret) {
-        setSelectedPretForDetail(updatedPret);
+    if (!validateEditMontant(editMontantRemboursement)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const nouveauMontant = parseFloat(editMontantRemboursement);
+      const remboursements = [...(selectedPretForDetail.remboursements || [])];
+      
+      // 1. Récupérer l'ancien montant à modifier
+      const ancienMontant = remboursements[selectedRemboursementIndex].montant;
+      
+      // 2. Calculer la différence entre ancien et nouveau montant
+      const difference = ancienMontant - nouveauMontant;
+      
+      // 3. Calculer le nouveau reste à payer
+      // Si différence positive (réduction du remboursement), on augmente le reste à payer
+      // Si différence négative (augmentation du remboursement), on diminue le reste à payer
+      const nouveauResteAPayer = selectedPretForDetail.soldeRestant + difference;
+      
+      // 4. Mettre à jour le montant du remboursement spécifique
+      remboursements[selectedRemboursementIndex] = {
+        ...remboursements[selectedRemboursementIndex],
+        montant: nouveauMontant
+      };
+      
+      const updatedPret: PretFamille = {
+        ...selectedPretForDetail,
+        soldeRestant: nouveauResteAPayer,
+        dernierRemboursement: remboursements.length > 0 ? remboursements[remboursements.length - 1].montant : 0,
+        remboursements: remboursements
+      };
+      
+      await pretFamilleService.updatePretFamille(selectedPretForDetail.id, updatedPret);
+      const updatedPrets = await pretFamilleService.getPretFamilles();
+      const pretsWithRemboursements = updatedPrets.map(pret => ({
+        ...pret,
+        remboursements: pret.remboursements || []
+      }));
+      setPrets(pretsWithRemboursements);
+      
+      // Mettre à jour le prêt sélectionné pour les détails
+      const updatedSelectedPret = pretsWithRemboursements.find(p => p.id === selectedPretForDetail.id);
+      if (updatedSelectedPret) {
+        setSelectedPretForDetail(updatedSelectedPret);
       }
+      
+      toast({ 
+        title: 'Succès', 
+        description: 'Remboursement modifié avec succès', 
+        variant: 'default',
+        className: 'notification-success'
+      });
+      
       setEditRemboursementDialogOpen(false);
+      setEditMontantRemboursement('');
+      setEditMontantError('');
       setSelectedRemboursementIndex(-1);
-      setEditMontant('');
+    } catch (error) {
+      console.error('Erreur lors de la modification du remboursement', error);
+      toast({ 
+        title: 'Erreur', 
+        description: 'Impossible de modifier le remboursement', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDeleteRemboursement = async (remboursementIndex: number) => {
-    if (!selectedPretForDetail) return;
-    
-    const success = await deleteRemboursement(selectedPretForDetail.id, remboursementIndex);
-    
-    if (success) {
-      // Rafraîchir les détails du prêt sélectionné
-      const updatedPret = prets.find(p => p.id === selectedPretForDetail.id);
-      if (updatedPret) {
-        setSelectedPretForDetail(updatedPret);
+  const openDeleteRemboursementDialog = (remboursementIndex: number) => {
+    setRemboursementIndexToDelete(remboursementIndex);
+    setConfirmDeleteDialogOpen(true);
+  };
+
+  const handleDeleteRemboursement = async () => {
+    if (!selectedPretForDetail || remboursementIndexToDelete < 0) return;
+
+    try {
+      setLoading(true);
+      const remboursements = [...(selectedPretForDetail.remboursements || [])];
+      
+      // 1. Récupérer la valeur à supprimer depuis la base de données
+      const Valeur = remboursements[remboursementIndexToDelete].montant;
+      
+      // 2. Récupérer le total remboursé actuel depuis la base de données
+      const TotalRembourse = selectedPretForDetail.pretTotal - selectedPretForDetail.soldeRestant;
+      
+      // 3. Calculer le nouveau total remboursé
+      const Rembourse = TotalRembourse - Valeur;
+      
+      // 4. Calculer le nouveau reste à payer
+      const nouveauResteAPayer = selectedPretForDetail.soldeRestant + Valeur;
+      
+      // 5. Supprimer le remboursement de l'historique
+      remboursements.splice(remboursementIndexToDelete, 1);
+      
+      const updatedPret: PretFamille = {
+        ...selectedPretForDetail,
+        soldeRestant: nouveauResteAPayer,
+        dernierRemboursement: remboursements.length > 0 ? remboursements[remboursements.length - 1].montant : 0,
+        remboursements: remboursements
+      };
+      
+      await pretFamilleService.updatePretFamille(selectedPretForDetail.id, updatedPret);
+      const updatedPrets = await pretFamilleService.getPretFamilles();
+      const pretsWithRemboursements = updatedPrets.map(pret => ({
+        ...pret,
+        remboursements: pret.remboursements || []
+      }));
+      setPrets(pretsWithRemboursements);
+      
+      // Mettre à jour le prêt sélectionné pour les détails
+      const updatedSelectedPret = pretsWithRemboursements.find(p => p.id === selectedPretForDetail.id);
+      if (updatedSelectedPret) {
+        setSelectedPretForDetail(updatedSelectedPret);
       }
+      
+      toast({ 
+        title: 'Succès', 
+        description: `Remboursement de ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(Valeur)} supprimé avec succès`, 
+        variant: 'default',
+        className: 'notification-success'
+      });
+
+      setConfirmDeleteDialogOpen(false);
+      setRemboursementIndexToDelete(-1);
+    } catch (error) {
+      console.error('Erreur lors de la suppression du remboursement', error);
+      toast({ 
+        title: 'Erreur', 
+        description: 'Impossible de supprimer le remboursement', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openDeletePretDialog = (pret: PretFamille) => {
+    setSelectedPretToDelete(pret);
+    setDeletePretDialogOpen(true);
+  };
+
+  const handleDeletePret = async () => {
+    if (!selectedPretToDelete) return;
+
+    try {
+      setLoading(true);
+      await pretFamilleService.deletePretFamille(selectedPretToDelete.id);
+      
+      const updatedPrets = await pretFamilleService.getPretFamilles();
+      const pretsWithRemboursements = updatedPrets.map(pret => ({
+        ...pret,
+        remboursements: pret.remboursements || []
+      }));
+      setPrets(pretsWithRemboursements);
+      
+      toast({ 
+        title: 'Succès', 
+        description: `Prêt de ${selectedPretToDelete.nom} supprimé avec succès`, 
+        variant: 'default',
+        className: 'notification-success'
+      });
+      
+      setDeletePretDialogOpen(false);
+      setSelectedPretToDelete(null);
+      
+      // Fermer le dialog de détails si c'était le prêt supprimé
+      if (selectedPretForDetail?.id === selectedPretToDelete.id) {
+        setDetailDialogOpen(false);
+        setSelectedPretForDetail(null);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression du prêt', error);
+      toast({ 
+        title: 'Erreur', 
+        description: 'Impossible de supprimer le prêt', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -324,18 +679,29 @@ const PretFamilles: React.FC = () => {
                         <span className="text-gray-600 dark:text-gray-400 font-bold">{pret.dateRemboursement}</span>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedPretForDetail(pret);
-                            setDetailDialogOpen(true);
-                          }}
-                          className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
-                          title="Voir détails"
-                        >
-                          <Eye className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                        </Button>
+                        <div className="flex items-center justify-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPretForDetail(pret);
+                              setDetailDialogOpen(true);
+                            }}
+                            className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
+                            title="Voir détails"
+                          >
+                            <Eye className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeletePretDialog(pret)}
+                            className="hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
+                            title="Suppression prêt"
+                          >
+                            <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -437,36 +803,37 @@ const PretFamilles: React.FC = () => {
                     {selectedPretForDetail.remboursements.map((remboursement, index) => (
                       <div 
                         key={index}
-                        className="flex justify-between items-center bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg group hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all"
+                        className="flex justify-between items-center bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg group hover:bg-white/70 dark:hover:bg-gray-800/70 transition-all"
                       >
-                        <div className="flex items-center gap-2 flex-1">
+                        <div className="flex items-center gap-2">
                           <CalendarIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             {remboursement.date}
                           </span>
                         </div>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400 mx-4">
-                          {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(remboursement.montant)}
-                        </span>
-                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditRemboursement(index)}
-                            className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
-                            title="Modifier"
-                          >
-                            <Edit className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteRemboursement(index)}
-                            className="h-8 w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900/20"
-                            title="Supprimer"
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
-                          </Button>
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                            {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(remboursement.montant)}
+                          </span>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                              onClick={() => openEditRemboursementDialog(index)}
+                            >
+                              <Edit2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-red-100 dark:hover:bg-red-900/30"
+                              onClick={() => openDeleteRemboursementDialog(index)}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+                            </Button>
+                          </div>
+
                         </div>
                       </div>
                     ))}
@@ -513,8 +880,8 @@ const PretFamilles: React.FC = () => {
                         onClick={() => selectFamille(result)}
                       >
                         <div className="font-semibold text-gray-800 dark:text-gray-200">{result.nom}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          Solde: {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(result.soldeRestant)}
+                        <div className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                          Reste à payer: {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(result.soldeRestant)}
                         </div>
                       </div>
                     ))}
@@ -531,13 +898,36 @@ const PretFamilles: React.FC = () => {
                   id="montant" 
                   type="number" 
                   value={montantRemboursement} 
-                  onChange={(e) => setMontantRemboursement(e.target.value)}
+                  onChange={(e) => {
+                    setMontantRemboursement(e.target.value);
+                    validateMontantRemboursement(e.target.value);
+                  }}
                   placeholder="0.00"
                   min="0"
                   step="0.01"
-                  className="pl-12 bg-white/50 backdrop-blur-sm border border-gray-200/50 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500/20 transition-all duration-200"
+                  className={cn(
+                    "pl-12 bg-white/50 backdrop-blur-sm border rounded-xl px-4 py-3 focus:ring-2 transition-all duration-200",
+                    montantRemboursementError 
+                      ? "border-red-500 focus:ring-red-500/20" 
+                      : "border-gray-200/50 focus:ring-emerald-500/20"
+                  )}
                 />
               </div>
+              {montantRemboursementError && (
+                <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                  {montantRemboursementError}
+                </p>
+              )}
+              {selectedPret && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200/50">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <span className="font-semibold">Solde actuel:</span>{' '}
+                    <span className="font-bold text-blue-600 dark:text-blue-400">
+                      {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(selectedPret.soldeRestant)}
+                    </span>
+                  </p>
+                </div>
+              )}
             </div>
             
             {selectedPret && (
@@ -563,8 +953,8 @@ const PretFamilles: React.FC = () => {
             
             <Button 
               onClick={handleRemboursement} 
-              disabled={loading || !selectedPret || !montantRemboursement || parseFloat(montantRemboursement) <= 0}
-              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 hover:scale-105 shadow-lg"
+              disabled={loading || !selectedPret || !montantRemboursement || parseFloat(montantRemboursement) <= 0 || !!montantRemboursementError}
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               {loading ? (
                 <>
@@ -575,6 +965,114 @@ const PretFamilles: React.FC = () => {
                 <>
                   <Receipt className="h-5 w-5 mr-2" />
                   Enregistrer le remboursement
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialog pour modifier un remboursement */}
+      <Dialog open={editRemboursementDialogOpen} onOpenChange={setEditRemboursementDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 border border-white/20 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <div className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-full p-2">
+                <Edit2 className="h-5 w-5 text-white" />
+              </div>
+              Modifier le remboursement
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-6 py-6">
+            <div className="grid gap-3">
+              <Label htmlFor="editMontant" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Nouveau montant du remboursement
+              </Label>
+              <div className="relative">
+                <DollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-emerald-500" />
+                <Input 
+                  id="editMontant" 
+                  type="number" 
+                  value={editMontantRemboursement} 
+                  onChange={(e) => {
+                    setEditMontantRemboursement(e.target.value);
+                    validateEditMontant(e.target.value);
+                  }}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  className={cn(
+                    "pl-12 bg-white/50 backdrop-blur-sm border rounded-xl px-4 py-3 focus:ring-2 transition-all duration-200",
+                    editMontantError 
+                      ? "border-red-500 focus:ring-red-500/20" 
+                      : "border-gray-200/50 focus:ring-emerald-500/20"
+                  )}
+                />
+              </div>
+              {editMontantError && (
+                <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                  {editMontantError}
+                </p>
+              )}
+            </div>
+            
+            {selectedPretForDetail && selectedRemboursementIndex >= 0 && (
+              <div className="bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/20 p-6 rounded-2xl border border-gray-200/50">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-gray-700 dark:text-gray-300">Montant actuel:</span>
+                    <span className="font-bold text-lg text-gray-800 dark:text-gray-200">
+                      {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(
+                        selectedPretForDetail.remboursements?.[selectedRemboursementIndex]?.montant || 0
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-gray-700 dark:text-gray-300">Reste à payer:</span>
+                    <span className="font-bold text-lg text-red-600 dark:text-red-400">
+                      {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(selectedPretForDetail.soldeRestant)}
+                    </span>
+                  </div>
+                  {editMontantRemboursement && !isNaN(parseFloat(editMontantRemboursement)) && (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-gray-700 dark:text-gray-300">Nouveau montant:</span>
+                        <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
+                          {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(parseFloat(editMontantRemboursement))}
+                        </span>
+                      </div>
+                      <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-gray-700 dark:text-gray-300">Nouveau solde restant:</span>
+                          <span className="font-bold text-lg text-blue-600 dark:text-blue-400">
+                            {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(
+                              selectedPretForDetail.soldeRestant + 
+                              (selectedPretForDetail.remboursements?.[selectedRemboursementIndex]?.montant || 0) - 
+                              parseFloat(editMontantRemboursement)
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            <Button 
+              onClick={handleEditRemboursement} 
+              disabled={loading || !editMontantRemboursement || parseFloat(editMontantRemboursement) < 0 || !!editMontantError}
+              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  Traitement...
+                </>
+              ) : (
+                <>
+                  <Edit2 className="h-5 w-5 mr-2" />
+                  Modifier le remboursement
                 </>
               )}
             </Button>
@@ -594,15 +1092,62 @@ const PretFamilles: React.FC = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-6 py-6">
-            <div className="grid gap-3">
-              <Label htmlFor="nouvNom" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Nom de la famille</Label>
+            <div className="grid gap-3 relative">
+              <Label htmlFor="nouvNom" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Nom de la famille
+                {selectedFamilleForPret && (
+                  <span className="ml-2 text-xs text-emerald-600 dark:text-emerald-400 font-normal">
+                    (Ajout au prêt existant)
+                  </span>
+                )}
+              </Label>
               <Input 
                 id="nouvNom" 
                 value={nouvNom} 
-                onChange={(e) => setNouvNom(e.target.value)}
-                placeholder="Nom de la famille"
+                onChange={(e) => handleNouvNomSearch(e.target.value)}
+                placeholder="Tapez au moins 3 caractères..."
                 className="bg-white/50 backdrop-blur-sm border border-gray-200/50 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200"
               />
+              
+              {/* Liste d'autocomplétion */}
+              {nouvSearchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto">
+                  {nouvSearchResults.map((famille) => (
+                    <button
+                      key={famille.id}
+                      type="button"
+                      onClick={() => selectFamilleForPret(famille)}
+                      className="w-full text-left px-4 py-3 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0"
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-gray-900 dark:text-gray-100">
+                          {famille.nom}
+                        </span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          Solde: {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(famille.soldeRestant)}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {selectedFamilleForPret && (
+                <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg border border-emerald-200/50">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <span className="font-semibold">Prêt actuel:</span>{' '}
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(selectedFamilleForPret.pretTotal)}
+                    </span>
+                  </p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
+                    <span className="font-semibold">Solde restant:</span>{' '}
+                    <span className="font-bold text-red-600 dark:text-red-400">
+                      {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(selectedFamilleForPret.soldeRestant)}
+                    </span>
+                  </p>
+                </div>
+              )}
             </div>
             
             <div className="grid gap-3">
@@ -668,69 +1213,67 @@ const PretFamilles: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Dialogue de confirmation de suppression de remboursement */}
+      <ConfirmDeleteDialog
+        isOpen={confirmDeleteDialogOpen}
+        onClose={() => {
+          setConfirmDeleteDialogOpen(false);
+          setRemboursementIndexToDelete(-1);
+        }}
+        onConfirm={handleDeleteRemboursement}
+        title="Confirmer la suppression"
+        description={
+  <>
+    Êtes-vous sûr de vouloir supprimer ce remboursement
+    {selectedPretForDetail && remboursementIndexToDelete >= 0 && (
+      <>
+        {' de '}
+        <span style={{ fontWeight: 'bold', color: 'red' }}>
+          {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(
+            selectedPretForDetail.remboursements?.[remboursementIndexToDelete]?.montant || 0
+          )}
+        </span>
+      </>
+    )}
+    {' ? Cette action est irréversible.'}
+  </>
+}
+        isSubmitting={loading}
+      />
 
-      {/* Dialog pour modifier un remboursement */}
-      <Dialog open={editRemboursementDialogOpen} onOpenChange={setEditRemboursementDialogOpen}>
-        <DialogContent className="sm:max-w-[400px] bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 border border-white/20 shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <div className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-full p-2">
-                <Edit className="h-5 w-5 text-white" />
-              </div>
-              Modifier le remboursement
-            </DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-6 py-6">
-            <div className="grid gap-3">
-              <Label htmlFor="editMontant" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Nouveau montant</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-blue-500" />
-                <Input 
-                  id="editMontant" 
-                  type="number" 
-                  value={editMontant} 
-                  onChange={(e) => setEditMontant(e.target.value)}
-                  placeholder="0.00"
-                  min="0"
-                  step="0.01"
-                  className="pl-12 bg-white/50 backdrop-blur-sm border border-gray-200/50 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
-                />
-              </div>
-            </div>
-            
-            <div className="flex gap-3">
-              <Button 
-                onClick={() => {
-                  setEditRemboursementDialogOpen(false);
-                  setSelectedRemboursementIndex(-1);
-                  setEditMontant('');
-                }}
-                variant="outline"
-                className="flex-1"
-              >
-                Annuler
-              </Button>
-              <Button 
-                onClick={handleUpdateRemboursement} 
-                disabled={loading || !editMontant || parseFloat(editMontant) <= 0}
-                className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Mise à jour...
-                  </>
-                ) : (
-                  <>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Modifier
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Dialogue de confirmation de suppression de prêt */}
+    <ConfirmDeleteDialog
+  isOpen={deletePretDialogOpen}
+  onClose={() => {
+    setDeletePretDialogOpen(false);
+    setSelectedPretToDelete(null);
+  }}
+  onConfirm={handleDeletePret}
+  title="Confirmer la suppression du prêt"
+  description={
+    <>
+      Êtes-vous sûr de vouloir supprimer le prêt de{' '}
+      <span style={{ fontWeight: 'bold', color: 'green' }}>
+        {selectedPretToDelete?.nom || ''}
+      </span>{' '}
+      
+      <span style={{ fontWeight: 'bold', color: 'red' }}>
+        (
+        {selectedPretToDelete
+          ? new Intl.NumberFormat('fr-FR', {
+              style: 'currency',
+              currency: 'EUR',
+            }).format(selectedPretToDelete.pretTotal)
+          : ''}
+          )
+      </span>
+       ? Cette action supprimera également tout l'historique des remboursements et est irréversible.
+    </>
+  }
+  isSubmitting={loading}
+/>
+
     </div>
   );
 };

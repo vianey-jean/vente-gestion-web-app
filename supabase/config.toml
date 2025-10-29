@@ -1,0 +1,4 @@
+project_id = "bonladoubmahommdlpev"
+
+[functions.generate-marketing-description]
+verify_jwt = false
