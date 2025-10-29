@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { productService, salesService } from '@/service/api';
+import { productService, salesService, marketingService } from '@/service/api';
 import { Product, Sale } from '@/types';
 import { 
   Sparkles, 
@@ -147,16 +146,12 @@ const AIMarketingAssistant: React.FC = () => {
     try {
       setGeneratingFor(product.id);
       
-      const { data, error } = await supabase.functions.invoke('generate-marketing-description', {
-        body: {
-          productDescription: product.description,
-          purchasePrice: product.purchasePrice,
-          sellingPrice: product.sellingPrice,
-          quantity: product.quantity,
-        },
+      const data = await marketingService.generateDescription({
+        productDescription: product.description,
+        purchasePrice: product.purchasePrice,
+        sellingPrice: product.sellingPrice,
+        quantity: product.quantity,
       });
-
-      if (error) throw error;
 
       if (!data.success) {
         throw new Error(data.error || 'Erreur lors de la génération');
@@ -165,7 +160,7 @@ const AIMarketingAssistant: React.FC = () => {
       const newDescription: MarketingDescription = {
         productId: product.id,
         description: product.description,
-        marketingText: data.description,
+        marketingText: data.description || '',
         generatedAt: new Date(),
       };
 
@@ -375,49 +370,97 @@ const AIMarketingAssistant: React.FC = () => {
                     Produits en Stock
                   </h3>
                   <div className="grid gap-4">
-                    {products.filter(p => p.quantity > 0).map(product => (
-                      <Card 
-                        key={product.id}
-                        className="hover:shadow-lg transition-all duration-300"
-                      >
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <CardTitle className="text-base font-bold">
-                                {product.description}
-                              </CardTitle>
-                              <div className="flex gap-2 mt-2 flex-wrap">
-                                <Badge variant="secondary">
-                                  Stock: {product.quantity}
-                                </Badge>
-                                {product.sellingPrice && (
-                                  <Badge variant="outline">
-                                    {product.sellingPrice}€
+                    {products.filter(p => p.quantity > 0).map(product => {
+                      const existingDescription = marketingDescriptions.find(d => d.productId === product.id);
+                      
+                      return (
+                        <Card 
+                          key={product.id}
+                          className="hover:shadow-lg transition-all duration-300"
+                        >
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <CardTitle className="text-base font-bold">
+                                  {product.description}
+                                </CardTitle>
+                                <div className="flex gap-2 mt-2 flex-wrap">
+                                  <Badge variant="secondary">
+                                    Stock: {product.quantity}
                                   </Badge>
-                                )}
+                                  {product.sellingPrice && (
+                                    <Badge variant="outline">
+                                      {product.sellingPrice}€
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
+                              <Button
+                                onClick={() => generateMarketingDescription(product)}
+                                disabled={generatingFor === product.id}
+                                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                              >
+                                {generatingFor === product.id ? (
+                                  <>
+                                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                    Génération...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="h-4 w-4 mr-2" />
+                                    Générer
+                                  </>
+                                )}
+                              </Button>
                             </div>
-                            <Button
-                              onClick={() => generateMarketingDescription(product)}
-                              disabled={generatingFor === product.id}
-                              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-                            >
-                              {generatingFor === product.id ? (
-                                <>
-                                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                                  Génération...
-                                </>
-                              ) : (
-                                <>
-                                  <Sparkles className="h-4 w-4 mr-2" />
-                                  Générer
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                    ))}
+                          </CardHeader>
+                          
+                          {/* Afficher la description générée juste en dessous */}
+                          {existingDescription && (
+                            <CardContent className="pt-0">
+                              <div className="mt-4 p-4 rounded-lg bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-800">
+                                <div className="flex items-center justify-between mb-3">
+                                  <h4 className="font-bold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                                    <Sparkles className="h-4 w-4" />
+                                    Description Marketing Générée
+                                  </h4>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => copyToClipboard(existingDescription.marketingText, product.id)}
+                                    className="border-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
+                                  >
+                                    {copiedId === product.id ? (
+                                      <>
+                                        <Check className="h-3 w-3 mr-1 text-green-600" />
+                                        Copié !
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy className="h-3 w-3 mr-1" />
+                                        Copier
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
+                                <p className="text-sm text-emerald-800 dark:text-emerald-200 whitespace-pre-wrap leading-relaxed">
+                                  {existingDescription.marketingText}
+                                </p>
+                                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-3 italic">
+                                  Généré le {new Date(existingDescription.generatedAt).toLocaleDateString('fr-FR', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </p>
+                              </div>
+                            </CardContent>
+                          )}
+                        </Card>
+                      );
+                    })}
                   </div>
                 </div>
 
