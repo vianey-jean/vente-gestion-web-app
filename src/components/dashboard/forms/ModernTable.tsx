@@ -9,7 +9,7 @@ interface ModernTableProps {
 
 const ModernTable: React.FC<ModernTableProps> = ({ children, className }) => {
   return (
-    <div className="rounded-lg sm:rounded-xl border-0 shadow-lg overflow-hidden bg-white dark:bg-gray-900 -mx-3 sm:mx-0">
+    <div className="rounded-xl border-0 overflow-hidden -mx-3 sm:mx-0 bg-gradient-to-br from-white via-gray-50 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" style={{ boxShadow: 'var(--shadow-elegant)' }}>
       <Table className={cn("min-w-full", className)}>
         {children}
       </Table>
@@ -18,7 +18,7 @@ const ModernTable: React.FC<ModernTableProps> = ({ children, className }) => {
 };
 
 const ModernTableHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <TableHeader className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700">
+  <TableHeader className="bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100 dark:from-gray-800 dark:via-gray-750 dark:to-gray-800 border-b-2 border-gray-200 dark:border-gray-700">
     {children}
   </TableHeader>
 );
@@ -30,9 +30,11 @@ const ModernTableRow: React.FC<{ children: React.ReactNode; onClick?: () => void
 }) => (
   <TableRow 
     className={cn(
-      "hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20",
-      "transition-all duration-200 border-gray-100 dark:border-gray-800",
-      onClick && "cursor-pointer hover:shadow-md",
+      "hover:bg-gradient-to-r hover:from-blue-50 hover:via-purple-50 hover:to-blue-50",
+      "dark:hover:from-blue-950/30 dark:hover:via-purple-950/30 dark:hover:to-blue-950/30",
+      "transition-all duration-300 border-b border-gray-100 dark:border-gray-800",
+      "hover:border-blue-200 dark:hover:border-blue-800",
+      onClick && "cursor-pointer hover:shadow-lg hover:scale-[1.01] transform",
       className
     )}
     onClick={onClick}
@@ -43,7 +45,7 @@ const ModernTableRow: React.FC<{ children: React.ReactNode; onClick?: () => void
 
 const ModernTableHead: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
   <TableHead className={cn(
-    "font-bold text-gray-700 dark:text-gray-300 bg-gradient-to-r from-transparent to-transparent text-xs sm:text-sm whitespace-nowrap",
+    "font-bold text-gray-900 dark:text-gray-100 text-xs sm:text-sm whitespace-nowrap uppercase tracking-wide py-4",
     className
   )}>
     {children}
@@ -51,7 +53,7 @@ const ModernTableHead: React.FC<{ children: React.ReactNode; className?: string 
 );
 
 const ModernTableCell: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
-  <TableCell className={cn("text-gray-600 dark:text-gray-400 text-xs sm:text-sm whitespace-nowrap", className)}>
+  <TableCell className={cn("text-gray-700 dark:text-gray-300 text-xs sm:text-sm whitespace-nowrap py-4 font-medium", className)}>
     {children}
   </TableCell>
 );

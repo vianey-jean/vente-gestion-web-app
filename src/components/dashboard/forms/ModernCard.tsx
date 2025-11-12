@@ -19,18 +19,18 @@ const ModernCard: React.FC<ModernCardProps> = ({
   headerActions
 }) => {
   return (
-    <Card className={`card-3d border-0 shadow-lg bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 ${className}`}>
+    <Card className={`card-3d border-0 rounded-xl bg-gradient-to-br from-white via-gray-50 to-white dark:from-gray-900 dark:via-gray-850 dark:to-gray-900 ${className}`} style={{ boxShadow: 'var(--shadow-elegant)' }}>
       {(title || Icon || headerActions) && (
-        <CardHeader className="pb-3 sm:pb-4">
+        <CardHeader className="pb-3 sm:pb-4 border-b border-gray-100 dark:border-gray-800">
           <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-3 xs:gap-0">
             <div className="flex items-center space-x-2 sm:space-x-3">
               {Icon && (
-                <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-app-blue to-app-purple text-white shrink-0">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 text-white shrink-0 shadow-lg shadow-blue-500/30">
                   <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
               )}
               {title && (
-                <CardTitle className="text-base sm:text-lg md:text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+                <CardTitle className="text-base sm:text-lg md:text-xl font-bold bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900 dark:from-white dark:via-gray-200 dark:to-white bg-clip-text text-transparent">
                   {title}
                 </CardTitle>
               )}
@@ -43,7 +43,7 @@ const ModernCard: React.FC<ModernCardProps> = ({
           </div>
         </CardHeader>
       )}
-      <CardContent className="pt-0">
+      <CardContent className="pt-4 sm:pt-6">
         {children}
       </CardContent>
     </Card>

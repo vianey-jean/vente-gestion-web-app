@@ -19,31 +19,36 @@ const ModernButton: React.FC<ModernButtonProps> = ({
   ...props
 }) => {
   const gradientClasses = {
-    blue: 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700',
-    green: 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700',
-    red: 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700',
-    purple: 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700',
-    orange: 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700'
+    blue: 'bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800',
+    green: 'bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700 hover:from-emerald-600 hover:via-emerald-700 hover:to-emerald-800',
+    red: 'bg-gradient-to-br from-rose-500 via-rose-600 to-rose-700 hover:from-rose-600 hover:via-rose-700 hover:to-rose-800',
+    purple: 'bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700 hover:from-purple-600 hover:via-purple-700 hover:to-purple-800',
+    orange: 'bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700 hover:from-orange-600 hover:via-orange-700 hover:to-orange-800'
   };
 
   return (
     <Button
       className={cn(
-        'btn-3d text-white border-0 shadow-lg transition-all duration-200',
-        'hover:shadow-xl hover:scale-105 active:scale-95',
-        'text-xs sm:text-sm px-3 sm:px-4 py-2 sm:py-2.5',
+        'relative overflow-hidden text-white border-0 font-semibold',
+        'transition-all duration-500 ease-out',
+        'hover:scale-105 hover:shadow-2xl active:scale-95',
+        'text-xs sm:text-sm px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg',
+        'before:absolute before:inset-0 before:bg-gradient-to-r before:from-white/0 before:via-white/20 before:to-white/0',
+        'before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700',
         gradientClasses[gradient],
         className
       )}
       disabled={isLoading}
       {...props}
     >
-      {isLoading ? (
-        <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-2 border-white border-t-transparent mr-1.5 sm:mr-2" />
-      ) : (
-        Icon && <Icon className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-      )}
-      {children}
+      <span className="relative z-10 flex items-center justify-center">
+        {isLoading ? (
+          <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-2 border-white border-t-transparent mr-1.5 sm:mr-2" />
+        ) : (
+          Icon && <Icon className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+        )}
+        {children}
+      </span>
     </Button>
   );
 };
