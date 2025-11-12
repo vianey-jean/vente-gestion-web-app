@@ -39,6 +39,9 @@ const ClientsPage: React.FC = () => {
     adresse: ''
   });
 
+  // État pour la recherche
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Dialogues de confirmation
   const [showAddConfirm, setShowAddConfirm] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
@@ -46,6 +49,15 @@ const ClientsPage: React.FC = () => {
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:10000';
+
+  // Filtrer les clients selon la recherche
+  const filteredClients = searchQuery.length >= 3 
+    ? clients.filter(client => 
+        client.nom.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        client.phone.includes(searchQuery) ||
+        client.adresse.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : clients;
 
   const resetForm = () => {
     setFormData({ nom: '', phone: '', adresse: '' });
@@ -212,13 +224,13 @@ const ClientsPage: React.FC = () => {
           <div className="absolute top-60 left-1/2 w-3 h-3 bg-green-300/30 rounded-full animate-bounce"></div>
         </div>
         
-        <div className="relative container mx-auto px-4 py-20">
+        <div className="relative container mx-auto px-3 sm:px-4 md:px-6 py-8 sm:py-12 md:py-20">
           <div className="text-center">
-            <div className="inline-flex items-center gap-4 mb-8">
+            <div className="inline-flex flex-col xs:flex-row items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
               <div className="relative">
-                <Crown className="w-16 h-16 text-yellow-300 animate-pulse" />
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center">
-                  <Star className="w-3 h-3 text-white" />
+                <Crown className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 text-yellow-300 animate-pulse" />
+                <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-4 h-4 sm:w-6 sm:h-6 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center">
+                  <Star className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
                 </div>
               </div>
              
@@ -234,30 +246,30 @@ const ClientsPage: React.FC = () => {
                                              Listes Clients <span className="text-transparent bg-gradient-to-r from-yellow-300 via-orange-300 to-yellow-300 bg-clip-text animate-pulse">Élite</span>
                                           </motion.h1>
               <div className="relative">
-                <Diamond className="w-16 h-16 text-purple-200 animate-spin-slow" />
+                <Diamond className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 text-purple-200 animate-spin-slow" />
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-pink-400/20 rounded-full blur-xl"></div>
               </div>
             </div>
             
-            <p className="text-2xl text-purple-100 mb-12 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-purple-100 mb-8 sm:mb-12 max-w-3xl mx-auto leading-relaxed px-4">
               Gérez vos clients VIP avec une sophistication et une élégance incomparables
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl px-8 py-4 border border-white/20 shadow-2xl">
-                <div className="flex items-center gap-3">
-                  <Users className="w-8 h-8 text-emerald-300" />
-                  <span className="text-white font-bold text-xl">{clients.length} Client{clients.length > 1 ? 's' : ''}</span>
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center px-4">
+              <div className="bg-white/10 backdrop-blur-md rounded-xl sm:rounded-2xl px-4 sm:px-6 md:px-8 py-3 sm:py-4 border border-white/20 shadow-2xl">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <Users className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-emerald-300 shrink-0" />
+                  <span className="text-white font-bold text-base sm:text-lg md:text-xl">{clients.length} Client{clients.length > 1 ? 's' : ''}</span>
                 </div>
               </div>
               
               <Button 
                 onClick={handleAddClient} 
-                className="group bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 hover:from-yellow-500 hover:via-orange-500 hover:to-red-500 text-black font-bold px-10 py-6 rounded-2xl shadow-2xl hover:shadow-yellow-500/30 transform hover:-translate-y-2 transition-all duration-500 border-2 border-yellow-300/50"
+                className="group bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 hover:from-yellow-500 hover:via-orange-500 hover:to-red-500 text-black font-bold px-6 sm:px-8 md:px-10 py-4 sm:py-5 md:py-6 rounded-xl sm:rounded-2xl shadow-2xl hover:shadow-yellow-500/30 transform hover:-translate-y-2 transition-all duration-500 border-2 border-yellow-300/50 w-full sm:w-auto"
               >
-                <Plus className="w-6 h-6 mr-3 group-hover:rotate-90 transition-transform duration-300" />
-                <span className="text-lg">Nouveau Client Élite</span>
-                <Sparkles className="w-6 h-6 ml-3 group-hover:scale-125 transition-transform duration-300" />
+                <Plus className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 group-hover:rotate-90 transition-transform duration-300 shrink-0" />
+                <span className="text-sm sm:text-base md:text-lg whitespace-nowrap">Nouveau Client<span className="hidden xs:inline"> Élite</span></span>
+                <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 ml-2 sm:ml-3 group-hover:scale-125 transition-transform duration-300 shrink-0" />
               </Button>
             </div>
           </div>
@@ -265,10 +277,56 @@ const ClientsPage: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-20 max-w-7xl">
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 py-8 sm:py-12 md:py-20 max-w-7xl">
+        {/* Barre de recherche */}
+        <div className="mb-8 sm:mb-10 md:mb-12">
+          <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-purple-200 dark:border-purple-800 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <Label htmlFor="search" className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                  Rechercher un client
+                </Label>
+                <div className="relative w-full">
+                  <Input
+                    id="search"
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Saisissez au moins 3 caractères (nom, téléphone, adresse)..."
+                    className="w-full pl-4 pr-12 py-3 sm:py-4 text-base sm:text-lg border-2 border-purple-300 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-500 rounded-xl bg-white dark:bg-gray-900 transition-all duration-300"
+                  />
+                  {searchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/50 rounded-full"
+                    >
+                      <span className="text-xl text-gray-500 dark:text-gray-400">×</span>
+                    </Button>
+                  )}
+                </div>
+              </div>
+              
+              {/* Indicateur de résultats */}
+              {searchQuery.length >= 3 && (
+                <div className="mt-4 text-sm sm:text-base text-purple-700 dark:text-purple-300 font-medium">
+                  {filteredClients.length} résultat{filteredClients.length > 1 ? 's' : ''} trouvé{filteredClients.length > 1 ? 's' : ''}
+                </div>
+              )}
+              
+              {searchQuery.length > 0 && searchQuery.length < 3 && (
+                <div className="mt-4 text-sm sm:text-base text-orange-600 dark:text-orange-400 font-medium">
+                  Saisissez au moins 3 caractères pour lancer la recherche
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Clients Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {clients.map((client, index) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
+          {filteredClients.map((client, index) => (
             <Card 
               key={client.id} 
               className="group hover:shadow-2xl transition-all duration-700 transform hover:-translate-y-4 hover:rotate-1 bg-gradient-to-br from-white via-gray-50 to-purple-50/30 dark:from-gray-800 dark:via-gray-900 dark:to-purple-900/30 backdrop-blur-sm border-0 shadow-xl hover:shadow-purple-500/25 relative overflow-hidden"
@@ -343,8 +401,32 @@ const ClientsPage: React.FC = () => {
           ))}
         </div>
 
+        {/* Empty State pour recherche sans résultat */}
+        {searchQuery.length >= 3 && filteredClients.length === 0 && (
+          <div className="text-center py-20">
+            <div className="relative inline-flex items-center justify-center w-32 h-32 bg-gradient-to-br from-gray-100 via-gray-200 to-gray-100 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 rounded-full mb-8 shadow-xl">
+              <Users className="w-16 h-16 text-gray-400 dark:text-gray-500" />
+            </div>
+            
+            <h3 className="text-2xl sm:text-3xl font-bold text-gray-700 dark:text-gray-300 mb-4">
+              Aucun client trouvé
+            </h3>
+            
+            <p className="text-lg text-gray-500 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
+              Aucun client ne correspond à votre recherche "{searchQuery}"
+            </p>
+            
+            <Button 
+              onClick={() => setSearchQuery('')} 
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-8 py-4 rounded-xl"
+            >
+              Effacer la recherche
+            </Button>
+          </div>
+        )}
+
         {/* Empty State Ultra Premium */}
-        {clients.length === 0 && (
+        {clients.length === 0 && searchQuery.length === 0 && (
           <div className="text-center py-32">
             <div className="relative inline-flex items-center justify-center w-48 h-48 bg-gradient-to-br from-purple-100 via-violet-100 to-indigo-100 dark:from-purple-900/20 dark:via-violet-900/20 dark:to-indigo-900/20 rounded-full mb-16 shadow-2xl">
               <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-violet-400/20 rounded-full animate-pulse"></div>
