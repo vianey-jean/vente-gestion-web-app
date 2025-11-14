@@ -11,8 +11,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Edit, Trash2, MoreVertical, Smile, Clock } from 'lucide-react';
-import data from '@emoji-mart/data';
-import Picker from '@emoji-mart/react';
 import UserAvatar from '@/components/user/UserAvatar';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -94,21 +92,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
               className="flex-1 border-blue-300 focus:border-blue-500"
               placeholder="Modifier votre message..."
             />
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" className="border-blue-300 hover:bg-blue-50">
-                  <Smile className="h-4 w-4 text-blue-600" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0" side="top">
-                <Picker 
-                  data={data}
-                  onEmojiSelect={onEmojiSelect}
-                  theme="light"
-                />
-              </PopoverContent>
-            </Popover>
-            <Button 
+            {/* Emoji picker temporairement désactivé */}
+            <Button
               onClick={handleEdit} 
               className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md"
               disabled={isPending}
