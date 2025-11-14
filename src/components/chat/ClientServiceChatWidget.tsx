@@ -12,8 +12,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { clientChatAPI } from '@/services/chatAPI';
 import { chatFilesAPI } from '@/services/chatFilesAPI';
 import { useAuth } from '@/contexts/AuthContext';
-import data from '@emoji-mart/data';
-import Picker from '@emoji-mart/react';
 import { toast } from 'sonner';
 import UserAvatar from '@/components/user/UserAvatar';
 import FileUploadButton from '@/components/chat/FileUploadButton';
@@ -539,13 +537,7 @@ const ClientServiceChatWidget: React.FC = () => {
                                 </Button>
                               </motion.div>
                             </PopoverTrigger>
-                            <PopoverContent className="w-full p-0 bg-white/95 backdrop-blur-2xl border-2 border-white/30 rounded-3xl" side="top">
-                              <Picker 
-                                data={data} 
-                                onEmojiSelect={handleEmojiSelect}
-                                theme="light"
-                              />
-                            </PopoverContent>
+                            {/* Emoji picker temporairement désactivé */}
                           </Popover>
                         </div>
                         

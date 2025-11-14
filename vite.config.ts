@@ -9,16 +9,13 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@emoji-mart/data': path.resolve(__dirname, 'node_modules/@emoji-mart/data'),
-      '@emoji-mart/react': path.resolve(__dirname, 'node_modules/@emoji-mart/react')
+      '@': path.resolve(__dirname, './src')
     },
   },
   build: {
     rollupOptions: {
       output: {
         manualChunks: {
-          'emoji-mart': ['@emoji-mart/data', '@emoji-mart/react', 'emoji-mart'],
           'three': ['three']
         }
       },
@@ -26,7 +23,7 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['three', '@emoji-mart/data', '@emoji-mart/react', 'emoji-mart']
+    include: ['three']
   },
   server: {
     host: '::',

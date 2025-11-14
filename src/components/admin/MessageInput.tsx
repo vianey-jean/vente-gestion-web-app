@@ -4,8 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Send, Smile } from 'lucide-react';
-import data from '@emoji-mart/data';
-import Picker from '@emoji-mart/react';
 import FileUploadButton from '@/components/chat/FileUploadButton';
 import VoiceRecorder from '@/components/chat/VoiceRecorder';
 
@@ -77,25 +75,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             disabled={disabled}
           />
           <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button 
-                  type="button"
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8 hover:bg-gray-200"
-                >
-                  <Smile className="h-4 w-4 text-gray-600" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0" side="top">
-                <Picker 
-                  data={data} 
-                  onEmojiSelect={onEmojiSelect}
-                  theme="light"
-                />
-              </PopoverContent>
-            </Popover>
+            {/* Emoji picker temporairement désactivé */}
           </div>
         </div>
         

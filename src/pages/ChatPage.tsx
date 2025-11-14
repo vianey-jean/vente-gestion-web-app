@@ -18,8 +18,6 @@ import FileUploadButton from '@/components/chat/FileUploadButton';
 import VoiceRecorder from '@/components/chat/VoiceRecorder';
 import { chatFilesAPI } from '@/services/chatFilesAPI';
 import Layout from '@/components/layout/Layout';
-import data from '@emoji-mart/data';
-import Picker from '@emoji-mart/react';
 
 interface FileAttachment {
   filename: string;
@@ -610,24 +608,7 @@ const ChatPage: React.FC = () => {
                     </motion.div>
                   </div>
 
-                  {/* Sélecteur d'Emoji avec design moderne */}
-                  <AnimatePresence>
-                    {isEmojiPickerOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 20, scale: 0.9 }}
-                        className="absolute bottom-24 right-8 z-50 bg-white/95 backdrop-blur-2xl border border-white/30 rounded-3xl shadow-2xl overflow-hidden"
-                      >
-                        <Picker 
-                          data={data} 
-                          onEmojiSelect={handleEmojiSelect} 
-                          theme="light"
-                          previewPosition="none"
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {/* Emoji picker temporairement désactivé */}
                 </motion.div>
               </motion.div>
             ) : (

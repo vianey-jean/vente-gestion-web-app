@@ -31,8 +31,6 @@ import { clientChatAPI } from '@/services/chatAPI';
 import { chatFilesAPI } from '@/services/chatFilesAPI';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
-import data from '@emoji-mart/data';
-import Picker from '@emoji-mart/react';
 import { toast } from 'sonner';
 import UserAvatar from '@/components/user/UserAvatar';
 import FileUploadButton from '@/components/chat/FileUploadButton';
@@ -588,13 +586,7 @@ const AdminServiceChatWidget: React.FC = () => {
                           <Smile className="h-4 w-4" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-full p-0" side="top">
-                        <Picker
-                          data={data}
-                          onEmojiSelect={handleEmojiSelect}
-                          theme="light"
-                        />
-                      </PopoverContent>
+                      {/* Emoji picker temporairement désactivé */}
                     </Popover>
                   </div>
                   <Button
