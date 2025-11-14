@@ -1,30 +1,59 @@
 
+/**
+ * @fileoverview Composant Button universel avec variants avancés
+ * 
+ * Composant bouton basé sur Radix-UI avec système de variants CVA (Class Variance Authority).
+ * Inclut de nombreux styles prédéfinis et des animations 3D modernes.
+ * 
+ * Variants disponibles:
+ * - default : Style principal avec ombre 3D
+ * - destructive : Pour actions de suppression/danger
+ * - outline : Bordure avec fond transparent
+ * - secondary : Style secondaire subtil
+ * - ghost : Transparent avec hover subtil
+ * - link : Style de lien souligné
+ * - gradient : Dégradé de couleurs moderne
+ * - shine : Effet de brillance animé
+ * 
+ * Tailles disponibles:
+ * - sm, default, lg, xl : Différentes tailles
+ * - icon : Format carré pour icônes
+ * 
+ * Fonctionnalités:
+ * - Support asChild (Slot pattern)
+ * - Animations de translation et ombres
+ * - Focus management pour accessibilité
+ * - États disabled gérés automatiquement
+ * 
+ * @version 2.0.0
+ * @author Equipe UI Riziky-Boutic
+ */
+
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-1.5 sm:gap-2 whitespace-nowrap rounded-lg text-xs sm:text-sm font-semibold ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-3 sm:[&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 relative overflow-hidden transform hover:-translate-y-1 active:translate-y-0",
   {
     variants: {
       variant: {
-        default: "bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 text-white hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 hover:scale-105",
-        destructive:
-          "bg-gradient-to-br from-rose-500 via-rose-600 to-rose-700 text-white hover:from-rose-600 hover:via-rose-700 hover:to-rose-800 shadow-lg shadow-rose-500/30 hover:shadow-xl hover:shadow-rose-500/40 hover:scale-105",
-        outline:
-          "border-2 border-input bg-gradient-to-br from-background to-muted hover:from-accent hover:to-accent/80 hover:text-accent-foreground shadow-md hover:shadow-lg hover:scale-105",
-        secondary:
-          "bg-gradient-to-br from-gray-100 to-gray-200 text-gray-900 dark:from-gray-800 dark:to-gray-700 dark:text-gray-100 hover:from-gray-200 hover:to-gray-300 dark:hover:from-gray-700 dark:hover:to-gray-600 shadow-md hover:shadow-lg hover:scale-105",
-        ghost: "hover:bg-gradient-to-br hover:from-accent hover:to-accent/80 hover:text-accent-foreground hover:scale-105",
+        default: "bg-primary text-primary-foreground shadow-[0_4px_0_0_rgba(0,0,0,0.2)] hover:shadow-[0_6px_0_0_rgba(0,0,0,0.2)] active:shadow-[0_2px_0_0_rgba(0,0,0,0.2)]",
+        destructive: "bg-destructive text-destructive-foreground shadow-[0_4px_0_0_rgba(0,0,0,0.2)] hover:shadow-[0_6px_0_0_rgba(0,0,0,0.2)] active:shadow-[0_2px_0_0_rgba(0,0,0,0.2)]",
+        outline: "border-2 border-input bg-background shadow-[0_4px_0_0_rgba(0,0,0,0.1)] hover:shadow-[0_6px_0_0_rgba(0,0,0,0.1)] active:shadow-[0_2px_0_0_rgba(0,0,0,0.1)] hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground shadow-[0_4px_0_0_rgba(0,0,0,0.1)] hover:shadow-[0_6px_0_0_rgba(0,0,0,0.1)] active:shadow-[0_2px_0_0_rgba(0,0,0,0.1)]",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        gradient: "bg-gradient-to-br from-primary to-purple-600 text-white shadow-[0_4px_0_0_rgba(0,0,0,0.2)] hover:shadow-[0_6px_0_0_rgba(0,0,0,0.2)] active:shadow-[0_2px_0_0_rgba(0,0,0,0.2)]",
+        shine: "bg-primary text-primary-foreground overflow-hidden shadow-[0_4px_0_0_rgba(0,0,0,0.2)] hover:shadow-[0_6px_0_0_rgba(0,0,0,0.2)] active:shadow-[0_2px_0_0_rgba(0,0,0,0.2)] before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:border-t before:border-white/10 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent",
       },
       size: {
-        default: "h-10 sm:h-11 px-4 sm:px-6 py-2 sm:py-2.5",
-        sm: "h-8 sm:h-9 rounded-lg px-3 sm:px-4 text-xs",
-        lg: "h-11 sm:h-12 rounded-lg px-7 sm:px-10 text-sm sm:text-base",
-        icon: "h-10 w-10 sm:h-11 sm:w-11",
+        default: "h-10 px-4 py-2",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-11 rounded-md px-8",
+        icon: "h-10 w-10",
+        xl: "h-12 rounded-md px-10 text-base",
       },
     },
     defaultVariants: {
@@ -55,48 +84,3 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button"
 
 export { Button, buttonVariants }
-
-// Add global CSS for 3D buttons
-// This will be added to the base styles
-if (typeof document !== 'undefined') {
-  const styleElement = document.createElement('style');
-  styleElement.textContent = `
-    .btn-3d {
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      transform: translateY(0);
-      transition: transform 0.1s, box-shadow 0.1s;
-    }
-    
-    .btn-3d:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    }
-    
-    .btn-3d:active {
-      transform: translateY(1px);
-      box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
-    }
-    
-    .card-3d {
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-      transition: box-shadow 0.2s, transform 0.2s;
-      transform: translateY(0);
-    }
-    
-    .card-3d:hover {
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-      transform: translateY(-4px);
-    }
-    
-    @media (prefers-color-scheme: dark) {
-      .card-3d {
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.15);
-      }
-      
-      .card-3d:hover {
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.15);
-      }
-    }
-  `;
-  document.head.appendChild(styleElement);
-}
