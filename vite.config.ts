@@ -29,6 +29,7 @@ export default defineConfig({
     include: ['three', '@emoji-mart/data', '@emoji-mart/react', 'emoji-mart']
   },
   server: {
+    host: '::',
     port: 8080,
   },
 });
