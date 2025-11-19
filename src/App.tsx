@@ -12,6 +12,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { AppProvider } from '@/contexts/AppContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { LanguageProvider } from '@/contexts/LanguageContext';
 import { AccessibilityProvider } from '@/components/accessibility/AccessibilityProvider';
 
 // Sécurité et erreurs
@@ -41,10 +42,11 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <AccessibilityProvider>
-          <AuthProvider>
-            <AppProvider>
-              <Router>
+        <LanguageProvider>
+          <AccessibilityProvider>
+            <AuthProvider>
+              <AppProvider>
+                <Router>
                 {/* Suspense : gestion du chargement asynchrone */}
                 <Suspense
                   fallback={
@@ -103,11 +105,12 @@ function App() {
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
-              </Router>
-              <Toaster />
-            </AppProvider>
-          </AuthProvider>
-        </AccessibilityProvider>
+                </Router>
+                <Toaster />
+              </AppProvider>
+            </AuthProvider>
+          </AccessibilityProvider>
+        </LanguageProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

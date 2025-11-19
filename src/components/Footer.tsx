@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Heart, Sparkles } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext'; // ✅ On importe le contexte d'authentification
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const Footer: React.FC = () => {
-  const { user } = useAuth(); // ✅ Récupère l'utilisateur connecté (null si déconnecté)
+  const { user } = useAuth();
+  const { t } = useLanguage();
 
   return (
     <footer className="relative bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 text-white mt-auto overflow-hidden">
@@ -23,23 +25,22 @@ const Footer: React.FC = () => {
               <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-purple-400 mr-2 shrink-0" />
               <div>
                 <span className="text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                  Gestion Vente
+                  {t('footer.company')}
                 </span>
               </div>
             </div>
             <p className="text-sm sm:text-base text-gray-300 leading-relaxed mb-4 sm:mb-6">
-              Solution révolutionnaire pour la gestion moderne de vos ventes et inventaires. 
-              Transformez votre business avec notre technologie de pointe.
+              {t('footer.description')}
             </p>
             <div className="flex items-center text-xs sm:text-sm text-gray-400">
               <Heart className="h-3 w-3 sm:h-4 sm:w-4 text-red-400 mr-2 shrink-0" />
-              Fait avec passion à La Réunion
+              {t('footer.madeWith')}
             </div>
           </div>
           
           {/* Quick links */}
           <div>
-            <h3 className="text-base sm:text-lg font-semibold mb-4 sm:mb-6 text-purple-300">Navigation</h3>
+            <h3 className="text-base sm:text-lg font-semibold mb-4 sm:mb-6 text-purple-300">{t('footer.navigation')}</h3>
             <ul className="space-y-3 sm:space-y-4">
               <li>
                 <Link 
@@ -50,7 +51,7 @@ const Footer: React.FC = () => {
                   <span className="relative after:content-[''] after:absolute after:left-0 after:-bottom-1 
                                   after:w-0 after:h-[3px] after:bg-red-500 after:transition-all after:duration-300 
                                   group-hover:after:w-full">
-                    Accueil
+                    {t('nav.home')}
                   </span>
                 </Link>
               </li>
@@ -64,12 +65,11 @@ const Footer: React.FC = () => {
                   <span className="relative after:content-[''] after:absolute after:left-0 after:-bottom-1 
                                   after:w-0 after:h-[3px] after:bg-red-500 after:transition-all after:duration-300 
                                   group-hover:after:w-full">
-                    À propos
+                    {t('nav.about')}
                   </span>
                 </Link>
               </li>
 
-              {/* ✅ Contact → visible uniquement si user est déconnecté */}
               {!user && (
                 <li>
                   <Link 
@@ -80,13 +80,12 @@ const Footer: React.FC = () => {
                     <span className="relative after:content-[''] after:absolute after:left-0 after:-bottom-1 
                                     after:w-0 after:h-[3px] after:bg-red-500 after:transition-all after:duration-300 
                                     group-hover:after:w-full">
-                      Contact
+                      {t('nav.contact')}
                     </span>
                   </Link>
                 </li>
               )}
 
-              {/* ✅ Connexion → visible uniquement si user est déconnecté */}
               {!user && (
                 <li>
                   <Link 
@@ -97,7 +96,7 @@ const Footer: React.FC = () => {
                     <span className="relative after:content-[''] after:absolute after:left-0 after:-bottom-1 
                                     after:w-0 after:h-[3px] after:bg-red-500 after:transition-all after:duration-300 
                                     group-hover:after:w-full">
-                      Connexion
+                      {t('nav.login')}
                     </span>
                   </Link>
                 </li>
@@ -107,37 +106,37 @@ const Footer: React.FC = () => {
 
           {/* Services */}
           <div>
-            <h3 className="text-base sm:text-lg font-semibold mb-4 sm:mb-6 text-purple-300">Nos Services</h3>
+            <h3 className="text-base sm:text-lg font-semibold mb-4 sm:mb-6 text-purple-300">{t('footer.services')}</h3>
             <ul className="space-y-3 sm:space-y-4 text-sm sm:text-base text-gray-300">
               <li className="flex items-center">
                 <span className="w-1 h-1 bg-blue-400 rounded-full mr-3"></span>
-                Gestion des ventes
+                {t('footer.service.sales')}
               </li>
               <li className="flex items-center">
                 <span className="w-1 h-1 bg-green-400 rounded-full mr-3"></span>
-                Suivi d'inventaire
+                {t('footer.service.inventory')}
               </li>
               <li className="flex items-center">
                 <span className="w-1 h-1 bg-yellow-400 rounded-full mr-3"></span>
-                Rapports analytiques
+                {t('footer.service.reports')}
               </li>
               <li className="flex items-center">
                 <span className="w-1 h-1 bg-red-400 rounded-full mr-3"></span>
-                Support
+                {t('footer.service.support')}
               </li>
             </ul>
           </div>
           
           {/* Contact info */}
           <div>
-            <h3 className="text-base sm:text-lg font-semibold mb-4 sm:mb-6 text-purple-300">Contactez-nous</h3>
+            <h3 className="text-base sm:text-lg font-semibold mb-4 sm:mb-6 text-purple-300">{t('footer.contact')}</h3>
             <div className="space-y-3 sm:space-y-4">
               <div className="flex items-start group">
                 <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg sm:rounded-xl flex items-center justify-center mr-3 sm:mr-4 group-hover:scale-110 transition-transform duration-200">
                   <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-white font-medium text-sm sm:text-base">Notre siège</p>
+                  <p className="text-white font-medium text-sm sm:text-base">{t('footer.headquarters')}</p>
                   <p className="text-gray-300 text-xs sm:text-sm leading-relaxed">
                     10 Allée des Beryls Bleus<br />
                     Bellepierre<br/>
@@ -151,7 +150,7 @@ const Footer: React.FC = () => {
                   <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-white font-medium text-sm sm:text-base">Email</p>
+                  <p className="text-white font-medium text-sm sm:text-base">{t('footer.email')}</p>
                   <p className="text-gray-300 text-xs sm:text-sm break-all">vianey.jean@ymail.com</p>
                 </div>
               </div>
@@ -161,7 +160,7 @@ const Footer: React.FC = () => {
                   <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-white font-medium text-sm sm:text-base">Téléphone</p>
+                  <p className="text-white font-medium text-sm sm:text-base">{t('footer.phone')}</p>
                   <p className="text-gray-300 text-xs sm:text-sm">+262 6 92 84 23 70</p>
                 </div>
               </div>
@@ -174,21 +173,21 @@ const Footer: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-center md:text-left">
               <p className="text-gray-400 text-xs sm:text-sm">
-                &copy; {new Date().getFullYear()} Gestion Vente. Tous droits réservés.
+                &copy; {new Date().getFullYear()} {t('footer.company')}. {t('footer.rights')}.
               </p>
             </div>
             
             <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 md:gap-6">
               <div className="text-[10px] sm:text-xs text-gray-500">
-                Conditions d'utilisation
+                {t('footer.terms')}
               </div>
               <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
               <div className="text-[10px] sm:text-xs text-gray-500">
-                Politique de confidentialité
+                {t('footer.privacy')}
               </div>
               <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
               <div className="text-[10px] sm:text-xs text-gray-500">
-                Mentions légales
+                {t('footer.legal')}
               </div>
             </div>
           </div>
@@ -197,11 +196,11 @@ const Footer: React.FC = () => {
           <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
             <div className="inline-flex items-center px-2 sm:px-3 py-1 bg-white/5 backdrop-blur-sm rounded-full text-[10px] sm:text-xs text-gray-400 border border-white/10">
               <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full mr-1.5 sm:mr-2 animate-pulse shrink-0"></div>
-              <span className="whitespace-nowrap">Version 3.2.0 - Système opérationnel</span>
+              <span className="whitespace-nowrap">{t('footer.version')}</span>
             </div>
             <div className="inline-flex items-center px-2 sm:px-3 py-1 bg-white/5 backdrop-blur-sm rounded-full text-[10px] sm:text-xs text-gray-400 border border-white/10">
               <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full mr-1.5 sm:mr-2 animate-pulse shrink-0"></div>
-              <span className="whitespace-nowrap">Créé par Jean Rabemanalina</span>
+              <span className="whitespace-nowrap">{t('footer.creator')}</span>
             </div>
           </div>
         </div>
