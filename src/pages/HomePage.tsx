@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import PremiumLoading from '@/components/ui/premium-loading';
 import { ArrowRight, BarChart3, Shield, Zap, TrendingUp } from 'lucide-react';
 import { motion } from "framer-motion";
@@ -10,6 +11,7 @@ import { motion } from "framer-motion";
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(true);
   
   // Simulate initial page load
@@ -24,7 +26,7 @@ const HomePage: React.FC = () => {
     return (
       <Layout>
         <PremiumLoading 
-          text="Bienvenue sur Gestion Ventes"
+          text={t('home.welcome')}
           size="xl"
           overlay={true}
           variant="default"
@@ -49,7 +51,7 @@ const HomePage: React.FC = () => {
             <div className="text-center">
               <div className="mb-6 sm:mb-8 animate-in fade-in-50 duration-1000">
                 <span className="inline-block px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 backdrop-blur-sm rounded-full text-white/90 text-xs sm:text-sm font-medium mb-4 sm:mb-6 border border-white/20">
-                  ✨ Solution complète de gestion
+                  ✨ {t('home.subtitle')}
                 </span>
               </div>
               
@@ -62,20 +64,19 @@ const HomePage: React.FC = () => {
                                           bg-[length:200%_200%] animate-gradient 
                                           bg-clip-text text-transparent mb-4 sm:mb-6 text-center text-3d px-4"
                               >
-                  Gestion de vente
+                  {t('home.heroTitle')}
                 <span className="block bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent mt-2">
-                  Simplifiée et efficace
+                  {t('home.heroSubtitle')}
                 </span>
               </motion.h1>
               
               <p className="mt-4 sm:mt-6 max-w-2xl mx-auto text-base sm:text-lg md:text-xl text-white/80 leading-relaxed animate-in fade-in-50 duration-1000 delay-400 px-4">
-                Transformez votre façon de gérer les ventes avec notre plateforme moderne. 
-                Suivez vos produits, maximisez vos bénéfices et développez votre business.
+                {t('home.heroDescription')}
               </p>
               
               {!isAuthenticated && (
                 <div className="mt-8 sm:mt-12 flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center animate-in fade-in-50 duration-1000 delay-600 px-4">
-                  <Button 
+                  <Button
                     className="group px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-xl sm:rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-2xl hover:shadow-purple-500/25 transform hover:scale-105 transition-all duration-300 w-full sm:w-auto"
                     onClick={() => navigate('/register')}
                   >
