@@ -1,8 +1,10 @@
 import { useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const NotFound = () => {
   const location = useLocation();
+  const { t } = useLanguage();
   const [animationKey, setAnimationKey] = useState(0);
 
   useEffect(() => {
@@ -10,7 +12,7 @@ const NotFound = () => {
       "404 Error: User attempted to access non-existent route:",
       location.pathname
     );
-    // Changer la clé pour relancer l’animation à chaque navigation
+    // Changer la clé pour relancer l'animation à chaque navigation
     setAnimationKey(Math.random());
   }, [location.pathname]);
 
@@ -50,18 +52,18 @@ const NotFound = () => {
         </h1>
 
         <h2 className="text-3xl font-bold  text-red-500 mb-3 animate-fadeIn">
-          Page introuvable
+          {t('notfound.title')}
         </h2>
 
         <p className="text-neutral-500 font-bold max-w-md mx-auto mb-10 leading-relaxed animate-fadeInDelay">
-          Oups… Il semble que cette page se soit perdue dans la Nature.
+          {t('notfound.description')}
         </p>
 
         <a
           href="/"
           className="inline-flex items-center gap-2 px-8 py-3 rounded-full bg-gradient-to-r from-fuchsia-500 via-pink-500 to-purple-600 hover:from-fuchsia-400 hover:to-purple-500 transition-all duration-500 shadow-lg shadow-purple-800/40 hover:shadow-purple-700/60 text-white font-medium backdrop-blur-sm animate-buttonFloat"
         >
-          ⟵ Retour à l’accueil
+          ⟵ {t('notfound.backHome')}
         </a>
       </div>
     </div>
