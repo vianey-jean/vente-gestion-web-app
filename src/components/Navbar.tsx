@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useMessages } from '@/hooks/use-messages';
 import { 
   Home, 
@@ -20,7 +21,8 @@ import {
   MessageSquare,
   Menu,
   X,
-  ChevronDown
+  ChevronDown,
+  Languages
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -34,10 +36,20 @@ import { Badge } from '@/components/ui/badge';
 const Navbar: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { language, setLanguage, t } = useLanguage();
   const { unreadCount } = useMessages();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const toggleMobileMenu = () => setIsMobileMenuOpen(prev => !prev);
+
+  const getFlagEmoji = (lang: string) => {
+    switch (lang) {
+      case 'fr': return '🇫🇷';
+      case 'en': return '🇺🇸';
+      case 'es': return '🇪🇸';
+      default: return '🇫🇷';
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border-b border-gray-200/50 dark:border-gray-700/50">
@@ -66,16 +78,16 @@ const Navbar: React.FC = () => {
                 <>
                   <Link to="/dashboard" className="group inline-flex items-center px-2 lg:px-4 py-2 rounded-lg lg:rounded-xl text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200">
                     <LayoutDashboard className="mr-1.5 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4 text-blue-600 group-hover:scale-110 transition-transform" />
-                    <span className="hidden lg:inline">Tableau de Bord</span>
+                    <span className="hidden lg:inline">{t('nav.dashboard')}</span>
                     <span className="lg:hidden">Dashboard</span>
                   </Link>
                   <Link to="/tendances" className="group inline-flex items-center px-2 lg:px-4 py-2 rounded-lg lg:rounded-xl text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-200">
                     <TrendingUp className="mr-1.5 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4 text-emerald-600 group-hover:scale-110 transition-transform" />
-                    Tendances
+                    {t('nav.trends')}
                   </Link>
                   <Link to="/clients" className="group inline-flex items-center px-2 lg:px-4 py-2 rounded-lg lg:rounded-xl text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200">
                     <Users className="mr-1.5 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4 text-purple-600 group-hover:scale-110 transition-transform" />
-                    Clients
+                    {t('nav.clients')}
                   </Link>
                 </>
               )}
@@ -83,14 +95,38 @@ const Navbar: React.FC = () => {
               {!isAuthenticated && (
                 <Link to="/about" className="group inline-flex items-center px-2 lg:px-4 py-2 rounded-lg lg:rounded-xl text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200">
                   <Info className="mr-1.5 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4 group-hover:scale-110 transition-transform" />
-                  <span className="hidden lg:inline">À propos</span>
+                  <span className="hidden lg:inline">{t('nav.about')}</span>
                 </Link>
               )}
 
               <Link to="/contact" className="group inline-flex items-center px-2 lg:px-4 py-2 rounded-lg lg:rounded-xl text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200">
                 <Mail className="mr-1.5 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4 group-hover:scale-110 transition-transform" />
-                <span className="hidden lg:inline">Contact</span>
+                <span className="hidden lg:inline">{t('nav.contact')}</span>
               </Link>
+
+              {/* Language selector */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="ml-1 lg:ml-2 h-8 w-8 lg:h-10 lg:w-10 rounded-lg lg:rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200"
+                  >
+                    <span className="text-lg lg:text-xl">{getFlagEmoji(language)}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                  <DropdownMenuItem onClick={() => setLanguage('fr')} className="cursor-pointer">
+                    <span className="mr-2">🇫🇷</span> Français
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLanguage('en')} className="cursor-pointer">
+                    <span className="mr-2">🇺🇸</span> English
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLanguage('es')} className="cursor-pointer">
+                    <span className="mr-2">🇪🇸</span> Español
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               {/* Theme toggle */}
               <Button 
@@ -128,7 +164,7 @@ const Navbar: React.FC = () => {
                       <DropdownMenuItem asChild>
                         <Link to="/messages" className="flex items-center w-full cursor-pointer text-xs sm:text-sm">
                           <MessageSquare className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
-                          Messages
+                          {t('nav.messages')}
                           {unreadCount > 0 && (
                             <Badge variant="destructive" className="ml-auto text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center bg-red-500 text-white">
                               {unreadCount}
@@ -146,14 +182,14 @@ const Navbar: React.FC = () => {
                     onClick={logout}
                   >
                     <LogOut className="h-3 w-3 lg:h-4 lg:w-4 lg:mr-2" />
-                    <span className="hidden lg:inline">Déconnexion</span>
+                    <span className="hidden lg:inline">{t('nav.logout')}</span>
                   </Button>
                 </div>
               ) : (
                 <Link to="/login">
                   <Button className="h-8 lg:h-10 px-3 lg:px-6 rounded-lg lg:rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all duration-200 transform hover:scale-105 text-xs lg:text-sm">
                     <LogIn className="h-3 w-3 lg:h-4 lg:w-4 lg:mr-2" />
-                    <span className="hidden lg:inline">Connexion</span>
+                    <span className="hidden lg:inline">{t('nav.login')}</span>
                   </Button>
                 </Link>
               )}
