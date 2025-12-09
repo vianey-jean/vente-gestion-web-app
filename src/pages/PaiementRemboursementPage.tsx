@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,17 +26,19 @@ const PaiementRemboursementPage: React.FC = () => {
   const [paiements, setPaiements] = useState<PaiementRemboursement[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
-    loadPaiements();
+    if (user) {
+      loadPaiements();
+    }
     
     // Socket connection for real-time updates
     const socket = io(import.meta.env.VITE_API_BASE_URL || 'http://localhost:10000');
     
     socket.on('paiement-remboursement-created', (newPaiement: PaiementRemboursement) => {
       // Only add if it belongs to this user and is accepted
-      const currentUserId = localStorage.getItem('userId');
-      if (newPaiement.userId === currentUserId && newPaiement.decision === 'accepté') {
+      if (user && newPaiement.userId === String(user.id) && newPaiement.decision === 'accepté') {
         setPaiements(prev => [...prev, newPaiement]);
       }
     });
@@ -49,11 +52,12 @@ const PaiementRemboursementPage: React.FC = () => {
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [user]);
 
   const loadPaiements = async () => {
     try {
       const response = await paiementRemboursementAPI.getUserPaiements();
+      console.log('Paiements chargés:', response.data);
       setPaiements(response.data);
     } catch (error) {
       console.error('Erreur chargement paiements:', error);
