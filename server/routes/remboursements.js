@@ -240,11 +240,24 @@ router.put('/:id/status', isAuthenticated, async (req, res) => {
           order: {
             id: order.id,
             totalAmount: order.totalAmount,
-            originalAmount: order.originalAmount || order.totalAmount,
+            originalAmount: order.originalAmount || order.subtotalProduits || order.totalAmount,
             discount: order.discount || 0,
+            subtotalProduits: order.subtotalProduits || order.originalAmount || order.totalAmount,
+            subtotalApresPromo: order.subtotalApresPromo || order.subtotalProduits || order.totalAmount,
+            taxRate: order.taxRate || 0,
+            taxAmount: order.taxAmount || 0,
+            deliveryPrice: order.deliveryPrice || 0,
             shippingAddress: order.shippingAddress,
             paymentMethod: order.paymentMethod,
-            items: order.items,
+            items: order.items.map(item => ({
+              productId: item.productId,
+              name: item.name,
+              price: item.price,
+              originalPrice: item.originalPrice || item.price,
+              quantity: item.quantity,
+              image: item.image,
+              subtotal: item.subtotal || (item.price * item.quantity)
+            })),
             createdAt: order.createdAt
           },
           reason: remboursement.reason,
