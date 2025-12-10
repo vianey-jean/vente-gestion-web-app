@@ -45,11 +45,11 @@
     },
     "reason": "trompé produit",
     "customReason": "desole",
-    "status": "debut",
+    "status": "payé",
     "decision": "accepté",
-    "clientValidated": false,
+    "clientValidated": true,
     "createdAt": "2025-12-09T13:24:43.479Z",
-    "updatedAt": "2025-12-09T13:24:43.479Z"
+    "updatedAt": "2025-12-09T14:23:04.736Z"
   },
   {
     "id": "PR-1765287701693",
@@ -88,10 +88,10 @@
     },
     "reason": "trompé produit",
     "customReason": "desolé merci",
-    "status": "debut",
+    "status": "en cours",
     "decision": "accepté",
     "clientValidated": false,
     "createdAt": "2025-12-09T13:41:41.693Z",
-    "updatedAt": "2025-12-09T13:41:41.693Z"
+    "updatedAt": "2025-12-09T14:23:32.461Z"
   }
 ]
