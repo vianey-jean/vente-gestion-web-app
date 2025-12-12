@@ -58,6 +58,8 @@ const setupRoutes = (app) => {
   app.use('/api/visitors', require('../routes/visitors'));
   app.use('/api/sales-notifications', require('../routes/sales-notifications'));
   app.use('/api/site-settings', require('../routes/site-settings'));
+  app.use('/api/payment-modes', require('../routes/payment-modes'));
+  app.use('/api/payments', require('../routes/payments'));
 };
 
 module.exports = setupRoutes;
