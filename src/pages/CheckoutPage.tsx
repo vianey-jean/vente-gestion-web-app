@@ -339,7 +339,14 @@ const CheckoutPage = () => {
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">Paiement sécurisé</h2>
                   <p className="text-gray-600">Vos données sont protégées par cryptage SSL</p>
                 </div>
-                <PaymentMethodSelector onPaymentSuccess={handlePaymentSuccess} />
+                <PaymentMethodSelector 
+                  onPaymentSuccess={handlePaymentSuccess}
+                  shippingAddress={shippingData}
+                  subtotal={discountedSubtotal}
+                  taxAmount={taxAmount}
+                  deliveryPrice={deliveryPrice}
+                  orderTotal={orderTotal}
+                />
                 <Button 
                   variant="outline" 
                   className="mt-6 w-full border-gray-300 hover:border-gray-400"
