@@ -97,41 +97,7 @@ const StripePaymentModal: React.FC<StripePaymentModalProps> = ({
     setErrorMessage('');
 
     try {
-      // Vérifier si Stripe est configuré
-      if (!STRIPE_PUBLISHABLE_KEY) {
-        // Mode simulation si Stripe n'est pas configuré
-        console.log('Mode simulation: Stripe non configuré');
-        
-        // Simuler un délai de traitement
-        await new Promise(resolve => setTimeout(resolve, 2500));
-        
-        // Simuler le succès (90% de chance de succès)
-        const isSuccess = Math.random() > 0.1;
-        
-        if (isSuccess) {
-          setPaymentStatus('success');
-          toast.success('Paiement accepté !');
-          
-          // Attendre un peu avant de rediriger
-          setTimeout(() => {
-            onPaymentSuccess();
-          }, 1500);
-        } else {
-          setPaymentStatus('failed');
-          setErrorMessage('La transaction a été refusée par votre banque. Veuillez réessayer ou utiliser une autre carte.');
-        }
-        return;
-      }
-
-      // Charger Stripe dynamiquement
-      const { loadStripe } = await import('@stripe/stripe-js');
-      const stripe = await loadStripe(STRIPE_PUBLISHABLE_KEY);
-
-      if (!stripe) {
-        throw new Error('Impossible de charger Stripe');
-      }
-
-      // Créer un PaymentIntent côté serveur
+      // Créer le PaymentIntent côté serveur
       const response = await fetch(`${API_BASE_URL}/api/payments/create-intent`, {
         method: 'POST',
         headers: {
@@ -159,12 +125,50 @@ const StripePaymentModal: React.FC<StripePaymentModalProps> = ({
       });
 
       if (!response.ok) {
-        throw new Error('Erreur lors de la création du paiement');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Erreur lors de la création du paiement');
       }
 
-      const { clientSecret, paymentIntentId } = await response.json();
+      const { clientSecret, paymentIntentId, simulated } = await response.json();
 
-      // Confirmer le paiement
+      // Mode simulation (Stripe non configuré côté serveur)
+      if (simulated) {
+        console.log('Mode simulation: Paiement simulé accepté');
+        
+        // Simuler un délai de traitement
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        setPaymentStatus('success');
+        toast.success('Paiement accepté !');
+        
+        setTimeout(() => {
+          onPaymentSuccess();
+        }, 1500);
+        return;
+      }
+
+      // Vérifier si Stripe est configuré côté client
+      if (!STRIPE_PUBLISHABLE_KEY) {
+        // Fallback en mode simulation
+        console.log('Mode simulation: Clé Stripe non configurée côté client');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        setPaymentStatus('success');
+        toast.success('Paiement accepté !');
+        setTimeout(() => {
+          onPaymentSuccess();
+        }, 1500);
+        return;
+      }
+
+      // Charger Stripe dynamiquement
+      const { loadStripe } = await import('@stripe/stripe-js');
+      const stripe = await loadStripe(STRIPE_PUBLISHABLE_KEY);
+
+      if (!stripe) {
+        throw new Error('Impossible de charger Stripe');
+      }
+
+      // Confirmer le paiement avec Stripe
       const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: cardInfo.id
       });
