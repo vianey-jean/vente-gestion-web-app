@@ -74,7 +74,7 @@ router.post('/', isAuthenticated, async (req, res) => {
   console.log('Requête reçue pour créer une commande:', JSON.stringify(req.body));
   
   try {
-    const { items, shippingAddress, paymentMethod, codePromo, taxRate = 0.20, deliveryPrice } = req.body;
+    const { items, shippingAddress, paymentMethod, codePromo, deliveryPrice } = req.body;
 
     // Convertir les items de format objet à format tableau si nécessaire
     let itemsArray = items;
@@ -170,11 +170,8 @@ router.post('/', isAuthenticated, async (req, res) => {
       }
     }
     
-    // Calculer la TVA sur le sous-total après promotion
-    const tvaAmount = subtotalApresPromo * taxRate;
-    
-    // Calculer le total TTC
-    const totalTTC = subtotalApresPromo + tvaAmount + fraisLivraison;
+    // Calculer le total TTC (sans TVA, déjà incluse dans les prix produits)
+    const totalTTC = subtotalApresPromo + fraisLivraison;
 
     // Créer une nouvelle commande avec ID unique
     const orderId = `ORD-${Date.now()}`;
@@ -190,8 +187,6 @@ router.post('/', isAuthenticated, async (req, res) => {
       codePromoUsed,
       discount: discount,
       subtotalApresPromo: subtotalApresPromo,
-      taxRate: taxRate,
-      taxAmount: tvaAmount,
       deliveryPrice: fraisLivraison,
       totalAmount: totalTTC, // Total TTC final
       
@@ -258,7 +253,6 @@ router.post('/', isAuthenticated, async (req, res) => {
       subtotalProduits,
       discount,
       subtotalApresPromo,
-      tvaAmount,
       fraisLivraison,
       totalTTC
     });
