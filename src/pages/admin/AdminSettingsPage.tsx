@@ -16,7 +16,8 @@ import SEOSettingsForm from '@/components/admin/settings/SEOSettingsForm';
 import SecuritySettingsForm from '@/components/admin/settings/SecuritySettingsForm';
 import SystemSettingsForm from '@/components/admin/settings/SystemSettingsForm';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
-import LoadingSpinner from '@/components/ui/loading-spinner';
+import PageDataLoader from '@/components/layout/PageDataLoader';
+import { siteSettingsAPI } from '@/services/siteSettingsAPI';
 
 const AdminSettingsPage = () => {
   const { settings, loading, saving, updateSection, resetSettings } = useSiteSettings();
@@ -25,9 +26,15 @@ const AdminSettingsPage = () => {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <LoadingSpinner />
-        </div>
+        <PageDataLoader
+          fetchFunction={async () => {
+            return await siteSettingsAPI.getSettings();
+          }}
+          onSuccess={() => {}}
+          loadingMessage="Chargement des paramètres..."
+          loadingSubmessage="Récupération de la configuration du site..."
+          errorMessage="Erreur de chargement des paramètres"
+        />
       </AdminLayout>
     );
   }

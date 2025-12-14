@@ -6,6 +6,7 @@ import HeroSection from '@/components/layout/HeroSection';
 import DesktopFilters from '@/components/filters/DesktopFilters';
 import FilterBadges from '@/components/filters/FilterBadges';
 import ProductsPageHeader from '@/components/products/ProductsPageHeader';
+import PageDataLoader from '@/components/layout/PageDataLoader';
 import { Product } from '@/contexts/StoreContext';
 import { productsAPI } from '@/services/api';
 import { toast } from '@/components/ui/sonner';
@@ -38,49 +39,50 @@ const NewArrivalsPage = () => {
     getFilterBadges
   } = useProductFilters({ products });
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setIsLoading(true);
+  const fetchProducts = async () => {
+    try {
+      // Essayer d'abord de récupérer les nouveautés via l'API spécialisée
       try {
-        // Essayer d'abord de récupérer les nouveautés via l'API spécialisée
-        try {
-          const newArrivalsResponse = await productsAPI.getNewArrivals();
-          if (newArrivalsResponse.data && Array.isArray(newArrivalsResponse.data)) {
-            setProducts(newArrivalsResponse.data);
-            return;
-          }
-        } catch (error) {
-          console.log("API nouveautés non disponible, fallback sur tous les produits");
+        const newArrivalsResponse = await productsAPI.getNewArrivals();
+        if (newArrivalsResponse.data && Array.isArray(newArrivalsResponse.data)) {
+          return newArrivalsResponse.data;
         }
-        
-        // Fallback: récupérer tous les produits et trier par date
-        const response = await productsAPI.getAll();
-        
-        if (!response.data || !Array.isArray(response.data)) {
-          throw new Error('Format de données incorrect');
-        }
-        
-        // Trier par date d'ajout pour avoir les nouveautés
-        const sortedByDate = [...response.data].sort((a, b) => {
-          const dateA = a.dateAjout ? new Date(a.dateAjout).getTime() : 0;
-          const dateB = b.dateAjout ? new Date(b.dateAjout).getTime() : 0;
-          return dateB - dateA;
-        });
-        
-        // Prendre les 50 produits les plus récents
-        const newArrivals = sortedByDate.slice(0, 50);
-        setProducts(newArrivals);
       } catch (error) {
-        console.error("Erreur lors du chargement des nouveautés:", error);
-        toast.error("Impossible de charger les nouveautés");
-        setProducts([]);
-      } finally {
-        setIsLoading(false);
+        console.log("API nouveautés non disponible, fallback sur tous les produits");
       }
-    };
-    
-    fetchProducts();
-  }, []);
+      
+      // Fallback: récupérer tous les produits et trier par date
+      const response = await productsAPI.getAll();
+      
+      if (!response.data || !Array.isArray(response.data)) {
+        throw new Error('Format de données incorrect');
+      }
+      
+      // Trier par date d'ajout pour avoir les nouveautés
+      const sortedByDate = [...response.data].sort((a, b) => {
+        const dateA = a.dateAjout ? new Date(a.dateAjout).getTime() : 0;
+        const dateB = b.dateAjout ? new Date(b.dateAjout).getTime() : 0;
+        return dateB - dateA;
+      });
+      
+      // Prendre les 50 produits les plus récents
+      return sortedByDate.slice(0, 50);
+    } catch (error) {
+      console.error("Erreur lors du chargement des nouveautés:", error);
+      toast.error("Impossible de charger les nouveautés");
+      throw error;
+    }
+  };
+
+  const handleDataSuccess = (data: Product[]) => {
+    setProducts(data);
+    setIsLoading(false);
+  };
+
+  const handleMaxRetriesReached = () => {
+    setProducts([]);
+    setIsLoading(false);
+  };
 
   const totalPages = Math.ceil(sortedProducts.length / productsPerPage);
   const startIndex = (currentPage - 1) * productsPerPage;
@@ -102,6 +104,20 @@ const NewArrivalsPage = () => {
     setShowOutOfStock,
     resetFilters
   };
+  if (isLoading) {
+    return (
+      <Layout>
+        <PageDataLoader
+          fetchFunction={fetchProducts}
+          onSuccess={handleDataSuccess}
+          onMaxRetriesReached={handleMaxRetriesReached}
+          loadingMessage="Chargement des nouveautés..."
+          loadingSubmessage="Récupération des derniers produits..."
+          errorMessage="Erreur de chargement des nouveautés"
+        />
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
