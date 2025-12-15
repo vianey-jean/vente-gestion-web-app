@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import AdminLayout from './AdminLayout';
 import AdminPageTitle from '@/components/admin/AdminPageTitle';
 import DataStatsCard from '@/components/admin/DataStatsCard';
-import PageDataLoader from '@/components/layout/PageDataLoader';
 import {
   Table,
   TableBody,
@@ -176,22 +175,6 @@ const AdminCodePromosPage = () => {
   const activeCodes = codePromos.filter(code => code.quantite > 0).length;
   const totalReduction = codePromos.reduce((sum, code) => sum + (code.pourcentage || 0), 0);
   const averageDiscount = totalCodes > 0 ? totalReduction / totalCodes : 0;
-  if (loading) {
-    return (
-      <AdminLayout>
-        <PageDataLoader
-          fetchFunction={fetchCodePromos}
-          onSuccess={(data) => {
-            setCodePromos(data);
-            setLoading(false);
-          }}
-          loadingMessage="Chargement des codes promo..."
-          loadingSubmessage="Récupération des données promotionnelles..."
-          errorMessage="Erreur de chargement des codes promo"
-        />
-      </AdminLayout>
-    );
-  }
 
   return (
     <AdminLayout>
@@ -254,7 +237,14 @@ const AdminCodePromosPage = () => {
           </div>
           
           <div className="p-6">
-            {codePromos.length === 0 && !loading ? (
+            {loading ? (
+              <div className="flex justify-center py-16">
+                <div className="relative">
+                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200"></div>
+                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-emerald-500 border-t-transparent absolute top-0"></div>
+                </div>
+              </div>
+            ) : codePromos.length === 0 ? (
               <div className="text-center py-16">
                 <div className="bg-gradient-to-br from-gray-100 to-gray-200 p-8 rounded-3xl w-fit mx-auto mb-6">
                   <Tag className="h-16 w-16 text-gray-400 mx-auto" />

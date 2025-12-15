@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '@/components/layout/Layout';
 import ProductGrid from '@/components/products/ProductGrid';
-import PageDataLoader from '@/components/layout/PageDataLoader';
+import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp, Heart, ShoppingBag, Star } from 'lucide-react';
 import { productsAPI } from '@/services/productsAPI';
 import { Product } from '@/types/product';
@@ -12,39 +12,58 @@ const PopularityPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchPopularProducts = async () => {
-    const response = await productsAPI.getMostFavorited();
-    if (response.data && Array.isArray(response.data)) {
-      return response.data;
-    }
-    return [];
-  };
+  useEffect(() => {
+    const fetchPopularProducts = async () => {
+      try {
+        setLoading(true);
+        
+        // Récupérer les produits les plus favorisés
+        const response = await productsAPI.getMostFavorited();
+        
+        if (response.data && Array.isArray(response.data)) {
+          setProducts(response.data);
+        } else {
+          setProducts([]);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des produits populaires:', error);
+        toast.error('Erreur lors du chargement des produits populaires');
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleDataSuccess = (data: Product[]) => {
-    setProducts(data);
-    setLoading(false);
-  };
+    fetchPopularProducts();
+  }, []);
 
-  const handleMaxRetriesReached = () => {
-    setProducts([]);
-    setLoading(false);
-  };
+  const LoadingSkeleton = () => (
+    <div className="container mx-auto px-4 py-8">
+      <div className="text-center mb-8">
+        <Skeleton className="h-12 w-64 mx-auto mb-4" />
+        <Skeleton className="h-6 w-96 mx-auto" />
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {[...Array(8)].map((_, i) => (
+          <div key={i} className="space-y-4">
+            <Skeleton className="h-64 w-full rounded-lg" />
+            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-8 w-full" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
       <Layout>
-        <PageDataLoader
-          fetchFunction={fetchPopularProducts}
-          onSuccess={handleDataSuccess}
-          onMaxRetriesReached={handleMaxRetriesReached}
-          loadingMessage="Chargement des produits populaires..."
-          loadingSubmessage="Récupération des favoris de nos clients..."
-          errorMessage="Erreur de chargement des produits populaires"
-        />
+        <LoadingSkeleton />
       </Layout>
     );
   }
-
 
   return (
     <Layout>

@@ -6,7 +6,6 @@ import HeroSection from '@/components/layout/HeroSection';
 import DesktopFilters from '@/components/filters/DesktopFilters';
 import FilterBadges from '@/components/filters/FilterBadges';
 import ProductsPageHeader from '@/components/products/ProductsPageHeader';
-import PageDataLoader from '@/components/layout/PageDataLoader';
 import { Product } from '@/contexts/StoreContext';
 import { productsAPI } from '@/services/api';
 import { toast } from '@/components/ui/sonner';
@@ -44,23 +43,28 @@ const PromotionalProductsPage = () => {
     promotionFilter: true 
   });
 
-  const fetchProducts = async () => {
-    const response = await productsAPI.getAll();
-    if (!response.data || !Array.isArray(response.data)) {
-      throw new Error('Format de données incorrect');
-    }
-    return response.data;
-  };
-
-  const handleDataSuccess = (data: Product[]) => {
-    setProducts(data);
-    setIsLoading(false);
-  };
-
-  const handleMaxRetriesReached = () => {
-    setProducts([]);
-    setIsLoading(false);
-  };
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setIsLoading(true);
+      try {
+        const response = await productsAPI.getAll();
+        
+        if (!response.data || !Array.isArray(response.data)) {
+          throw new Error('Format de données incorrect');
+        }
+        
+        setProducts(response.data);
+      } catch (error) {
+        console.error("Erreur lors du chargement des produits en promotion:", error);
+        toast.error("Impossible de charger les produits en promotion");
+        setProducts([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchProducts();
+  }, []);
 
   const totalPages = Math.ceil(sortedProducts.length / productsPerPage);
   const startIndex = (currentPage - 1) * productsPerPage;
@@ -84,21 +88,6 @@ const PromotionalProductsPage = () => {
     setShowPromoOnly,
     resetFilters
   };
-
-  if (isLoading) {
-    return (
-      <Layout>
-        <PageDataLoader
-          fetchFunction={fetchProducts}
-          onSuccess={handleDataSuccess}
-          onMaxRetriesReached={handleMaxRetriesReached}
-          loadingMessage="Chargement des promotions..."
-          loadingSubmessage="Récupération des offres spéciales..."
-          errorMessage="Erreur de chargement des promotions"
-        />
-      </Layout>
-    );
-  }
 
   return (
     <Layout>

@@ -127,21 +127,38 @@ const AdminRemboursementsPage = () => {
     });
   };
 
-  const loadRemboursementsData = async () => {
-    const response = await remboursementsAPI.getAll();
-    return response.data;
-  };
-
   if (isLoading) {
     return (
       <AdminLayout>
-        <PageDataLoader
-          fetchFunction={loadRemboursementsData}
-          onSuccess={() => {}}
-          loadingMessage="Chargement des remboursements..."
-          loadingSubmessage="Récupération des données administrateur..."
-          errorMessage="Erreur de chargement des remboursements"
-        />
+
+
+                    <PageDataLoader
+               
+                  loadingMessage="Chargement de votre boutique..."
+                  loadingSubmessage="Préparation de votre expérience shopping premium..."
+                  errorMessage="Erreur de chargement des produits" fetchFunction={function (): Promise<any> {
+                    throw new Error('Function not implemented.');
+                  } } onSuccess={function (data: any): void {
+                    throw new Error('Function not implemented.');
+                  } } children={''}        >
+        
+                </PageDataLoader>
+
+
+        {/* <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
+          <div className="text-center space-y-6">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-20 w-20 border-4 border-blue-500 border-t-transparent mx-auto"></div>
+              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-blue-400 to-purple-500 opacity-20 animate-pulse"></div>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Chargement des remboursements
+              </h2>
+              <p className="text-gray-600">Veuillez patienter...</p>
+            </div>
+          </div>
+        </div> */}
       </AdminLayout>
     );
   }
