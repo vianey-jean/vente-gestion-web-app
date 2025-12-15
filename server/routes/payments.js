@@ -1,25 +1,34 @@
 /**
  * Routes de paiement Stripe
  * Gère la création des PaymentIntents pour les paiements par carte bancaire
+ * Utilise la clé secrète cryptée stockée dans la base de données
  */
 
 const express = require('express');
 const router = express.Router();
+const { getStripeSecretKey } = require('../services/stripeKeys.service');
 
-// Vérifier si Stripe est configuré
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
-let stripe = null;
-
-if (STRIPE_SECRET_KEY) {
+/**
+ * Initialise Stripe avec la clé secrète récupérée et décryptée
+ * @returns {Promise<object|null>} Instance Stripe ou null
+ */
+const getStripeInstance = async () => {
   try {
-    stripe = require('stripe')(STRIPE_SECRET_KEY);
-    console.log('✅ Stripe initialisé avec succès');
+    const secretKey = await getStripeSecretKey();
+    
+    if (!secretKey) {
+      console.warn('⚠️ Aucune clé secrète Stripe configurée - Mode simulation activé');
+      return null;
+    }
+    
+    const stripe = require('stripe')(secretKey);
+    console.log('✅ Stripe initialisé avec la clé cryptée');
+    return stripe;
   } catch (error) {
     console.error('❌ Erreur lors de l\'initialisation de Stripe:', error.message);
+    return null;
   }
-} else {
-  console.warn('⚠️ STRIPE_SECRET_KEY non configuré - Les paiements seront en mode simulation');
-}
+};
 
 /**
  * POST /api/payments/create-intent
@@ -36,6 +45,9 @@ router.post('/create-intent', async (req, res) => {
         message: 'Montant invalide'
       });
     }
+
+    // Récupérer l'instance Stripe avec la clé décryptée
+    const stripe = await getStripeInstance();
 
     // Mode simulation si Stripe n'est pas configuré
     if (!stripe) {
@@ -121,6 +133,9 @@ router.post('/confirm', async (req, res) => {
       });
     }
 
+    // Récupérer l'instance Stripe
+    const stripe = await getStripeInstance();
+
     // Mode simulation
     if (!stripe || paymentIntentId.includes('simulated')) {
       return res.json({
@@ -156,6 +171,9 @@ router.post('/confirm', async (req, res) => {
 router.get('/status/:id', async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Récupérer l'instance Stripe
+    const stripe = await getStripeInstance();
 
     // Mode simulation
     if (!stripe || id.includes('simulated')) {

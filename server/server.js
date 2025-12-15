@@ -102,6 +102,7 @@ app.use('/api/cards', require('./routes/cards'));
 app.use('/api/profile-images', require('./routes/profile-images'));
 app.use('/api/chat-files', require('./routes/chat-files'));
 app.use('/api/payments', require('./routes/payments'));
+app.use('/api/stripe-keys', require('./routes/stripe-keys'));
 
 // ✅ Route test
 app.get('/api/test', (req, res) => {
