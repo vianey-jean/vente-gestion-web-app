@@ -29,7 +29,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { ConfirmDialog } from '@/components/shared';
 
 interface RdvCalendarProps {
   rdvs: RDV[];
@@ -37,6 +38,7 @@ interface RdvCalendarProps {
   onSlotClick: (date: string, time: string) => void;
   onRdvDrop: (rdv: RDV, newDate: string, newTime: string) => void;
   onRdvDelete?: (rdv: RDV) => void;
+  onOpenFormWithDateTime?: (rdv: RDV, date: string, time: string) => void;
 }
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 8);
@@ -46,6 +48,7 @@ const statusColors: Record<string, { bg: string; border: string; text: string }>
   confirme: { bg: 'bg-gradient-to-r from-emerald-500 to-green-600', border: 'border-green-400', text: 'text-green-600' },
   annule: { bg: 'bg-gradient-to-r from-red-500 to-rose-600', border: 'border-red-400', text: 'text-red-600' },
   termine: { bg: 'bg-gradient-to-r from-gray-500 to-slate-600', border: 'border-gray-400', text: 'text-gray-600' },
+  reporte: { bg: 'bg-gradient-to-r from-amber-500 to-orange-600', border: 'border-amber-400', text: 'text-amber-600' },
 };
 
 const statusLabels: Record<string, string> = {
@@ -53,6 +56,7 @@ const statusLabels: Record<string, string> = {
   confirme: 'Confirmé',
   annule: 'Annulé',
   termine: 'Terminé',
+  reporte: 'Reporté',
 };
 
 const RdvCalendar: React.FC<RdvCalendarProps> = ({
@@ -61,17 +65,25 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
   onSlotClick,
   onRdvDrop,
   onRdvDelete,
+  onOpenFormWithDateTime,
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [draggedRdv, setDraggedRdv] = useState<RDV | null>(null);
   const [dropTarget, setDropTarget] = useState<{ date: string; hour: number } | null>(null);
   const [showTimeDialog, setShowTimeDialog] = useState(false);
-  const [pendingDrop, setPendingDrop] = useState<{ rdv: RDV; date: string } | null>(null);
+  const [pendingDrop, setPendingDrop] = useState<{ rdv: RDV; date: string; time: string } | null>(null);
   const [newTime, setNewTime] = useState('09:00');
+  const [newDate, setNewDate] = useState('');
   
   // RDV Detail Modal
   const [selectedRdvDetail, setSelectedRdvDetail] = useState<RDV | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  
+  // Confirm dialogs
+  const [confirmModifyOpen, setConfirmModifyOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [rdvToModify, setRdvToModify] = useState<RDV | null>(null);
+  const [rdvToDelete, setRdvToDelete] = useState<RDV | null>(null);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -108,11 +120,13 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
     setDropTarget(null);
   };
 
-  const handleDrop = (e: React.DragEvent, date: string) => {
+  const handleDrop = (e: React.DragEvent, date: string, hour: number) => {
     e.preventDefault();
     if (draggedRdv) {
-      setPendingDrop({ rdv: draggedRdv, date });
-      setNewTime(draggedRdv.heureDebut);
+      const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+      setPendingDrop({ rdv: draggedRdv, date, time: timeStr });
+      setNewDate(date);
+      setNewTime(timeStr);
       setShowTimeDialog(true);
     }
     setDraggedRdv(null);
@@ -120,8 +134,12 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
   };
 
   const confirmTimeChange = () => {
-    if (pendingDrop) {
-      onRdvDrop(pendingDrop.rdv, pendingDrop.date, newTime);
+    if (pendingDrop && onOpenFormWithDateTime) {
+      // Ouvrir le formulaire avec les nouvelles valeurs pré-remplies
+      onOpenFormWithDateTime(pendingDrop.rdv, newDate, newTime);
+    } else if (pendingDrop) {
+      // Fallback: mise à jour directe
+      onRdvDrop(pendingDrop.rdv, newDate, newTime);
     }
     setShowTimeDialog(false);
     setPendingDrop(null);
@@ -135,16 +153,34 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
 
   const handleEditFromDetail = () => {
     if (selectedRdvDetail) {
-      onRdvClick(selectedRdvDetail);
-      setShowDetailModal(false);
+      setRdvToModify(selectedRdvDetail);
+      setConfirmModifyOpen(true);
     }
   };
 
-  const handleDeleteFromDetail = () => {
-    if (selectedRdvDetail && onRdvDelete) {
-      onRdvDelete(selectedRdvDetail);
+  const confirmModify = () => {
+    if (rdvToModify) {
+      onRdvClick(rdvToModify);
       setShowDetailModal(false);
     }
+    setConfirmModifyOpen(false);
+    setRdvToModify(null);
+  };
+
+  const handleDeleteFromDetail = () => {
+    if (selectedRdvDetail) {
+      setRdvToDelete(selectedRdvDetail);
+      setConfirmDeleteOpen(true);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (rdvToDelete && onRdvDelete) {
+      onRdvDelete(rdvToDelete);
+      setShowDetailModal(false);
+    }
+    setConfirmDeleteOpen(false);
+    setRdvToDelete(null);
   };
 
   const getRdvPosition = (rdv: RDV) => {
@@ -239,7 +275,7 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
                       onClick={() => onSlotClick(dateStr, `${hour.toString().padStart(2, '0')}:00`)}
                       onDragOver={(e) => handleDragOver(e, dateStr, hour)}
                       onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, dateStr)}
+                      onDrop={(e) => handleDrop(e, dateStr, hour)}
                     />
                   );
                 })}
@@ -255,7 +291,7 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
                 const pos = getRdvPosition(rdv);
                 const leftPercent = (dayIdx + 1) * (100 / 8);
                 const widthPercent = 100 / 8 - 0.5;
-                const colors = statusColors[rdv.statut];
+                const colors = statusColors[rdv.statut] || statusColors.planifie;
                 
                 return (
                   <motion.div
@@ -301,19 +337,29 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
         </div>
       </CardContent>
 
-      {/* Time Change Dialog */}
+      {/* Time Change Dialog - Opens form with pre-filled date/time */}
       <Dialog open={showTimeDialog} onOpenChange={setShowTimeDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-primary" />
-              Modifier l'horaire
+              Modifier la date et l'horaire
             </DialogTitle>
             <DialogDescription>
-              Vous déplacez "{pendingDrop?.rdv.titre}" vers le {pendingDrop?.date && format(parseISO(pendingDrop.date), 'EEEE d MMMM', { locale: fr })}.
+              Vous déplacez "{pendingDrop?.rdv.titre}". Ajustez la date et l'heure avant d'enregistrer.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="newDate">Nouvelle date</Label>
+              <Input
+                id="newDate"
+                type="date"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+                className="h-12"
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="newTime">Nouvelle heure de début</Label>
               <Input
@@ -330,7 +376,7 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
               Annuler
             </Button>
             <Button onClick={confirmTimeChange} className="bg-gradient-to-r from-primary to-primary/80">
-              Confirmer
+              Ouvrir le formulaire
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -343,7 +389,7 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
             <DialogTitle className="flex items-center gap-3 text-xl">
               <div className={cn(
                 "p-2 rounded-xl",
-                selectedRdvDetail && statusColors[selectedRdvDetail.statut].bg
+                selectedRdvDetail && (statusColors[selectedRdvDetail.statut]?.bg || statusColors.planifie.bg)
               )}>
                 <Calendar className="h-5 w-5 text-white" />
               </div>
@@ -358,10 +404,10 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
                 <Badge 
                   className={cn(
                     "text-white",
-                    statusColors[selectedRdvDetail.statut].bg
+                    statusColors[selectedRdvDetail.statut]?.bg || statusColors.planifie.bg
                   )}
                 >
-                  {statusLabels[selectedRdvDetail.statut]}
+                  {statusLabels[selectedRdvDetail.statut] || 'Inconnu'}
                 </Badge>
               </div>
 
@@ -451,6 +497,35 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Modify Dialog */}
+      <ConfirmDialog
+        open={confirmModifyOpen}
+        onOpenChange={setConfirmModifyOpen}
+        title="Modifier le rendez-vous"
+        description={`Êtes-vous sûr de vouloir modifier le rendez-vous "${rdvToModify?.titre}" ?`}
+        confirmText="Modifier"
+        cancelText="Annuler"
+        onConfirm={confirmModify}
+        variant="info"
+      />
+        confirmText="Modifier"
+        cancelText="Annuler"
+        onConfirm={confirmModify}
+        variant="default"
+      />
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title="Supprimer le rendez-vous"
+        description={`Êtes-vous sûr de vouloir supprimer le rendez-vous "${rdvToDelete?.titre}" ? Cette action est irréversible.`}
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        onConfirm={confirmDelete}
+        variant="danger"
+      />
     </Card>
   );
 };

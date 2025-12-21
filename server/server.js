@@ -192,6 +192,7 @@ const messagesRoutes = require('./routes/messages');
 const marketingRoutes = require('./routes/marketing');
 const commandesRoutes = require('./routes/commandes');
 const rdvRoutes = require('./routes/rdv');
+const rdvNotificationsRoutes = require('./routes/rdvNotifications');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -207,6 +208,7 @@ app.use('/api/messages', messagesRoutes);
 app.use('/api/marketing', marketingRoutes);
 app.use('/api/commandes', commandesRoutes);
 app.use('/api/rdv', rdvRoutes);
+app.use('/api/rdv-notifications', rdvNotificationsRoutes);
 
 // Static file serving for uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
