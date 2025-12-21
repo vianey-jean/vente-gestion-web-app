@@ -40,6 +40,7 @@ interface RdvFormProps {
   defaultDate?: string;
   defaultTime?: string;
   conflicts?: RDV[];
+  viewOnly?: boolean;
 }
 
 const RdvForm: React.FC<RdvFormProps> = ({
@@ -50,6 +51,7 @@ const RdvForm: React.FC<RdvFormProps> = ({
   defaultDate,
   defaultTime,
   conflicts = [],
+  viewOnly = false,
 }) => {
   const [formData, setFormData] = useState<RDVFormData>({
     titre: '',
@@ -80,9 +82,9 @@ const RdvForm: React.FC<RdvFormProps> = ({
         clientNom: rdv.clientNom,
         clientTelephone: rdv.clientTelephone || '',
         clientAdresse: rdv.clientAdresse || '',
-        date: rdv.date,
-        heureDebut: rdv.heureDebut,
-        heureFin: rdv.heureFin,
+        date: defaultDate || rdv.date,
+        heureDebut: defaultTime || rdv.heureDebut,
+        heureFin: defaultTime ? addHour(defaultTime) : rdv.heureFin,
         lieu: rdv.lieu || '',
         statut: rdv.statut,
       });
@@ -171,6 +173,7 @@ const RdvForm: React.FC<RdvFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (viewOnly) return;
     if (!formData.titre.trim() || !formData.clientNom.trim()) return;
     
     setIsSubmitting(true);
@@ -191,9 +194,9 @@ const RdvForm: React.FC<RdvFormProps> = ({
               <Calendar className="h-6 w-6 text-primary" />
             </div>
             <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-              {rdv ? 'Modifier le rendez-vous' : 'Nouveau rendez-vous'}
+              {viewOnly ? 'Détails du rendez-vous' : rdv ? 'Modifier le rendez-vous' : 'Nouveau rendez-vous'}
             </span>
-            <Sparkles className="h-5 w-5 text-amber-500 animate-pulse" />
+            {!viewOnly && <Sparkles className="h-5 w-5 text-amber-500 animate-pulse" />}
           </DialogTitle>
         </DialogHeader>
 
@@ -225,6 +228,7 @@ const RdvForm: React.FC<RdvFormProps> = ({
               placeholder="Ex: Livraison perruque, Consultation..."
               className="h-12 text-base border-primary/20 focus:border-primary/50 bg-background/50"
               required
+              disabled={viewOnly}
             />
           </div>
 
@@ -252,6 +256,7 @@ const RdvForm: React.FC<RdvFormProps> = ({
                 placeholder="Tapez le nom du client..."
                 className="h-12 pl-10 text-base border-primary/20 focus:border-primary/50 bg-background/50"
                 required
+                disabled={viewOnly}
               />
               {isSearching && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -262,7 +267,7 @@ const RdvForm: React.FC<RdvFormProps> = ({
 
             {/* Search Results Dropdown */}
             <AnimatePresence>
-              {showResults && searchResults.length > 0 && (
+              {showResults && searchResults.length > 0 && !viewOnly && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -339,6 +344,7 @@ const RdvForm: React.FC<RdvFormProps> = ({
                 onChange={(e) => handleChange('date', e.target.value)}
                 className="h-12 border-primary/20 focus:border-primary/50 bg-background/50"
                 required
+                disabled={viewOnly}
               />
             </div>
 
@@ -354,6 +360,7 @@ const RdvForm: React.FC<RdvFormProps> = ({
                 onChange={(e) => handleChange('heureDebut', e.target.value)}
                 className="h-12 border-primary/20 focus:border-primary/50 bg-background/50"
                 required
+                disabled={viewOnly}
               />
             </div>
 
@@ -369,6 +376,7 @@ const RdvForm: React.FC<RdvFormProps> = ({
                 onChange={(e) => handleChange('heureFin', e.target.value)}
                 className="h-12 border-primary/20 focus:border-primary/50 bg-background/50"
                 required
+                disabled={viewOnly}
               />
             </div>
           </div>
@@ -385,6 +393,7 @@ const RdvForm: React.FC<RdvFormProps> = ({
               onChange={(e) => handleChange('lieu', e.target.value)}
               placeholder="Adresse ou lieu du rendez-vous"
               className="h-12 border-primary/20 focus:border-primary/50 bg-background/50"
+              disabled={viewOnly}
             />
           </div>
 
@@ -394,6 +403,7 @@ const RdvForm: React.FC<RdvFormProps> = ({
             <Select
               value={formData.statut}
               onValueChange={(value) => handleChange('statut', value as RDVFormData['statut'])}
+              disabled={viewOnly}
             >
               <SelectTrigger className="h-12 border-primary/20 focus:border-primary/50 bg-background/50">
                 <SelectValue />
@@ -403,6 +413,7 @@ const RdvForm: React.FC<RdvFormProps> = ({
                 <SelectItem value="confirme">✅ Confirmé</SelectItem>
                 <SelectItem value="annule">❌ Annulé</SelectItem>
                 <SelectItem value="termine">✔️ Terminé</SelectItem>
+                <SelectItem value="reporte">🔄 Reporté</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -417,6 +428,7 @@ const RdvForm: React.FC<RdvFormProps> = ({
               placeholder="Détails du rendez-vous..."
               rows={3}
               className="border-primary/20 focus:border-primary/50 bg-background/50 resize-none"
+              disabled={viewOnly}
             />
           </div>
 
@@ -427,25 +439,27 @@ const RdvForm: React.FC<RdvFormProps> = ({
               onClick={onClose}
               className="h-12 px-6"
             >
-              Annuler
+              {viewOnly ? 'Fermer' : 'Annuler'}
             </Button>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="h-12 px-8 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
-            >
-              {isSubmitting ? (
-                <span className="flex items-center gap-2">
-                  <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Enregistrement...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4" />
-                  {rdv ? 'Modifier' : 'Créer le rendez-vous'}
-                </span>
-              )}
-            </Button>
+            {!viewOnly && (
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="h-12 px-8 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Enregistrement...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4" />
+                    {rdv ? 'Modifier' : 'Créer le rendez-vous'}
+                  </span>
+                )}
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>
