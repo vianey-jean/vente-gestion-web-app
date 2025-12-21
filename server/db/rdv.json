@@ -1,0 +1,49 @@
+[
+  {
+    "id": "1766320226665",
+    "titre": "Livraison a bellepierre",
+    "description": "Livraison pour le bleu",
+    "clientNom": "Cliente Naomie Vaubon",
+    "clientTelephone": "0693406686",
+    "clientAdresse": "Vaubon",
+    "date": "2025-12-23",
+    "heureDebut": "11:00",
+    "heureFin": "12:00",
+    "lieu": "Vaubon",
+    "statut": "planifie",
+    "notes": "",
+    "produits": [],
+    "commandeId": null,
+    "notificationEnvoyee": false,
+    "rappelEnvoye": false,
+    "createdAt": "2025-12-21T12:30:26.665Z",
+    "updatedAt": "2025-12-21T12:34:47.467Z"
+  },
+  {
+    "id": "1766320295876",
+    "titre": "Réservation: Perruque lisse blonde miel 24 pouces",
+    "description": "Produits réservés:\n- Perruque lisse blonde miel 24 pouces x1 (180 Ar)",
+    "clientNom": "Princesse Princesse",
+    "clientTelephone": "0692782974",
+    "clientAdresse": "18 avenue Raymond Vergès, La Possession",
+    "date": "2025-12-22",
+    "heureDebut": "10:00",
+    "heureFin": "11:00",
+    "lieu": "18 avenue Raymond Vergès, La Possession",
+    "statut": "planifie",
+    "notes": "Créé automatiquement depuis une réservation",
+    "produits": [
+      {
+        "nom": "Perruque lisse blonde miel 24 pouces",
+        "quantite": 1,
+        "prixUnitaire": 47,
+        "prixVente": 180
+      }
+    ],
+    "commandeId": "1766320295825",
+    "notificationEnvoyee": false,
+    "rappelEnvoye": false,
+    "createdAt": "2025-12-21T12:31:35.876Z",
+    "updatedAt": "2025-12-21T12:33:22.416Z"
+  }
+]
