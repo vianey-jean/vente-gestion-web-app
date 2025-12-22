@@ -442,27 +442,5 @@
     "createdAt": "2025-12-17T11:39:08.586Z",
     "saleId": null,
     "updatedAt": "2025-12-20T03:39:40.832Z"
-  },
-  {
-    "id": "1766320295825",
-    "clientNom": "Princesse Princesse",
-    "clientPhone": "0692782974",
-    "clientAddress": "18 avenue Raymond Vergès, La Possession",
-    "type": "reservation",
-    "produits": [
-      {
-        "nom": "Perruque lisse blonde miel 24 pouces",
-        "prixUnitaire": 47,
-        "quantite": 1,
-        "prixVente": 180
-      }
-    ],
-    "dateCommande": "2025-12-21T12:31:35.779Z",
-    "statut": "reporter",
-    "dateEcheance": "2025-12-22",
-    "horaire": "10:00",
-    "createdAt": "2025-12-21T12:31:35.825Z",
-    "saleId": null,
-    "updatedAt": "2025-12-21T12:33:22.391Z"
   }
 ]
