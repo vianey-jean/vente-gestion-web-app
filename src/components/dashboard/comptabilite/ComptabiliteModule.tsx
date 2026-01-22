@@ -29,6 +29,7 @@ import {
 import { useApp } from '@/contexts/AppContext';
 import useCurrencyFormatter from '@/hooks/use-currency-formatter';
 import nouvelleAchatApiService from '@/services/api/nouvelleAchatApi';
+import comptaApiService from '@/services/api/comptaApi';
 import { NouvelleAchat, NouvelleAchatFormData, DepenseFormData, ComptabiliteData } from '@/types/comptabilite';
 import { Product } from '@/types/product';
 import { toast } from '@/hooks/use-toast';
@@ -60,6 +61,7 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
   // États du formulaire d'achat
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showProductList, setShowProductList] = useState(false);
   const [achatForm, setAchatForm] = useState<NouvelleAchatFormData>({
     productDescription: '',
     purchasePrice: 0,
@@ -81,11 +83,11 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
 
   // Filtrer les produits pour la recherche - mémorisé
   const filteredProducts = useMemo(() => {
-    if (searchTerm.length < 3) return [];
+    if (searchTerm.length < 3 || !showProductList) return [];
     return products.filter(p => 
       p.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [searchTerm, products]);
+  }, [searchTerm, products, showProductList]);
 
   // Charger les achats - mémorisé avec useCallback
   const loadAchats = useCallback(async () => {
@@ -168,6 +170,24 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
     };
   }, [allSales, achats, selectedMonth, selectedYear]);
 
+  // Sauvegarder les données de comptabilité dans la base de données
+  const saveComptaData = useCallback(async () => {
+    try {
+      console.log(`💾 Saving compta data for ${selectedMonth}/${selectedYear}...`);
+      await comptaApiService.calculateMonth(selectedYear, selectedMonth);
+      console.log('✅ Compta data saved successfully');
+    } catch (error) {
+      console.error('❌ Error saving compta data:', error);
+    }
+  }, [selectedMonth, selectedYear]);
+
+  // Sauvegarder les données de comptabilité chaque fois que les données changent
+  useEffect(() => {
+    if (comptabiliteData && (comptabiliteData.salesCount > 0 || achats.length > 0)) {
+      saveComptaData();
+    }
+  }, [comptabiliteData, achats.length, saveComptaData]);
+
   // Données pour les graphiques mensuels - STABLE et MÉMORISÉ
   const monthlyChartData = useMemo(() => {
     const data = [];
@@ -218,11 +238,15 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
   const handleSelectProduct = useCallback((product: Product) => {
     setSelectedProduct(product);
     setSearchTerm(product.description);
+    setShowProductList(false); // Cacher la liste après sélection
     setAchatForm(prev => ({
       ...prev,
       productId: product.id,
       productDescription: product.description,
-      purchasePrice: product.purchasePrice
+      purchasePrice: product.purchasePrice,
+      quantity: prev.quantity || 1, // Définir quantité par défaut à 1
+      fournisseur: prev.fournisseur || '',
+      caracteristiques: prev.caracteristiques || product.description
     }));
   }, []);
 
@@ -253,6 +277,7 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
       });
       setSelectedProduct(null);
       setSearchTerm('');
+      setShowProductList(false);
       setShowAchatForm(false);
       
       loadAchats();
@@ -314,7 +339,12 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
   }, []);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
+    const value = e.target.value;
+    setSearchTerm(value);
+    setShowProductList(value.length >= 3); // Afficher la liste si 3+ caractères
+    if (value.length < 3) {
+      setSelectedProduct(null);
+    }
   }, []);
 
   const handleAchatFormChange = useCallback((field: keyof NouvelleAchatFormData, value: string | number) => {
