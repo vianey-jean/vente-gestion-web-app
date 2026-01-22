@@ -1,0 +1,22 @@
+[
+  {
+    "id": "1769056129726",
+    "date": "2026-01-22T04:28:49.724Z",
+    "productId": "2",
+    "productDescription": "Perruque bouclé noir 26 pouces",
+    "purchasePrice": 50,
+    "quantity": 1,
+    "fournisseur": "Sanowi",
+    "caracteristiques": "très jolie perruque",
+    "totalCost": 50,
+    "type": "achat_produit"
+  },
+  {
+    "id": "1769056199908",
+    "date": "2026-01-22T04:29:59.906Z",
+    "description": "taxes des produits 21/01/2026",
+    "totalCost": 25,
+    "type": "taxes",
+    "categorie": "divers"
+  }
+]
