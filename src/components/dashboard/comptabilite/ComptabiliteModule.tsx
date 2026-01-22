@@ -29,6 +29,8 @@ import {
 import { useApp } from '@/contexts/AppContext';
 import useCurrencyFormatter from '@/hooks/use-currency-formatter';
 import nouvelleAchatApiService from '@/services/api/nouvelleAchatApi';
+import productApiService from '@/services/api/productApi';
+import { ProductFormData } from '@/types/product';
 import comptaApiService from '@/services/api/comptaApi';
 import { NouvelleAchat, NouvelleAchatFormData, DepenseFormData, ComptabiliteData } from '@/types/comptabilite';
 import { Product } from '@/types/product';
@@ -239,12 +241,15 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
     setSelectedProduct(product);
     setSearchTerm(product.description);
     setShowProductList(false); // Cacher la liste après sélection
+    // Ne pas pré-remplir les champs prix et quantité - on les laisse vides
+    // L'utilisateur doit entrer une nouvelle quantité obligatoirement
+    // Le prix d'achat est optionnel (peut garder l'ancien)
     setAchatForm(prev => ({
       ...prev,
       productId: product.id,
       productDescription: product.description,
-      purchasePrice: product.purchasePrice,
-      quantity: prev.quantity || 1, // Définir quantité par défaut à 1
+      purchasePrice: 0, // Vide - le nouveau prix est optionnel
+      quantity: 0, // Vide - l'utilisateur doit saisir une nouvelle quantité
       fournisseur: prev.fournisseur || '',
       caracteristiques: prev.caracteristiques || product.description
     }));
@@ -252,20 +257,47 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
 
   const handleSubmitAchat = useCallback(async () => {
     try {
+      // Validation: description et quantité obligatoires, prix optionnel
       if (!achatForm.productDescription || achatForm.quantity <= 0) {
         toast({
           title: 'Erreur',
-          description: 'Veuillez remplir tous les champs obligatoires',
+          description: 'Veuillez remplir la description et la quantité',
           variant: 'destructive'
         });
         return;
       }
 
-      await nouvelleAchatApiService.create(achatForm);
+      // Déterminer le prix d'achat final
+      const finalPurchasePrice = achatForm.purchasePrice > 0 
+        ? achatForm.purchasePrice 
+        : (selectedProduct?.purchasePrice || 0);
+
+      // Si un produit existant est sélectionné, mettre à jour products.json
+      if (selectedProduct) {
+        const updateData: Partial<ProductFormData> = {
+          quantity: selectedProduct.quantity + achatForm.quantity // Ajouter la nouvelle quantité
+        };
+        
+        // Si un nouveau prix est saisi, l'enregistrer aussi
+        if (achatForm.purchasePrice > 0) {
+          updateData.purchasePrice = achatForm.purchasePrice;
+        }
+        
+        await productApiService.update(selectedProduct.id, updateData);
+        console.log('✅ Product updated in products.json:', updateData);
+      }
+
+      // Créer l'entrée dans compta avec le prix final
+      await nouvelleAchatApiService.create({
+        ...achatForm,
+        purchasePrice: finalPurchasePrice
+      });
       
       toast({
         title: 'Succès',
-        description: 'Achat enregistré avec succès'
+        description: selectedProduct 
+          ? `Stock mis à jour: +${achatForm.quantity} unités${achatForm.purchasePrice > 0 ? `, nouveau prix: ${formatEuro(achatForm.purchasePrice)}` : ''}`
+          : 'Achat enregistré avec succès'
       });
       
       setAchatForm({
@@ -290,7 +322,7 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
         variant: 'destructive'
       });
     }
-  }, [achatForm, loadAchats, fetchProducts]);
+  }, [achatForm, selectedProduct, loadAchats, fetchProducts, formatEuro]);
 
   const handleSubmitDepense = useCallback(async () => {
     try {
@@ -684,72 +716,131 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Prix d'achat (€)</Label>
+            <div className="grid grid-cols-2 gap-6">
+              {/* Prix d'achat */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-emerald-500" />
+                    Prix d'achat (€)
+                  </Label>
+                  {selectedProduct && (
+                    <span className="text-sm font-bold text-red-600 bg-red-50 dark:bg-red-900/30 px-3 py-1 rounded-full border border-red-200 dark:border-red-700 flex items-center gap-1">
+                      Actuel: {formatEuro(selectedProduct.purchasePrice)}
+                    </span>
+                  )}
+                </div>
                 <Input
                   type="number"
+                  step="0.01"
+                  min="0"
                   value={achatForm.purchasePrice || ''}
                   onChange={(e) => handleAchatFormChange('purchasePrice', parseFloat(e.target.value) || 0)}
-                  className="bg-white/80 dark:bg-gray-800/80"
+                  placeholder={selectedProduct ? "Nouveau prix (optionnel)" : "Prix d'achat"}
+                  className="h-12 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 focus:border-emerald-500 dark:focus:border-emerald-400 rounded-xl text-lg font-medium shadow-sm transition-all duration-200"
                 />
+                {selectedProduct && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+                    💡 Laissez vide pour garder le prix actuel
+                  </p>
+                )}
               </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Quantité</Label>
+              
+              {/* Quantité */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                    <Package className="h-4 w-4 text-blue-500" />
+                    Quantité à ajouter *
+                  </Label>
+                  {selectedProduct && (
+                    <span className="text-sm font-bold text-red-600 bg-red-50 dark:bg-red-900/30 px-3 py-1 rounded-full border border-red-200 dark:border-red-700 flex items-center gap-1">
+                      Stock: {selectedProduct.quantity}
+                    </span>
+                  )}
+                </div>
                 <Input
                   type="number"
+                  min="1"
                   value={achatForm.quantity || ''}
                   onChange={(e) => handleAchatFormChange('quantity', parseInt(e.target.value) || 0)}
-                  className="bg-white/80 dark:bg-gray-800/80"
+                  placeholder="Quantité à ajouter"
+                  className="h-12 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 rounded-xl text-lg font-medium shadow-sm transition-all duration-200"
+                />
+                {selectedProduct && achatForm.quantity > 0 && (
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                    ✓ Nouveau stock: {selectedProduct.quantity + achatForm.quantity} unités
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <Label className="text-sm font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                  <ShoppingCart className="h-4 w-4 text-purple-500" />
+                  Fournisseur
+                </Label>
+                <Input
+                  value={achatForm.fournisseur || ''}
+                  onChange={(e) => handleAchatFormChange('fournisseur', e.target.value)}
+                  placeholder="Nom du fournisseur"
+                  className="h-12 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 focus:border-purple-500 dark:focus:border-purple-400 rounded-xl font-medium shadow-sm transition-all duration-200"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-sm font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-indigo-500" />
+                  Caractéristiques
+                </Label>
+                <Textarea
+                  value={achatForm.caracteristiques || ''}
+                  onChange={(e) => handleAchatFormChange('caracteristiques', e.target.value)}
+                  placeholder="Caractéristiques du produit..."
+                  className="bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 focus:border-indigo-500 dark:focus:border-indigo-400 rounded-xl font-medium shadow-sm transition-all duration-200 resize-none"
+                  rows={2}
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Fournisseur</Label>
-              <Input
-                value={achatForm.fournisseur || ''}
-                onChange={(e) => handleAchatFormChange('fournisseur', e.target.value)}
-                placeholder="Nom du fournisseur"
-                className="bg-white/80 dark:bg-gray-800/80"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Caractéristiques</Label>
-              <Textarea
-                value={achatForm.caracteristiques || ''}
-                onChange={(e) => handleAchatFormChange('caracteristiques', e.target.value)}
-                placeholder="Caractéristiques du produit..."
-                className="bg-white/80 dark:bg-gray-800/80"
-                rows={3}
-              />
-            </div>
-
-            {/* Résumé */}
-            {achatForm.purchasePrice > 0 && achatForm.quantity > 0 && (
-              <Card className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border-blue-500/30">
-                <CardContent className="pt-4">
+            {/* Résumé du coût */}
+            {achatForm.quantity > 0 && (
+              <Card className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 border-emerald-500/30 shadow-lg">
+                <CardContent className="pt-5 pb-4">
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold">Coût total:</span>
-                    <span className="text-xl font-bold text-blue-600">
-                      {formatEuro(achatForm.purchasePrice * achatForm.quantity)}
+                    <div className="flex items-center gap-2">
+                      <Calculator className="h-5 w-5 text-emerald-600" />
+                      <span className="font-bold text-gray-800 dark:text-gray-100">Coût total de cet achat:</span>
+                    </div>
+                    <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                      {formatEuro((achatForm.purchasePrice > 0 ? achatForm.purchasePrice : (selectedProduct?.purchasePrice || 0)) * achatForm.quantity)}
                     </span>
                   </div>
+                  {selectedProduct && achatForm.purchasePrice === 0 && (
+                    <p className="text-sm text-gray-500 mt-2 italic">
+                      * Calculé avec le prix actuel du produit
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             )}
           </div>
 
-          <DialogFooter className="gap-3">
-            <Button variant="outline" onClick={() => setShowAchatForm(false)}>
+          <DialogFooter className="gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAchatForm(false)}
+              className="h-12 px-6 rounded-xl border-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200"
+            >
               Annuler
             </Button>
             <Button
               onClick={handleSubmitAchat}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xl"
+              disabled={!achatForm.productDescription || achatForm.quantity <= 0}
+              className="h-12 px-8 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-700 hover:via-teal-700 hover:to-cyan-700 text-white shadow-xl rounded-xl font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-5 w-5 mr-2" />
               Enregistrer l'achat
             </Button>
           </DialogFooter>
