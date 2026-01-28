@@ -1,22 +1,14 @@
 [
   {
-    "id": "1769056129726",
-    "date": "2026-01-22T04:28:49.724Z",
-    "productId": "2",
-    "productDescription": "Perruque bouclé noir 26 pouces",
-    "purchasePrice": 50,
+    "id": "1769502102000",
+    "date": "2026-01-27T08:21:41.993Z",
+    "productId": "1762441237630",
+    "productDescription": "perruque bouclé frange blonde miel14 pouces",
+    "purchasePrice": 36.79,
     "quantity": 1,
-    "fournisseur": "Sanowi",
-    "caracteristiques": "très jolie perruque",
-    "totalCost": 50,
+    "fournisseur": "Black Pearl",
+    "caracteristiques": "perruque bouclé frange blonde miel14 pouces",
+    "totalCost": 36.79,
     "type": "achat_produit"
-  },
-  {
-    "id": "1769056199908",
-    "date": "2026-01-22T04:29:59.906Z",
-    "description": "taxes des produits 21/01/2026",
-    "totalCost": 25,
-    "type": "taxes",
-    "categorie": "divers"
   }
 ]
