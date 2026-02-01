@@ -88,7 +88,8 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
     purchasePrice: 0,
     quantity: 0,
     fournisseur: '',
-    caracteristiques: ''
+    caracteristiques: '',
+    date: ''
   });
   
   // États du formulaire de dépense
@@ -96,7 +97,8 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
     description: '',
     montant: 0,
     type: 'autre_depense',
-    categorie: 'divers'
+    categorie: 'divers',
+    date: ''
   });
 
   // Ref pour éviter les appels multiples
@@ -300,10 +302,10 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
       // ========================================
       // ÉTAPE 1: Validation des champs obligatoires
       // ========================================
-      if (!achatForm.productDescription || achatForm.quantity <= 0) {
+      if (!achatForm.productDescription || achatForm.quantity <= 0 || !achatForm.date) {
         toast({
           title: 'Erreur',
-          description: 'Veuillez remplir la description et la quantité',
+          description: 'Veuillez remplir la description, la quantité et la date',
           variant: 'destructive'
         });
         return;
@@ -327,7 +329,8 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
         purchasePrice: finalPurchasePrice,
         quantity: achatForm.quantity,
         fournisseur: achatForm.fournisseur,
-        caracteristiques: achatForm.caracteristiques
+        caracteristiques: achatForm.caracteristiques,
+        date: achatForm.date
       });
       console.log('✅ Achat enregistré - le backend gère le produit');
       
@@ -361,7 +364,8 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
         purchasePrice: 0,
         quantity: 0,
         fournisseur: '',
-        caracteristiques: ''
+        caracteristiques: '',
+        date: ''
       });
       setSelectedProduct(null);
       setSearchTerm('');
@@ -385,16 +389,19 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
 
   const handleSubmitDepense = useCallback(async () => {
     try {
-      if (!depenseForm.description || depenseForm.montant <= 0) {
+      if (!depenseForm.description || depenseForm.montant <= 0 || !depenseForm.date) {
         toast({
           title: 'Erreur',
-          description: 'Veuillez remplir tous les champs obligatoires',
+          description: 'Veuillez remplir tous les champs obligatoires (description, montant, date)',
           variant: 'destructive'
         });
         return;
       }
 
-      await nouvelleAchatApiService.addDepense(depenseForm);
+      await nouvelleAchatApiService.addDepense({
+        ...depenseForm,
+        date: depenseForm.date
+      });
       
      toast({
   title: 'Succès',
@@ -407,7 +414,8 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
         description: '',
         montant: 0,
         type: 'autre_depense',
-        categorie: 'divers'
+        categorie: 'divers',
+        date: ''
       });
 
       // ✅ FERMETURE DE LA MODALE
