@@ -26,8 +26,14 @@ import {
   ArrowDownCircle,
   Wallet,
   Sparkles,
-  FileDown
+  FileDown,
+  CalendarIcon
 } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
 import useCurrencyFormatter from '@/hooks/use-currency-formatter';
 import nouvelleAchatApiService from '@/services/api/nouvelleAchatApi';
@@ -1745,14 +1751,39 @@ doc.text(
                 <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold">
                   ⚠️ Le nom sera modifié de "{selectedProduct.description}" à "{achatForm.productDescription}"
                 </p>
-              )}
+            )}
             </div>
 
-
-              {/**Ici il faut ajouter une formulaire date  */}
-             
-
-
+            {/* Date d'achat */}
+            <div className="space-y-3">
+              <Label className="text-sm font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4 text-blue-500" />
+                Date d'achat *
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full h-12 justify-start text-left font-normal bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-xl",
+                      !achatForm.date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {achatForm.date ? format(new Date(achatForm.date), "PPP", { locale: fr }) : <span>Sélectionner une date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={achatForm.date ? new Date(achatForm.date) : undefined}
+                    onSelect={(date) => handleAchatFormChange('date', date ? date.toISOString() : '')}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
 
             <div className="grid grid-cols-2 gap-6">
               {/* Prix d'achat */}
@@ -1875,7 +1906,7 @@ doc.text(
             </Button>
             <Button
               onClick={handleSubmitAchat}
-              disabled={!achatForm.productDescription || achatForm.quantity <= 0}
+              disabled={!achatForm.productDescription || achatForm.quantity <= 0 || !achatForm.date}
               className="h-12 px-8 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-700 hover:via-teal-700 hover:to-cyan-700 text-white shadow-xl rounded-xl font-bold text-base disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
               <Plus className="h-5 w-5 mr-2" />
@@ -1927,16 +1958,42 @@ doc.text(
                     </div>
                   </SelectItem>
                 </SelectContent>
-              </Select>
+            </Select>
             </div>
 
-
-  {/**Ici il faut ajouter une formulaire date  */}
-
-
-  
+            {/* Date de dépense */}
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Description</Label>
+              <Label className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4 text-orange-500" />
+                Date de dépense *
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal bg-white/80 dark:bg-gray-800/80",
+                      !depenseForm.date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {depenseForm.date ? format(new Date(depenseForm.date), "PPP", { locale: fr }) : <span>Sélectionner une date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={depenseForm.date ? new Date(depenseForm.date) : undefined}
+                    onSelect={(date) => handleDepenseFormChange('date', date ? date.toISOString() : '')}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Description *</Label>
               <Input
                 value={depenseForm.description}
                 onChange={(e) => handleDepenseFormChange('description', e.target.value)}
@@ -1973,7 +2030,8 @@ doc.text(
             </Button>
             <Button
               onClick={handleSubmitDepense}
-              className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white shadow-xl"
+              disabled={!depenseForm.description || depenseForm.montant <= 0 || !depenseForm.date}
+              className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="h-4 w-4 mr-2" />
               Enregistrer la dépense
