@@ -164,14 +164,9 @@ const AchatFormDialog: React.FC<AchatFormDialogProps> = ({
               <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold">
                 ⚠️ Le nom sera modifié de "{selectedProduct.description}" à "{achatForm.productDescription}"
               </p>
-            )}
+          )}
           </div>
 
-
-          {/**Ici il faut ajouter une formulaire date  */}
-
-
-          
           {/* Grille Prix / Quantité */}
           <div className="grid grid-cols-2 gap-6">
             {/* Prix d'achat */}

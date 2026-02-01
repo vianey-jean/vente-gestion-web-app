@@ -159,12 +159,6 @@ const DepenseFormDialog: React.FC<DepenseFormDialogProps> = ({
             </Select>
           </div>
 
-
-  {/**Ici il faut ajouter une formulaire date  */}
-
-
-
-  
           {/* Description */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold text-gray-700 dark:text-gray-200">
