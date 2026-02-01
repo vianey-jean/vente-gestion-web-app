@@ -1748,6 +1748,12 @@ doc.text(
               )}
             </div>
 
+
+              {/**Ici il faut ajouter une formulaire date  */}
+             
+
+
+
             <div className="grid grid-cols-2 gap-6">
               {/* Prix d'achat */}
               <div className="space-y-3">
@@ -1924,6 +1930,11 @@ doc.text(
               </Select>
             </div>
 
+
+  {/**Ici il faut ajouter une formulaire date  */}
+
+
+  
             <div className="space-y-2">
               <Label className="text-sm font-semibold text-gray-700 dark:text-gray-200">Description</Label>
               <Input

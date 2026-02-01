@@ -167,6 +167,11 @@ const AchatFormDialog: React.FC<AchatFormDialogProps> = ({
             )}
           </div>
 
+
+          {/**Ici il faut ajouter une formulaire date  */}
+
+
+          
           {/* Grille Prix / Quantité */}
           <div className="grid grid-cols-2 gap-6">
             {/* Prix d'achat */}
