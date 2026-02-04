@@ -542,8 +542,8 @@ const Inventaire = () => {
                     <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg shadow-purple-500/30">
                       <Package className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                     </div>
-                    <span className="text-white hidden sm:inline text-sm">Description</span>
-                    <span className="text-white sm:hidden text-xs">Prod.</span>
+                    <span className="text-red-600 hidden sm:inline text-sm">Description</span>
+                    <span className="text-red-600 sm:hidden text-xs">Prod.</span>
                   </div>
                 </th>
                 <th className="p-3 sm:p-4 md:p-6 text-left font-black uppercase tracking-wider">
@@ -551,7 +551,7 @@ const Inventaire = () => {
                     <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 shadow-lg shadow-amber-500/30">
                       <Star className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                     </div>
-                    <span className="text-white hidden xs:inline text-sm">Prix</span>
+                    <span className="text-yellow-600 hidden xs:inline text-sm">Prix</span>
                   </div>
                 </th>
                 <th className="p-3 sm:p-4 md:p-6 text-left font-black uppercase tracking-wider">
@@ -559,7 +559,7 @@ const Inventaire = () => {
                     <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/30">
                       <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                     </div>
-                    <span className="text-white hidden xs:inline text-sm">Qté</span>
+                    <span className="text-Blue-600 hidden xs:inline text-sm">Qté</span>
                   </div>
                 </th>
                 <th className="p-3 sm:p-4 md:p-6 text-left font-black uppercase tracking-wider hidden md:table-cell">
@@ -567,7 +567,7 @@ const Inventaire = () => {
                     <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 shadow-lg shadow-orange-500/30">
                       <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                     </div>
-                    <span className="text-white text-sm">Priorité</span>
+                    <span className="text-red-400 text-sm">Priorité</span>
                   </div>
                 </th>
                 <th className="p-3 sm:p-4 md:p-6 text-center font-black uppercase tracking-wider">
@@ -575,7 +575,7 @@ const Inventaire = () => {
                     <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/30">
                       <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                     </div>
-                    <span className="text-white hidden sm:inline text-sm">Actions</span>
+                    <span className="text-purple-600 hidden sm:inline text-sm">Actions</span>
                   </div>
                 </th>
               </tr>
