@@ -531,142 +531,176 @@ const Inventaire = () => {
         </div>
       </ModernContainer>
 
-      {/* Tableau des produits Premium */}
+      {/* Tableau des produits Premium - Ultra Moderne et Luxueux */}
       <ModernContainer gradient="neutral" className="card-3d overflow-hidden -mx-3 sm:mx-0">
         <div className="overflow-x-auto -mx-3 sm:mx-0">
           <table className="w-full text-xs sm:text-sm md:text-base">
             <thead>
-              <tr className="bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100 border-b-2 border-gray-200">
-                <th className="p-3 sm:p-4 md:p-6 text-left font-black uppercase tracking-wide">
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <Package className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-purple-600" />
-                    <span className="hidden sm:inline">Description</span>
-                    <span className="sm:hidden">Prod.</span>
+              <tr className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 border-b-2 border-purple-500/30">
+                <th className="p-3 sm:p-4 md:p-6 text-left font-black uppercase tracking-wider">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg shadow-purple-500/30">
+                      <Package className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
+                    </div>
+                    <span className="text-white hidden sm:inline text-sm">Description</span>
+                    <span className="text-white sm:hidden text-xs">Prod.</span>
                   </div>
                 </th>
-                <th className="p-3 sm:p-4 md:p-6 text-left font-black uppercase tracking-wide">
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <Star className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-yellow-500" />
-                    <span className="hidden xs:inline">Prix</span>
+                <th className="p-3 sm:p-4 md:p-6 text-left font-black uppercase tracking-wider">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 shadow-lg shadow-amber-500/30">
+                      <Star className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
+                    </div>
+                    <span className="text-white hidden xs:inline text-sm">Prix</span>
                   </div>
                 </th>
-                <th className="p-3 sm:p-4 md:p-6 text-left font-black uppercase tracking-wide">
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600" />
-                    <span className="hidden xs:inline">Qté</span>
+                <th className="p-3 sm:p-4 md:p-6 text-left font-black uppercase tracking-wider">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg shadow-blue-500/30">
+                      <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
+                    </div>
+                    <span className="text-white hidden xs:inline text-sm">Qté</span>
                   </div>
                 </th>
-                <th className="p-3 sm:p-4 md:p-6 text-left font-black uppercase tracking-wide hidden md:table-cell">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5 text-orange-600" />
-                    Priorité
+                <th className="p-3 sm:p-4 md:p-6 text-left font-black uppercase tracking-wider hidden md:table-cell">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 shadow-lg shadow-orange-500/30">
+                      <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
+                    </div>
+                    <span className="text-white text-sm">Priorité</span>
                   </div>
                 </th>
-                <th className="p-3 sm:p-4 md:p-6 text-left font-black uppercase tracking-wide">
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-indigo-600" />
-                    <span className="hidden sm:inline">Actions</span>
-                    <span className="sm:hidden">...</span>
+                <th className="p-3 sm:p-4 md:p-6 text-center font-black uppercase tracking-wider">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 shadow-lg shadow-indigo-500/30">
+                      <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
+                    </div>
+                    <span className="text-white hidden sm:inline text-sm">Actions</span>
                   </div>
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {currentProducts.map((product, index) => {
                 const priority = getPriority(product.quantity);
                 const PriorityIcon = priority.icon;
                 return (
-                  <tr key={product.id} className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50 hover:via-purple-50 hover:to-pink-50 transition-all duration-300 group">
+                  <tr 
+                    key={product.id} 
+                    className="group cursor-pointer bg-white dark:bg-gray-900 hover:bg-gradient-to-r hover:from-purple-50 hover:via-pink-50 hover:to-blue-50 dark:hover:from-purple-900/20 dark:hover:via-pink-900/20 dark:hover:to-blue-900/20 transition-all duration-500"
+                    onClick={() => setViewingProduct(product)}
+                  >
                     <td className="p-3 sm:p-4 md:p-6">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg group-hover:from-blue-100 group-hover:to-purple-100 transition-all duration-300 flex-shrink-0">
-                          <span className="font-bold text-gray-600 text-xs sm:text-sm">{index + 1 + (currentPage - 1) * ITEMS_PER_PAGE}</span>
+                      <div className="flex items-center gap-2 sm:gap-4">
+                        {/* Numéro avec design luxe */}
+                        <div className="relative flex-shrink-0">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl group-hover:from-purple-600 group-hover:to-pink-600 transition-all duration-500">
+                            <span className="font-black text-white text-xs sm:text-sm md:text-base">{index + 1 + (currentPage - 1) * ITEMS_PER_PAGE}</span>
+                          </div>
+                          <div className="absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center">
+                            <Gem className="h-1.5 w-1.5 sm:h-2 sm:w-2 text-white" />
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <div className="font-bold text-sm sm:text-base md:text-lg group-hover:text-blue-900 transition-colors truncate">{product.description}</div>
-                          <div className="flex items-center gap-2 mt-1 sm:mt-2 flex-wrap">
-                            {/* Code unique du produit */}
+                        
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold text-sm sm:text-base md:text-lg text-gray-900 dark:text-white group-hover:text-purple-700 dark:group-hover:text-purple-300 transition-colors truncate">
+                            {product.description}
+                          </div>
+                          <div className="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 flex-wrap">
+                            {/* Code unique avec style premium */}
                             {product.code && (
-                              <Badge className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-0 font-mono text-xs px-2 py-0.5 rounded-lg shadow-md">
+                              <Badge className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white border-0 font-mono text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg shadow-lg shadow-purple-500/30 hover:shadow-xl hover:scale-105 transition-all">
+                                <Crown className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
                                 {product.code}
                               </Badge>
                             )}
-                            <Badge variant="outline" className="bg-gradient-to-r from-gray-100 to-gray-200 border-0 text-gray-700 font-semibold text-xs hidden sm:inline-flex">
-                              <div className="flex items-center gap-1">
-                                {categorizeProduct(product.description) === 'perruque' && <Crown className="h-3 w-3" />}
-                                {categorizeProduct(product.description) === 'tissage' && <Diamond className="h-3 w-3" />}
-                                {categorizeProduct(product.description) === 'autre' && <ShoppingBag className="h-3 w-3" />}
-                                {categorizeProduct(product.description)}
-                              </div>
+                            {/* Catégorie badge */}
+                            <Badge className="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 border-0 text-gray-700 dark:text-gray-200 font-semibold text-[10px] sm:text-xs hidden sm:inline-flex px-2 py-0.5 rounded-lg">
+                              {categorizeProduct(product.description) === 'perruque' && <Crown className="h-2.5 w-2.5 mr-1 text-purple-500" />}
+                              {categorizeProduct(product.description) === 'tissage' && <Diamond className="h-2.5 w-2.5 mr-1 text-blue-500" />}
+                              {categorizeProduct(product.description) === 'autre' && <ShoppingBag className="h-2.5 w-2.5 mr-1 text-green-500" />}
+                              {categorizeProduct(product.description)}
                             </Badge>
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="p-3 sm:p-4 md:p-6">
-                      <div className="flex items-center gap-1">
-                        <div className="text-sm sm:text-lg md:text-2xl font-black bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+                      <div className="relative inline-flex items-baseline gap-0.5">
+                        <span className="text-base sm:text-xl md:text-2xl font-black bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 bg-clip-text text-transparent">
                           {product.purchasePrice.toFixed(2)}
-                        </div>
-                        <span className="text-xs sm:text-base md:text-xl font-black bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">€</span>
+                        </span>
+                        <span className="text-sm sm:text-lg md:text-xl font-black bg-gradient-to-r from-amber-500 to-amber-600 bg-clip-text text-transparent">€</span>
+                        <Award className="absolute -top-1 -right-3 h-3 w-3 sm:h-4 sm:w-4 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </td>
                     <td className="p-3 sm:p-4 md:p-6">
                       <div className="flex items-center gap-2 sm:gap-3">
                         <div className={cn(
-                          "w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-lg sm:rounded-xl flex items-center justify-center font-black text-base sm:text-lg md:text-xl shadow-lg",
-                          product.quantity === 0 ? "bg-gradient-to-br from-red-500 to-red-600 text-white" :
-                          product.quantity <= 2 ? "bg-gradient-to-br from-orange-500 to-orange-600 text-white" :
-                          "bg-gradient-to-br from-green-500 to-green-600 text-white"
+                          "relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center font-black text-lg sm:text-xl md:text-2xl shadow-xl transition-all duration-300 group-hover:scale-110",
+                          product.quantity === 0 ? "bg-gradient-to-br from-red-500 to-red-700 text-white shadow-red-500/40" :
+                          product.quantity <= 2 ? "bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-orange-500/40" :
+                          "bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-emerald-500/40"
                         )}>
                           {product.quantity}
+                          <Flame className={cn(
+                            "absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5",
+                            product.quantity === 0 ? "text-red-300 animate-pulse" : 
+                            product.quantity <= 2 ? "text-orange-300 animate-pulse" : "text-emerald-300 opacity-0"
+                          )} />
                         </div>
                       </div>
                     </td>
                     <td className="p-3 sm:p-4 md:p-6 hidden md:table-cell">
-                      <Badge className={cn("font-bold text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl shadow-lg flex items-center gap-2 w-fit", priority.color)}>
+                      <Badge className={cn(
+                        "font-bold text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl shadow-lg flex items-center gap-2 w-fit transition-all duration-300 group-hover:scale-105",
+                        priority.color
+                      )}>
                         <PriorityIcon className="h-3 w-3 sm:h-4 sm:w-4" />
                         {priority.label}
                       </Badge>
                     </td>
-                    <td className="p-2 sm:p-4 md:p-6">
-                      <div className="flex flex-wrap gap-1 sm:gap-2">
-                        <ModernActionButton
-                          buttonSize="sm"
-                          variant="outline"
-                          gradient="blue"
-                          icon={Edit}
+                    <td className="p-2 sm:p-4 md:p-6" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
+                        {/* Bouton Modifier - Design Luxe */}
+                        <button
                           onClick={() => setEditingProduct(product)}
-                          className="btn-3d hover:scale-105 p-1 min-w-[32px] h-8"
+                          className="group/btn relative p-2 sm:p-2.5 md:p-3 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/50 hover:scale-110 active:scale-95 transition-all duration-300"
                           title="Modifier"
-                        />
-                        <ModernActionButton
-                          buttonSize="sm"
-                          variant="outline"
-                          gradient="red"
-                          icon={Trash2}
+                        >
+                          <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+                          <div className="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                        </button>
+                        
+                        {/* Bouton Supprimer - Design Luxe */}
+                        <button
                           onClick={() => setDeletingProduct(product)}
-                          className="btn-3d hover:scale-105 p-1 min-w-[32px] h-8"
+                          className="group/btn relative p-2 sm:p-2.5 md:p-3 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/30 hover:shadow-xl hover:shadow-red-500/50 hover:scale-110 active:scale-95 transition-all duration-300"
                           title="Supprimer"
-                        />
-                        <ModernActionButton
-                          buttonSize="sm"
-                          variant="outline"
-                          gradient="purple"
-                          icon={Eye}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+                          <div className="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                        </button>
+                        
+                        {/* Bouton Voir - Design Luxe */}
+                        <button
                           onClick={() => setViewingProduct(product)}
-                          className="btn-3d hover:scale-105 p-1 min-w-[32px] h-8"
-                          title="Voir"
-                        />
-                        <ModernActionButton
-                          buttonSize="sm"
-                          variant="outline"
-                          gradient="indigo"
-                          icon={FileDown}
+                          className="group/btn relative p-2 sm:p-2.5 md:p-3 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/50 hover:scale-110 active:scale-95 transition-all duration-300"
+                          title="Voir détails"
+                        >
+                          <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+                          <div className="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                        </button>
+                        
+                        {/* Bouton Télécharger PDF - Design Luxe */}
+                        <button
                           onClick={() => handleDownloadProductPDF(product)}
-                          className="btn-3d hover:scale-105 p-1 min-w-[32px] h-8"
+                          className="group/btn relative p-2 sm:p-2.5 md:p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/50 hover:scale-110 active:scale-95 transition-all duration-300"
                           title="Télécharger PDF"
-                        />
+                        >
+                          <FileDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+                          <div className="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                        </button>
                       </div>
                     </td>
                   </tr>
