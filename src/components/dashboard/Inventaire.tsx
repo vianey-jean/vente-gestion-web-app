@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { productService } from '@/service/api';
 import { Product } from '@/types';
-import { Search, Plus, Edit, Trash2, Package, Filter, ArrowUpDown, AlertTriangle, ShoppingBag, Star, TrendingUp, Eye, CheckCircle, XCircle, Clock, Sparkles, Crown, Diamond, FileDown, Gem, Award, Zap, Flame } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Package, Filter, ArrowUpDown, AlertTriangle, ShoppingBag, Star, TrendingUp, Eye, CheckCircle, XCircle, Clock, Sparkles, Crown, Diamond, FileDown, Gem, Award, Zap, Flame, Printer, Settings, Ban } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import ModernActionButton from '@/components/dashboard/forms/ModernActionButton';
@@ -34,6 +34,9 @@ const Inventaire = () => {
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [showStockAlert, setShowStockAlert] = useState(false);
   const [loading, setLoading] = useState(true);
+  // États pour les confirmations depuis la modale de détail
+  const [showEditConfirmFromDetail, setShowEditConfirmFromDetail] = useState(false);
+  const [showDeleteConfirmFromDetail, setShowDeleteConfirmFromDetail] = useState(false);
 
   const [newProduct, setNewProduct] = useState({
     description: '',
@@ -955,7 +958,7 @@ const Inventaire = () => {
       {/* Dialog de visualisation Premium */}
       {viewingProduct && (
         <Dialog open={!!viewingProduct} onOpenChange={() => setViewingProduct(null)}>
-          <DialogContent className="bg-gradient-to-br from-white via-purple-50 to-indigo-50 backdrop-blur-xl border-0 shadow-2xl rounded-3xl">
+          <DialogContent className="bg-gradient-to-br from-white via-purple-50 to-indigo-50 backdrop-blur-xl border-0 shadow-2xl rounded-3xl max-w-lg">
             <DialogHeader className="text-center space-y-4 pb-6">
               <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl">
                 <Eye className="h-8 w-8 text-white" />
@@ -1018,7 +1021,57 @@ const Inventaire = () => {
                   })()}
                 </div>
               </div>
-              <div className="flex justify-center pt-6">
+
+              {/* Actions Premium Icons */}
+              <div className="p-5 bg-gradient-to-r from-slate-900 via-purple-900 to-indigo-900 rounded-2xl shadow-2xl">
+                <p className="text-center text-white/80 text-sm font-semibold mb-4 flex items-center justify-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Actions Rapides
+                </p>
+                <div className="flex justify-center gap-4">
+                  {/* Icône Modifier Luxe */}
+                  <button
+                    onClick={() => setShowEditConfirmFromDetail(true)}
+                    className="group relative p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-xl shadow-blue-500/40 hover:shadow-2xl hover:shadow-blue-500/60 transform hover:scale-110 hover:-translate-y-1 transition-all duration-300"
+                    title="Modifier ce produit"
+                  >
+                    <Edit className="h-6 w-6 text-white group-hover:animate-pulse" />
+                    <div className="absolute inset-0 rounded-2xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-blue-300 rounded-full opacity-0 group-hover:opacity-100 blur-sm transition-opacity" />
+                  </button>
+
+                  {/* Icône Supprimer Luxe */}
+                  <button
+                    onClick={() => setShowDeleteConfirmFromDetail(true)}
+                    className="group relative p-4 bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl shadow-xl shadow-red-500/40 hover:shadow-2xl hover:shadow-red-500/60 transform hover:scale-110 hover:-translate-y-1 transition-all duration-300"
+                    title="Supprimer ce produit"
+                  >
+                    <Trash2 className="h-6 w-6 text-white group-hover:animate-pulse" />
+                    <div className="absolute inset-0 rounded-2xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-red-300 rounded-full opacity-0 group-hover:opacity-100 blur-sm transition-opacity" />
+                  </button>
+
+                  {/* Icône Imprimer Luxe */}
+                  <button
+                    onClick={() => {
+                      handleDownloadProductPDF(viewingProduct);
+                    }}
+                    className="group relative p-4 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl shadow-xl shadow-emerald-500/40 hover:shadow-2xl hover:shadow-emerald-500/60 transform hover:scale-110 hover:-translate-y-1 transition-all duration-300"
+                    title="Imprimer étiquette PDF"
+                  >
+                    <Printer className="h-6 w-6 text-white group-hover:animate-pulse" />
+                    <div className="absolute inset-0 rounded-2xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-emerald-300 rounded-full opacity-0 group-hover:opacity-100 blur-sm transition-opacity" />
+                  </button>
+                </div>
+                <div className="flex justify-center gap-6 mt-3">
+                  <span className="text-xs text-blue-300 font-medium">Modifier</span>
+                  <span className="text-xs text-red-300 font-medium">Supprimer</span>
+                  <span className="text-xs text-emerald-300 font-medium">Imprimer</span>
+                </div>
+              </div>
+
+              <div className="flex justify-center pt-4">
                 <ModernActionButton
                   variant="outline"
                   gradient="purple"
@@ -1026,7 +1079,7 @@ const Inventaire = () => {
                   buttonSize="lg"
                   className="px-8"
                 >
-                  <CheckCircle className="h-5 w-5 mr-2" />
+                  <Ban className="h-5 w-5 mr-2" />
                   Fermer
                 </ModernActionButton>
               </div>
@@ -1034,6 +1087,148 @@ const Inventaire = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Dialog de confirmation pour modifier depuis détail */}
+      <AlertDialog open={showEditConfirmFromDetail} onOpenChange={setShowEditConfirmFromDetail}>
+        <AlertDialogContent className="bg-gradient-to-br from-white via-blue-50 to-indigo-50 backdrop-blur-xl border-0 shadow-2xl rounded-3xl">
+          <AlertDialogHeader className="text-center space-y-4 pb-6">
+            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl">
+              <Edit className="h-8 w-8 text-white" />
+            </div>
+            <AlertDialogTitle className="text-2xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              ✏️ Modifier ce Produit ?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="text-gray-700 text-center font-medium space-y-4">
+                <div>Voulez-vous vraiment modifier les informations de ce produit premium ?</div>
+                {viewingProduct && (
+                  <div className="p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
+                    <div className="flex items-center gap-3 justify-center">
+                      <Package className="h-5 w-5 text-blue-600" />
+                      <span className="text-blue-800 font-bold">{viewingProduct.description}</span>
+                    </div>
+                    {viewingProduct.code && (
+                      <Badge className="mt-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-mono font-bold">
+                        {viewingProduct.code}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-3 pt-6">
+            <AlertDialogCancel asChild>
+              <ModernActionButton
+                variant="outline"
+                gradient="red"
+                buttonSize="lg"
+                className="flex-1"
+              >
+                <XCircle className="h-5 w-5 mr-2" />
+                Non, Annuler
+              </ModernActionButton>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <ModernActionButton
+                gradient="blue"
+                buttonSize="lg"
+                className="flex-1 btn-3d"
+                onClick={() => {
+                  if (viewingProduct) {
+                    setEditingProduct(viewingProduct);
+                    setViewingProduct(null);
+                    setShowEditConfirmFromDetail(false);
+                  }
+                }}
+              >
+                <Edit className="h-5 w-5 mr-2" />
+                Oui, Modifier
+              </ModernActionButton>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog de confirmation pour supprimer depuis détail */}
+      <AlertDialog open={showDeleteConfirmFromDetail} onOpenChange={setShowDeleteConfirmFromDetail}>
+        <AlertDialogContent className="bg-gradient-to-br from-white via-red-50 to-pink-50 backdrop-blur-xl border-0 shadow-2xl rounded-3xl">
+          <AlertDialogHeader className="text-center space-y-4 pb-6">
+            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl flex items-center justify-center shadow-xl animate-pulse">
+              <Trash2 className="h-8 w-8 text-white" />
+            </div>
+            <AlertDialogTitle className="text-2xl font-black bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
+              🗑️ Supprimer ce Produit ?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="text-gray-700 text-center font-medium space-y-4">
+                <div>Êtes-vous absolument certain de vouloir supprimer ce produit premium ?</div>
+                {viewingProduct && (
+                  <div className="p-4 bg-red-50 rounded-xl border-2 border-red-200">
+                    <div className="flex items-center gap-3 justify-center">
+                      <Package className="h-5 w-5 text-red-600" />
+                      <span className="text-red-800 font-bold">{viewingProduct.description}</span>
+                    </div>
+                    {viewingProduct.code && (
+                      <Badge className="mt-2 bg-gradient-to-r from-red-500 to-rose-500 text-white font-mono font-bold">
+                        {viewingProduct.code}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+                <div className="text-sm text-red-600 font-semibold">
+                  ⚡ Cette action est irréversible et définitive !
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-3 pt-6">
+            <AlertDialogCancel asChild>
+              <ModernActionButton
+                variant="outline"
+                gradient="green"
+                buttonSize="lg"
+                className="flex-1"
+              >
+                <CheckCircle className="h-5 w-5 mr-2" />
+                Non, Conserver
+              </ModernActionButton>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <ModernActionButton
+                gradient="red"
+                buttonSize="lg"
+                className="flex-1 btn-3d"
+                onClick={async () => {
+                  if (viewingProduct) {
+                    try {
+                      await productService.deleteProduct(viewingProduct.id);
+                      await loadProducts();
+                      setViewingProduct(null);
+                      setShowDeleteConfirmFromDetail(false);
+                      toast({
+                        title: "🗑️ Produit Premium Supprimé !",
+                        description: "💔 Le produit de luxe a été retiré définitivement du catalogue premium.",
+                        className: "bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-300 text-red-900 shadow-xl rounded-xl font-semibold",
+                      });
+                    } catch (error) {
+                      toast({
+                        title: "Erreur",
+                        description: "Impossible de supprimer le produit.",
+                        variant: "destructive",
+                        className: "notification-erreur",
+                      });
+                    }
+                  }
+                }}
+              >
+                <Trash2 className="h-5 w-5 mr-2" />
+                Oui, Supprimer
+              </ModernActionButton>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Dialog de suppression Premium */}
       <AlertDialog open={!!deletingProduct} onOpenChange={() => setDeletingProduct(null)}>
