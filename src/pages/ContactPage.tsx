@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Mail, Phone, MapPin, Send, CheckCircle, Clock, Globe, Shield, Sparkles, Crown } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, CheckCircle, Clock, Globe, Shield, Sparkles, Crown, MessageCircle, Radio } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Layout from '@/components/Layout';
 import { useMessages } from '@/hooks/use-messages';
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import LiveChatVisitor from '@/components/livechat/LiveChatVisitor';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://server-gestion-ventes.onrender.com';
 
 const ContactPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -22,7 +25,10 @@ const ContactPage: React.FC = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  
+  const [adminOnline, setAdminOnline] = useState(false);
+  const [showLiveChat, setShowLiveChat] = useState(false);
+  const [submittedName, setSubmittedName] = useState(localStorage.getItem('livechat_pseudo') || '');
+
   const { toast } = useToast();
   const { sendMessage } = useMessages();
 
@@ -35,6 +41,22 @@ const ContactPage: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // Check admin online status
+  useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/messagerie/admin-status`);
+        if (res.ok) {
+          const data = await res.json();
+          setAdminOnline(data.online);
+        }
+      } catch { setAdminOnline(false); }
+    };
+    checkAdmin();
+    const interval = setInterval(checkAdmin, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.expediteurNom || !formData.expediteurEmail || !formData.sujet || !formData.contenu) {
@@ -44,6 +66,8 @@ const ContactPage: React.FC = () => {
     setIsSubmitting(true);
     try {
       await sendMessage(formData);
+      setSubmittedName(formData.expediteurNom);
+      localStorage.setItem('livechat_pseudo', formData.expediteurNom);
       setIsSubmitted(true);
       toast({ title: "Message envoyé", description: "Votre message a été envoyé avec succès." });
       setFormData({ expediteurNom: '', expediteurEmail: '', expediteurTelephone: '', sujet: '', contenu: '', destinataireId: '1' });
@@ -62,7 +86,7 @@ const ContactPage: React.FC = () => {
           <div className="fixed inset-0 overflow-hidden pointer-events-none">
             <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 12, repeat: Infinity }} className="absolute top-1/3 left-1/3 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px]" />
           </div>
-          
+
           <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5 }}>
             <Card className="w-full max-w-lg text-center border-0 bg-white/[0.06] backdrop-blur-2xl border border-white/[0.1] shadow-[0_32px_64px_rgba(0,0,0,0.4)] rounded-3xl overflow-hidden">
               <div className="h-px bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent" />
@@ -75,16 +99,54 @@ const ContactPage: React.FC = () => {
                 <div className="text-emerald-200/50 mb-8 text-lg leading-relaxed">
                   Merci pour votre message. Notre équipe vous répondra dans les plus brefs délais.
                 </div>
-                <Button 
-                  onClick={() => setIsSubmitted(false)} 
-                  className="w-full h-14 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-lg font-semibold shadow-[0_20px_40px_rgba(16,185,129,0.3)] border border-white/10 rounded-xl transition-all duration-300 hover:scale-[1.02]"
-                >
-                  <Send className="mr-3 h-5 w-5" />
-                  Envoyer un autre message
-                </Button>
+                <div className="space-y-4">
+                  <Button
+                    onClick={() => setIsSubmitted(false)}
+                    className="w-full h-14 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-lg font-semibold shadow-[0_20px_40px_rgba(16,185,129,0.3)] border border-white/10 rounded-xl transition-all duration-300 hover:scale-[1.02]"
+                  >
+                    <Send className="mr-3 h-5 w-5" />
+                    Envoyer un autre message
+                  </Button>
+
+                  <Button
+                    onClick={() => setShowLiveChat(true)}
+                    disabled={!adminOnline}
+                    className={`w-full h-14 text-lg font-semibold rounded-xl border border-white/10 transition-all duration-300 hover:scale-[1.02] ${
+                      adminOnline
+                        ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-[0_20px_40px_rgba(139,92,246,0.3)]'
+                        : 'bg-white/[0.05] text-white/30 cursor-not-allowed'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="relative">
+                        <MessageCircle className="h-5 w-5" />
+                        {adminOnline && (
+                          <Radio className="absolute -top-1 -right-1 h-3 w-3 text-emerald-400 animate-pulse" />
+                        )}
+                      </div>
+                      {adminOnline ? 'Chat en direct' : 'Chat hors ligne'}
+                      {adminOnline && (
+                        <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-xs rounded-full border border-emerald-500/30">
+                          LIVE
+                        </span>
+                      )}
+                    </div>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Live Chat Visitor Widget */}
+          <AnimatePresence>
+            {showLiveChat && adminOnline && (
+              <LiveChatVisitor
+                visitorNom={submittedName || 'Visiteur'}
+                adminId="1"
+                onClose={() => setShowLiveChat(false)}
+              />
+            )}
+          </AnimatePresence>
         </div>
       </Layout>
     );
@@ -98,7 +160,7 @@ const ContactPage: React.FC = () => {
           <motion.div animate={{ x: [0, 30, 0], y: [0, -20, 0] }} transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }} className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px]" />
           <motion.div animate={{ x: [0, -30, 0], y: [0, 20, 0] }} transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }} className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-blue-500/8 rounded-full blur-[120px]" />
         </div>
-        
+
         {/* Grid */}
         <div className="fixed inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:48px_48px] pointer-events-none" />
 
@@ -109,7 +171,7 @@ const ContactPage: React.FC = () => {
               <Crown className="h-4 w-4 text-amber-400" />
               <span className="text-sm font-medium text-purple-300/80">Contact Premium</span>
             </div>
-            
+
             <motion.h1
               initial={{ opacity: 0, y: 60, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -118,7 +180,7 @@ const ContactPage: React.FC = () => {
             >
               Contactez-nous
             </motion.h1>
-            
+
             <div className="max-w-3xl mx-auto px-3 sm:px-4">
               <div className="text-sm sm:text-base md:text-lg text-purple-200/40 leading-relaxed mb-6 sm:mb-8">
                 Une question ? Un projet ? Notre équipe est à votre disposition.
@@ -182,7 +244,7 @@ const ContactPage: React.FC = () => {
                         <SelectTrigger className="h-12 bg-white/[0.04] border-white/[0.08] text-white rounded-xl focus:bg-white/[0.08] focus:border-purple-400/30">
                           <SelectValue placeholder="Choisissez le sujet" />
                         </SelectTrigger>
-                        <SelectContent className="bg-slate-900/95 backdrop-blur-2xl border border-white/[0.1] shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+                        <SelectContent className="bg-white/10 backdrop-blur-2xl border border-white/20 shadow-[0_20px_40px_rgba(0,0,0,0.25)]">
                           <SelectItem value="Demande d'information">💡 Information</SelectItem>
                           <SelectItem value="Support technique">🔧 Support technique</SelectItem>
                           <SelectItem value="Partenariat">🤝 Partenariat</SelectItem>
@@ -197,8 +259,8 @@ const ContactPage: React.FC = () => {
                       <Textarea id="contenu" name="contenu" value={formData.contenu} onChange={handleChange} placeholder="Décrivez votre demande..." rows={6} required className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-purple-300/25 rounded-xl focus:bg-white/[0.08] focus:border-purple-400/30 resize-none" />
                     </div>
 
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="w-full h-14 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 hover:from-blue-500 hover:via-purple-500 hover:to-indigo-500 text-white text-lg font-semibold shadow-[0_20px_40px_rgba(79,70,229,0.3)] rounded-xl border border-white/10 transition-all duration-300 hover:scale-[1.02]"
                       disabled={isSubmitting}
                     >

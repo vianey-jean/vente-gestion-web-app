@@ -32,11 +32,14 @@ const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/pages/RegisterPage'));
 const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
-const TendancesPage = lazy(() => import('@/pages/TendancesPage'));
+// TendancesPage removed - content moved to Comptabilité & Finances in Dashboard
 const ClientsPage = lazy(() => import('@/pages/ClientsPage'));
 const MessagesPage = lazy(() => import('@/pages/MessagesPage'));
 const CommandesPage = lazy(() => import('@/pages/CommandesPage'));
 const RdvPage = lazy(() => import('@/pages/RdvPage'));
+const ProduitsPage = lazy(() => import('@/pages/ProduitsPage'));
+const PointagePage = lazy(() => import('@/pages/PointagePage'));
+const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 function App() {
@@ -76,14 +79,7 @@ function App() {
                         </ProtectedRoute>
                       }
                     />
-                    <Route
-                      path="/tendances"
-                      element={
-                        <ProtectedRoute>
-                          <TendancesPage />
-                        </ProtectedRoute>
-                      }
-                    />
+                    {/* Route Tendances supprimée - contenu dans Dashboard > Comptabilité & Finances */}
                     <Route
                       path="/clients"
                       element={
@@ -113,6 +109,31 @@ function App() {
                       element={
                         <ProtectedRoute>
                           <RdvPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/produits"
+                      element={
+                        <ProtectedRoute>
+                          <ProduitsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/pointage"
+                      element={
+                        <ProtectedRoute>
+                          <PointagePage />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    <Route
+                      path="/profile"
+                      element={
+                        <ProtectedRoute>
+                          <ProfilePage />
                         </ProtectedRoute>
                       }
                     />

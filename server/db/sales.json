@@ -3772,5 +3772,317 @@
     "clientPhone": "0693497257",
     "reste": 0,
     "nextPaymentDate": null
+  },
+  {
+    "id": "1771423264305",
+    "date": "2026-02-18",
+    "products": [
+      {
+        "productId": "1764299613440",
+        "description": "Tissages bouclé blonde miel 24 pouces",
+        "quantitySold": 2,
+        "purchasePrice": 52.86,
+        "sellingPrice": 130,
+        "profit": 77.14,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 52.86,
+    "totalSellingPrice": 130,
+    "totalProfit": 77.14,
+    "clientName": "Steffie Mila",
+    "clientAddress": "Centre commerciale Sacré coeur Le Port",
+    "clientPhone": "0693131910",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1771423294344",
+    "date": "2026-02-18",
+    "products": [
+      {
+        "productId": "1770796102705",
+        "description": "Demi-Perruque bouclé noir 16 pouces",
+        "quantitySold": 1,
+        "purchasePrice": 49.36,
+        "sellingPrice": 110,
+        "profit": 60.64,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 49.36,
+    "totalSellingPrice": 110,
+    "totalProfit": 60.64,
+    "clientName": "Arisoa Miranville Monette",
+    "clientAddress": "12 rue Pitel Saint-Clotilde",
+    "clientPhone": "0692603490",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1771423357258",
+    "date": "2026-02-18",
+    "products": [
+      {
+        "productId": "1745933978887",
+        "description": "Perruque cheveux gasy 16 pouces",
+        "quantitySold": 1,
+        "purchasePrice": 19.79,
+        "sellingPrice": 60,
+        "profit": 40.21,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 19.79,
+    "totalSellingPrice": 60,
+    "totalProfit": 40.21,
+    "clientName": "Li Lou",
+    "clientAddress": "173 rue général de Gaule",
+    "clientPhone": "0692571158",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1771728952540",
+    "date": "2026-02-22",
+    "products": [
+      {
+        "productId": "1771728868780",
+        "description": "Perruque bouclé noir 22 pouces",
+        "quantitySold": 1,
+        "purchasePrice": 45.46,
+        "sellingPrice": 130,
+        "profit": 84.53999999999999,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 45.46,
+    "totalSellingPrice": 130,
+    "totalProfit": 84.53999999999999,
+    "clientName": "MCie Fortuna",
+    "clientAddress": "MacDo Saint-Pierre",
+    "clientPhone": "0692810595",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1771754655709",
+    "date": "2026-02-22",
+    "products": [
+      {
+        "productId": "1771754602552",
+        "description": "Tissages lisse ondulé  noir 18 pouces",
+        "quantitySold": 2,
+        "purchasePrice": 26.72,
+        "sellingPrice": 100,
+        "profit": 73.28,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 26.72,
+    "totalSellingPrice": 100,
+    "totalProfit": 73.28,
+    "clientName": "Anaelle Aveam",
+    "clientAddress": "Gare routière St Paul",
+    "clientPhone": "0693401505",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1772040033592",
+    "date": "2026-02-25",
+    "products": [
+      {
+        "productId": "1769950767834",
+        "description": "Perruque bouclé blonde miel 30 pouces",
+        "quantitySold": 1,
+        "purchasePrice": 74.91,
+        "sellingPrice": 160,
+        "profit": 85.09,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 74.91,
+    "totalSellingPrice": 160,
+    "totalProfit": 85.09,
+    "clientName": "Marie Amourany",
+    "clientAddress": "22 rue des muscadier Apt 3 saint Clotilde",
+    "clientPhone": "0693821738",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1772092367557",
+    "date": "2026-02-26",
+    "products": [
+      {
+        "productId": "1756486622500",
+        "description": "Perruque bouclé blonde miel blanche 24 pouces",
+        "quantitySold": 1,
+        "purchasePrice": 64.84,
+        "sellingPrice": 170,
+        "profit": 105.16,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 64.84,
+    "totalSellingPrice": 170,
+    "totalProfit": 105.16,
+    "clientName": "Orchidée Angela",
+    "clientAddress": "22 rue du génértal de gaulle saint louis",
+    "clientPhone": "0693818015",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1772362829991",
+    "date": "2026-03-01",
+    "products": [
+      {
+        "productId": "1753356444320",
+        "description": "Tissages bouclé blonde miel 18 pouces",
+        "quantitySold": 1,
+        "purchasePrice": 15.49,
+        "sellingPrice": 45,
+        "profit": 29.51,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 15.49,
+    "totalSellingPrice": 45,
+    "totalProfit": 29.51,
+    "clientName": "Latifa Olga",
+    "clientAddress": "Parking Gymnase Cazal Saint Denis",
+    "clientPhone": "0693497257",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1772533708447",
+    "date": "2026-03-03",
+    "products": [
+      {
+        "productId": "1772265753721",
+        "description": "Perruque bouclé mèche blonde gasy",
+        "quantitySold": 1,
+        "purchasePrice": 50,
+        "sellingPrice": 100,
+        "profit": 50,
+        "deliveryFee": 10,
+        "deliveryLocation": "Autres"
+      }
+    ],
+    "totalPurchasePrice": 50,
+    "totalSellingPrice": 110,
+    "totalProfit": 50,
+    "clientName": "Patty Rgm",
+    "clientAddress": "22 Allée des poudriers Appt 13 jolie Fond Saint-Pierre",
+    "clientPhone": "0692157371",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1772772648792",
+    "date": "2026-03-06",
+    "products": [
+      {
+        "productId": "1772772612966",
+        "description": "Perruque lisse noir 30 pouces",
+        "quantitySold": 1,
+        "purchasePrice": 61.26,
+        "sellingPrice": 190,
+        "profit": 128.74,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 61.26,
+    "totalSellingPrice": 190,
+    "totalProfit": 128.74,
+    "clientName": "Princesse Princesse",
+    "clientAddress": "18 avenue Raymond Vergès, La Possession",
+    "clientPhone": "0692782974",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1772980409992",
+    "date": "2026-03-07",
+    "products": [
+      {
+        "productId": "1772980373931",
+        "description": "Perruque tefy gasy volumineux mèche blonde",
+        "quantitySold": 1,
+        "purchasePrice": 100,
+        "sellingPrice": 150,
+        "profit": 50,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 100,
+    "totalSellingPrice": 150,
+    "totalProfit": 50,
+    "clientName": "Marie Amourany",
+    "clientAddress": "22 rue des muscadier Apt 3 saint Clotilde",
+    "clientPhone": "0693821738",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1773061835923",
+    "date": "2026-03-09",
+    "products": [
+      {
+        "productId": "1753186907720",
+        "description": "Tissages bouclé noir 16 poucess",
+        "quantitySold": 1,
+        "purchasePrice": 12.82,
+        "sellingPrice": 100,
+        "profit": 87.18,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 12.82,
+    "totalSellingPrice": 100,
+    "totalProfit": 87.18,
+    "clientName": "Lina Ma copilote",
+    "clientAddress": "Parking run market saint-Clotilde",
+    "clientPhone": "0692005905",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1773121582631",
+    "date": "2026-03-10",
+    "products": [
+      {
+        "productId": "1746811570529",
+        "description": "Avance Perruque ou Tissages",
+        "quantitySold": 0,
+        "purchasePrice": 0,
+        "sellingPrice": 100,
+        "profit": 0,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 0,
+    "totalSellingPrice": 100,
+    "totalProfit": 0,
+    "clientName": "Emilienne Nomenjanahary",
+    "clientAddress": "Vaubon saint denis",
+    "clientPhone": "0693326932",
+    "reste": 0,
+    "nextPaymentDate": null
   }
 ]

@@ -18,6 +18,7 @@ import { Commande, CommandeProduit, CommandeStatut } from '@/types/commande';
 import api from '@/service/api';
 import { rdvFromReservationService } from '@/services/rdvFromReservationService';
 import { reservationRdvSyncService } from '@/services/reservationRdvSyncService';
+import tacheApi from '@/services/api/tacheApi';
 
 // ============================================================================
 // Types locaux
@@ -118,6 +119,13 @@ export const useCommandesLogic = () => {
   const [isRdvLoading, setIsRdvLoading] = useState(false);
 
   // =========================================================================
+  // États conflit tâche lors création RDV
+  // =========================================================================
+  const [showTacheConflictModal, setShowTacheConflictModal] = useState(false);
+  const [conflictingTache, setConflictingTache] = useState<any>(null);
+  const [pendingTacheData, setPendingTacheData] = useState<any>(null);
+
+  // =========================================================================
   // Fonctions de chargement des données
   // =========================================================================
 
@@ -205,17 +213,21 @@ export const useCommandesLogic = () => {
 
   const filteredProducts = useMemo(() => {
     if (productSearch.length < 3) return [];
-    const usedProductNames = new Set<string>();
+    // Calculer la quantité réservée par produit (par nom) dans les commandes actives
+    const reservedQuantityByName = new Map<string, number>();
     commandes.forEach(commande => {
       if (editingCommande && commande.id === editingCommande.id) return;
       if (commande.statut === 'valide' || commande.statut === 'annule') return;
-      commande.produits.forEach(produit => usedProductNames.add(produit.nom.toLowerCase()));
+      commande.produits.forEach(produit => {
+        const key = produit.nom.toLowerCase();
+        reservedQuantityByName.set(key, (reservedQuantityByName.get(key) || 0) + produit.quantite);
+      });
     });
     return products.filter(product => {
       const matchesSearch = product.description.toLowerCase().includes(productSearch.toLowerCase());
-      const isNotUsed = !usedProductNames.has(product.description.toLowerCase());
-      const hasStock = product.quantity > 0;
-      return matchesSearch && isNotUsed && hasStock;
+      const reservedQty = reservedQuantityByName.get(product.description.toLowerCase()) || 0;
+      const availableQty = product.quantity - reservedQty;
+      return matchesSearch && availableQty > 0;
     });
   }, [productSearch, products, commandes, editingCommande]);
 
@@ -269,13 +281,35 @@ export const useCommandesLogic = () => {
     setShowClientSuggestions(false);
   }, []);
 
+  // Calculer la quantité disponible d'un produit (stock - réservations actives)
+  const getAvailableQuantityForProduct = useCallback((productDescription: string): number => {
+    const product = products.find(p => p.description.toLowerCase() === productDescription.toLowerCase());
+    if (!product) return 0;
+    let reservedQty = 0;
+    commandes.forEach(c => {
+      if (editingCommande && c.id === editingCommande.id) return;
+      if (c.statut === 'valide' || c.statut === 'annule') return;
+      if (c.type !== 'reservation') return;
+      c.produits.forEach(p => {
+        if (p.nom.toLowerCase() === productDescription.toLowerCase()) {
+          reservedQty += p.quantite;
+        }
+      });
+    });
+    return Math.max(0, product.quantity - reservedQty);
+  }, [products, commandes, editingCommande]);
+
+  const [availableQuantityForSelected, setAvailableQuantityForSelected] = useState<number | null>(null);
+
   const handleProductSelect = useCallback((product: Product) => {
     setProduitNom(product.description);
     setPrixUnitaire(product.purchasePrice.toString());
     setProductSearch(product.description);
     setShowProductSuggestions(false);
     setSelectedProduct(product);
-  }, []);
+    const availQty = getAvailableQuantityForProduct(product.description);
+    setAvailableQuantityForSelected(availQty);
+  }, [getAvailableQuantityForProduct]);
 
   // =========================================================================
   // Validation et reset
@@ -292,11 +326,12 @@ export const useCommandesLogic = () => {
     setDateArrivagePrevue(''); setDateEcheance(''); setHoraire('');
     setType('commande'); setClientSearch(''); setProductSearch('');
     setProduitsListe([]); setEditingCommande(null); setSelectedProduct(null); setEditingProductIndex(null);
+    setAvailableQuantityForSelected(null);
   }, []);
 
   const resetProductFields = useCallback(() => {
     setProduitNom(''); setPrixUnitaire(''); setQuantite('1'); setPrixVente('');
-    setProductSearch(''); setEditingProductIndex(null); setSelectedProduct(null);
+    setProductSearch(''); setEditingProductIndex(null); setSelectedProduct(null); setAvailableQuantityForSelected(null);
   }, []);
 
   // =========================================================================
@@ -311,12 +346,13 @@ export const useCommandesLogic = () => {
     const quantiteInt = parseInt(quantite);
     const existingProduct = products.find(p => p.description.toLowerCase() === produitNom.toLowerCase());
     if (existingProduct) {
-      if (existingProduct.quantity <= 0) {
-        toast({ title: 'Stock insuffisant', description: `${produitNom} n'a plus de stock disponible`, className: "bg-app-red text-white", variant: 'destructive' });
+      const availableQty = getAvailableQuantityForProduct(produitNom);
+      if (availableQty <= 0) {
+        toast({ title: 'Stock insuffisant', description: `${produitNom} n'a plus de stock disponible (tout est réservé)`, className: "bg-app-red text-white", variant: 'destructive' });
         return;
       }
-      if (quantiteInt > existingProduct.quantity) {
-        toast({ title: 'Quantité insuffisante', description: `Stock disponible: ${existingProduct.quantity} unités`, className: "bg-app-red text-white", variant: 'destructive' });
+      if (quantiteInt > availableQty) {
+        toast({ title: 'Quantité insuffisante', description: `Quantité disponible: ${availableQty} unité(s) (stock: ${existingProduct.quantity}, réservé: ${existingProduct.quantity - availableQty})`, className: "bg-app-red text-white", variant: 'destructive' });
         return;
       }
     }
@@ -331,7 +367,7 @@ export const useCommandesLogic = () => {
       toast({ title: 'Produit ajouté', description: `${nouveauProduit.nom} ajouté au panier` });
     }
     resetProductFields();
-  }, [produitNom, prixUnitaire, quantite, prixVente, products, editingProductIndex, produitsListe, resetProductFields]);
+  }, [produitNom, prixUnitaire, quantite, prixVente, products, editingProductIndex, produitsListe, resetProductFields, getAvailableQuantityForProduct]);
 
   const handleEditProduit = useCallback((index: number) => {
     const produit = produitsListe[index];
@@ -359,6 +395,21 @@ export const useCommandesLogic = () => {
       toast({ title: 'Erreur', description: 'Veuillez remplir tous les champs et ajouter au moins un produit', className: "bg-app-red text-white", variant: 'destructive' });
       return;
     }
+    // Vérifier doublon : même produit, même client, même date pour les réservations
+    if (type === 'reservation' && !editingCommande) {
+      const dateToCheck = dateEcheance;
+      const isDuplicate = commandes.some(c => {
+        if (c.statut === 'valide' || c.statut === 'annule') return false;
+        if (c.type !== 'reservation') return false;
+        if (c.clientNom.toLowerCase() !== clientNom.toLowerCase()) return false;
+        if (c.dateEcheance !== dateToCheck) return false;
+        return c.produits.some(cp => produitsListe.some(pl => pl.nom.toLowerCase() === cp.nom.toLowerCase()));
+      });
+      if (isDuplicate) {
+        toast({ title: 'Doublon détecté', description: 'Ce client a déjà une réservation avec ce produit à cette date', className: "bg-app-red text-white", variant: 'destructive' });
+        return;
+      }
+    }
     const commandeData: Partial<Commande> = { clientNom, clientPhone, clientAddress, type, produits: produitsListe, dateCommande: new Date().toISOString(), statut: type === 'commande' ? 'en_route' : 'en_attente' };
     if (type === 'commande') commandeData.dateArrivagePrevue = dateArrivagePrevue;
     else commandeData.dateEcheance = dateEcheance;
@@ -374,8 +425,20 @@ export const useCommandesLogic = () => {
       await fetchProducts();
 
       if (editingCommande) {
+        // Dé-réserver les anciens produits qui ne sont plus dans la liste
+        if (editingCommande.type === 'reservation') {
+          for (const oldProduit of editingCommande.produits) {
+            const stillInList = produitsListe.some(p => p.nom.toLowerCase() === oldProduit.nom.toLowerCase());
+            if (!stillInList) {
+              const existingProduct = products.find(p => p.description.toLowerCase() === oldProduit.nom.toLowerCase());
+              if (existingProduct) {
+                try { await api.put(`/api/products/${existingProduct.id}`, { reserver: 'non' }); } catch (err) { console.error('Erreur dé-réservation ancien produit:', err); }
+              }
+            }
+          }
+        }
         await api.put(`/api/commandes/${editingCommande.id}`, commandeData);
-        // Marquer les produits comme réservés si c'est une réservation
+        // Marquer les nouveaux produits comme réservés si c'est une réservation
         if (type === 'reservation') {
           for (const produit of produitsListe) {
             const existingProduct = products.find(p => p.description.toLowerCase() === produit.nom.toLowerCase());
@@ -476,7 +539,16 @@ export const useCommandesLogic = () => {
     try {
       if (commande && commande.statut === 'valide' && commande.saleId) await api.delete(`/api/sales/${commande.saleId}`);
       await api.put(`/api/commandes/${cancellingId}`, { statut: 'annule', saleId: null });
-      if (commande && commande.type === 'reservation') { try { await api.put(`/api/rdv/by-commande/${cancellingId}`, { statut: 'annule' }); } catch (rdvError) { console.log('RDV non trouvé:', rdvError); } }
+      // Dé-réserver tous les produits de cette réservation annulée
+      if (commande && commande.type === 'reservation') {
+        for (const produit of commande.produits) {
+          const existingProduct = products.find(p => p.description.toLowerCase() === produit.nom.toLowerCase());
+          if (existingProduct) {
+            try { await api.put(`/api/products/${existingProduct.id}`, { reserver: 'non' }); } catch (err) { console.error('Erreur dé-réservation produit:', err); }
+          }
+        }
+        try { await api.put(`/api/rdv/by-commande/${cancellingId}`, { statut: 'annule' }); } catch (rdvError) { console.log('RDV non trouvé:', rdvError); }
+      }
       toast({ title: 'Succès', description: 'Commande annulée', className: "bg-app-green text-white" });
       await Promise.all([fetchCommandes(), fetchProducts()]); setCancellingId(null);
     } catch (error) { console.error('Error cancelling:', error); toast({ title: 'Erreur', description: "Impossible d'annuler", className: "bg-app-red text-white", variant: 'destructive' }); }
@@ -508,9 +580,32 @@ export const useCommandesLogic = () => {
       const totalSellingPrice = commandeToValidate.produits.reduce((sum, p) => sum + (p.prixVente * p.quantite), 0);
       const saleData = { date: today, products: saleProducts, totalPurchasePrice, totalSellingPrice, totalProfit: totalSellingPrice - totalPurchasePrice, clientName: commandeToValidate.clientNom, clientAddress: commandeToValidate.clientAddress, clientPhone: commandeToValidate.clientPhone, reste: 0, nextPaymentDate: null };
       if (commandeToValidate.type === 'reservation') { try { await api.put(`/api/rdv/by-commande/${validatingId}`, { statut: 'confirme' }); } catch (rdvError) { console.log('RDV non trouvé:', rdvError); } }
+      // Mark associated tache as completed with current time as heureFin
+      if (commandeToValidate.type === 'reservation') {
+        try {
+          const tachesResponse = await tacheApi.getAll();
+          const taches = tachesResponse.data || tachesResponse;
+          const associatedTache = (taches as any[]).find((t: any) => t.commandeId === validatingId);
+          if (associatedTache && !associatedTache.completed) {
+            const now = new Date();
+            const currentHeureFin = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            await tacheApi.update(associatedTache.id, { completed: true, heureFin: currentHeureFin });
+          }
+        } catch (tacheErr) { console.log('Tâche associée non trouvée:', tacheErr); }
+      }
       const saleResponse = await api.post('/api/sales', saleData);
       const createdSale = saleResponse.data;
       await api.put(`/api/commandes/${validatingId}`, { statut: 'valide', saleId: createdSale.id });
+      // Dé-réserver les produits et déduire la quantité réservée du stock
+      if (commandeToValidate.type === 'reservation') {
+        for (const p of commandeToValidate.produits) {
+          const existingProduct = products.find(prod => prod.description.toLowerCase() === p.nom.toLowerCase());
+          if (existingProduct) {
+            const newQuantity = Math.max(0, existingProduct.quantity - p.quantite);
+            try { await api.put(`/api/products/${existingProduct.id}`, { reserver: 'non', quantity: newQuantity }); } catch (err) { console.error('Erreur dé-réservation/stock produit:', err); }
+          }
+        }
+      }
       toast({ title: 'Succès', description: 'Commande validée et enregistrée comme vente', className: "bg-app-green text-white" });
       await Promise.all([fetchCommandes(), fetchProducts()]); setValidatingId(null);
     } catch (error) { console.error('Error validating:', error); toast({ title: 'Erreur', description: 'Impossible de valider', className: "bg-app-red text-white", variant: 'destructive' }); }
@@ -567,8 +662,92 @@ export const useCommandesLogic = () => {
       };
       await api.post('/api/rdv', rdvData);
       toast({ title: '📅 Rendez-vous créé', description: `Le RDV a été créé pour le ${pendingReservationForRdv.dateEcheance}`, className: "bg-app-green text-white" });
+
+      // Also create as tache - check for time conflicts first
+      const tacheData = {
+        date: pendingReservationForRdv.dateEcheance || '',
+        heureDebut,
+        heureFin,
+        description: titre || `RDV: ${pendingReservationForRdv.clientNom}`,
+        importance: 'pertinent' as const,
+        travailleurId: '',
+        travailleurNom: '',
+        commandeId: pendingReservationForRdv.id,
+      };
+
+      try {
+        await tacheApi.create(tacheData);
+        toast({ title: '📋 Tâche créée', description: 'La tâche correspondante a été ajoutée au calendrier', className: "bg-app-green text-white" });
+      } catch (tacheErr: any) {
+        if (tacheErr?.response?.status === 409) {
+          // Time conflict - check what task conflicts
+          const conflictData = tacheErr.response.data;
+          const conflictTache = conflictData.conflict;
+          
+          // Try to find the conflicting tache
+          try {
+            const existingTaches = await tacheApi.getByDate(tacheData.date);
+            const conflicting = existingTaches.data.find((t: any) => {
+              const tStart = t.heureDebut.split(':').map(Number);
+              const tEnd = t.heureFin.split(':').map(Number);
+              const tStartMin = tStart[0] * 60 + tStart[1];
+              const tEndMin = tEnd[0] * 60 + tEnd[1];
+              const newStartMin = heureDebut.split(':').map(Number);
+              const newEndMin = heureFin.split(':').map(Number);
+              const nStart = newStartMin[0] * 60 + newStartMin[1];
+              const nEnd = newEndMin[0] * 60 + newEndMin[1];
+              return nStart <= tEndMin && nEnd >= tStartMin;
+            });
+
+            if (conflicting && conflicting.importance !== 'pertinent') {
+              setConflictingTache(conflicting);
+              setPendingTacheData(tacheData);
+              setShowTacheConflictModal(true);
+            } else {
+              toast({ title: '⚠️ Conflit horaire', description: conflictData.error || 'Ce créneau est déjà occupé par une tâche non déplaçable', className: "bg-app-red text-white", variant: 'destructive' });
+            }
+          } catch {
+            toast({ title: '⚠️ Conflit horaire', description: conflictData.error || 'Ce créneau est déjà occupé', className: "bg-app-red text-white", variant: 'destructive' });
+          }
+        } else {
+          console.error('Erreur création tâche:', tacheErr);
+        }
+      }
     } catch (err) { console.error('Erreur création RDV:', err); toast({ title: 'Erreur', description: 'Impossible de créer le rendez-vous', className: "bg-app-red text-white", variant: 'destructive' }); }
     finally { setIsRdvLoading(false); setShowRdvFormModal(false); setPendingReservationForRdv(null); }
+  };
+
+  const handleRescheduleTacheAndCreate = async (tacheId: string, newDate: string, newHeureDebut: string, newHeureFin: string) => {
+    try {
+      // Reschedule conflicting tache
+      await tacheApi.update(tacheId, { date: newDate, heureDebut: newHeureDebut, heureFin: newHeureFin });
+      toast({ title: '✅ Tâche déplacée', description: 'La tâche conflictuelle a été déplacée', className: "bg-app-green text-white" });
+
+      // Now create the new tache
+      if (pendingTacheData) {
+        try {
+          await tacheApi.create(pendingTacheData);
+          toast({ title: '📋 Tâche créée', description: 'La tâche RDV a été ajoutée au calendrier', className: "bg-app-green text-white" });
+        } catch (err) {
+          console.error('Erreur création tâche après reschedule:', err);
+          toast({ title: 'Erreur', description: 'Impossible de créer la tâche après le déplacement', className: "bg-app-red text-white", variant: 'destructive' });
+        }
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Impossible de déplacer la tâche';
+      toast({ title: 'Erreur', description: msg, className: "bg-app-red text-white", variant: 'destructive' });
+    } finally {
+      setShowTacheConflictModal(false);
+      setConflictingTache(null);
+      setPendingTacheData(null);
+    }
+  };
+
+  const handleSkipTacheConflict = () => {
+    setShowTacheConflictModal(false);
+    setConflictingTache(null);
+    setPendingTacheData(null);
+    toast({ title: 'ℹ️ Tâche non créée', description: 'Le RDV a été créé sans tâche associée' });
   };
 
   const handleDeclineRdv = useCallback(() => { setShowRdvConfirmDialog(false); setPendingReservationForRdv(null); }, []);
@@ -636,7 +815,7 @@ export const useCommandesLogic = () => {
     type, setType, dateArrivagePrevue, setDateArrivagePrevue, dateEcheance, setDateEcheance, horaire, setHoraire,
     produitNom, setProduitNom, prixUnitaire, setPrixUnitaire, quantite, setQuantite, prixVente, setPrixVente,
     productSearch, setProductSearch, showProductSuggestions, setShowProductSuggestions,
-    selectedProduct, produitsListe, editingProductIndex,
+    selectedProduct, produitsListe, editingProductIndex, availableQuantityForSelected,
     // États recherche/tri
     commandeSearch, setCommandeSearch, sortDateAsc, setSortDateAsc,
     // États modales
@@ -644,6 +823,7 @@ export const useCommandesLogic = () => {
     exportDialogOpen, setExportDialogOpen, exportDate, setExportDate,
     reporterModalOpen, setReporterModalOpen, reporterDate, setReporterDate, reporterHoraire, setReporterHoraire,
     showRdvConfirmDialog, showRdvFormModal, pendingReservationForRdv, isRdvLoading,
+    showTacheConflictModal, conflictingTache,
     // Handlers
     handleClientSelect, handleProductSelect,
     handleAddProduit, handleEditProduit, handleRemoveProduit,
@@ -651,6 +831,7 @@ export const useCommandesLogic = () => {
     handleStatusChange, confirmValidation, confirmCancellation,
     handleReporterConfirm, handleExportPDF,
     handleCreateRdvFromReservation, handleDeclineRdv, handleAcceptRdv, handleCloseRdvModal,
+    handleRescheduleTacheAndCreate, handleSkipTacheConflict,
     getStatusOptions, resetForm,
   };
 };
