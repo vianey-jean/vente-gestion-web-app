@@ -113,14 +113,12 @@ const Product = {
   // Search products by description
   search: (query) => {
     try {
-      const products = readEncrypted(PRODUCTS_FILE);
+      const data = fs.readFileSync(productsPath, 'utf8');
+      const products = JSON.parse(data);
       if (!query || query.length < 3) return [];
-      
       const results = products.filter(product => 
         product.description && product.description.toLowerCase().includes(query.toLowerCase())
       );
-      
-      console.log(`🔍 Search query "${query}" returned ${results.length} results`);
       return results;
     } catch (error) {
       console.error("❌ Error searching products:", error);
