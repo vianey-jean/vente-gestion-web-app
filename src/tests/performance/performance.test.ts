@@ -157,7 +157,7 @@ describe('Tests de Performance', () => {
         )
       );
       
-      global.fetch = mockFetch;
+      (globalThis as any).fetch = mockFetch;
       
       const startTime = Date.now();
       
