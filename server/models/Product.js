@@ -1,7 +1,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { readEncrypted, writeEncrypted } = require('../services/encryptedDb.service');
 
 const productsPath = path.join(__dirname, '../db/products.json');
 const PRODUCTS_FILE = 'products.json';
