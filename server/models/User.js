@@ -2,8 +2,10 @@
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const { readEncrypted, writeEncrypted } = require('../services/encryptedDb.service');
 
 const usersPath = path.join(__dirname, '../db/users.json');
+const USERS_FILE = 'users.json';
 
 const User = {
   // Get all users
