@@ -10,7 +10,7 @@ interface RealtimeSyncOptions {
 
 // Variable globale pour bloquer la synchronisation pendant la saisie de formulaire
 let globalFormProtection = false;
-let formProtectionTimeout: NodeJS.Timeout | null = null;
+let formProtectionTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export const setFormProtection = (active: boolean) => {
   globalFormProtection = active;
