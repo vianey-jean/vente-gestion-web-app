@@ -228,8 +228,7 @@ const Product = {
       // Remove product from array
       products.splice(productIndex, 1);
       
-      // Write encrypted
-      writeEncrypted(PRODUCTS_FILE, products);
+      fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
       
       console.log('✅ Product deleted successfully:', deletedProduct.description);
       console.log(`📊 Remaining products in database: ${products.length}`);
