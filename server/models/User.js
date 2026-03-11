@@ -11,8 +11,7 @@ const User = {
   // Get all users
   getAll: () => {
     try {
-      const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
-      return users;
+      return readEncrypted(USERS_FILE);
     } catch (error) {
       console.error("Error reading users:", error);
       return [];
