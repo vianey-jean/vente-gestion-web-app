@@ -99,28 +99,22 @@ const User = {
   // Update password
   updatePassword: (email, newPassword) => {
     try {
-      let users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
+      let users = readEncrypted(USERS_FILE);
       
-      // Find user index
-      const userIndex = users.findIndex(user => user.email.toLowerCase() === email.toLowerCase());
+      const userIndex = users.findIndex(user => user.email && user.email.toLowerCase() === email.toLowerCase());
       if (userIndex === -1) {
         return false;
       }
       
-      // Check if new password is the same as old password (after hashing)
       if (bcrypt.compareSync(newPassword, users[userIndex].password)) {
         return false;
       }
       
-      // Hash the new password
       const salt = bcrypt.genSaltSync(10);
       const hashedPassword = bcrypt.hashSync(newPassword, salt);
       
-      // Update password
       users[userIndex].password = hashedPassword;
-      
-      // Write back to file
-      fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+      writeEncrypted(USERS_FILE, users);
       
       return true;
     } catch (error) {
