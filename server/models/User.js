@@ -98,7 +98,7 @@ const User = {
   // Update password
   updatePassword: (email, newPassword) => {
     try {
-      let users = readEncrypted(USERS_FILE);
+      let users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
       
       const userIndex = users.findIndex(user => user.email && user.email.toLowerCase() === email.toLowerCase());
       if (userIndex === -1) {
@@ -113,7 +113,7 @@ const User = {
       const hashedPassword = bcrypt.hashSync(newPassword, salt);
       
       users[userIndex].password = hashedPassword;
-      writeEncrypted(USERS_FILE, users);
+      fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
       
       return true;
     } catch (error) {
