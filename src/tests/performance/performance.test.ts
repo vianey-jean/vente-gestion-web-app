@@ -181,7 +181,7 @@ describe('Tests de Performance', () => {
         removeItem: vi.fn()
       };
       
-      global.localStorage = mockLocalStorage as any;
+      (globalThis as any).localStorage = mockLocalStorage as any;
       
       // Simulate storage operations
       localStorage.setItem('test', 'value');

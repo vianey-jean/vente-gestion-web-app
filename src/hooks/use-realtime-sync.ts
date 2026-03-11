@@ -36,8 +36,8 @@ export const isFormProtected = () => globalFormProtection;
 export const useRealtimeSync = (options: RealtimeSyncOptions = {}) => {
   const { enabled = true, interval = 5000, debounceMs = 1000 } = options;
   const { refreshData } = useApp();
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSyncRef = useRef<number>(0);
   const isActiveRef = useRef<boolean>(true);
 
