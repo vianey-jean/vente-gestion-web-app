@@ -131,9 +131,8 @@ const Product = {
     try {
       console.log('📝 Creating new product:', productData);
       
-      const products = readEncrypted(PRODUCTS_FILE);
-      
-      // Récupérer les codes existants pour éviter les doublons
+      const data = fs.readFileSync(productsPath, 'utf8');
+      const products = JSON.parse(data);
       const existingCodes = products.filter(p => p.code).map(p => p.code);
       
       // Générer un code unique pour le nouveau produit
