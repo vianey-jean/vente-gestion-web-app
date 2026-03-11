@@ -17,8 +17,8 @@ const mockPerformance = {
 const mockRequestAnimationFrame = vi.fn();
 
 // Setup global mocks
-global.performance = mockPerformance as any;
-global.requestAnimationFrame = mockRequestAnimationFrame;
+(globalThis as any).performance = mockPerformance as any;
+(globalThis as any).requestAnimationFrame = mockRequestAnimationFrame;
 
 describe('Tests de Performance', () => {
   beforeEach(() => {
