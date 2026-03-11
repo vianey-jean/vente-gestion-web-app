@@ -264,8 +264,7 @@ const Product = {
       // Update quantity
       products[productIndex].quantity += quantityChange;
       
-      // Write encrypted
-      writeEncrypted(PRODUCTS_FILE, products);
+      fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
       
       console.log('✅ Product quantity updated successfully:', products[productIndex]);
       return products[productIndex];
