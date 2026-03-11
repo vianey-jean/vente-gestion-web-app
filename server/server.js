@@ -355,9 +355,13 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Promesse rejetée non gérée:', reason);
 });
 
+// Migrer toutes les bases de données vers le format crypté au démarrage
+migrateAllDatabases();
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🔒 Security middleware enabled`);
+  console.log(`🔐 AES-256-GCM encryption enabled for all data`);
   console.log(`📡 Sync events available at /api/sync/events`);
 });
