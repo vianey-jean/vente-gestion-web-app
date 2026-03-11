@@ -1,8 +1,10 @@
 
 const fs = require('fs');
 const path = require('path');
+const { readEncrypted, writeEncrypted } = require('../services/encryptedDb.service');
 
 const productsPath = path.join(__dirname, '../db/products.json');
+const PRODUCTS_FILE = 'products.json';
 
 // ============================================
 // FONCTION DE GÉNÉRATION DE CODE UNIQUE
@@ -75,8 +77,7 @@ if (descLower.includes('perruque')) {
  */
 const getAllExistingCodes = () => {
   try {
-    const data = fs.readFileSync(productsPath, 'utf8');
-    const products = JSON.parse(data);
+    const products = readEncrypted(PRODUCTS_FILE);
     return products.filter(p => p.code).map(p => p.code);
   } catch (error) {
     return [];
@@ -87,8 +88,7 @@ const Product = {
   // Get all products
   getAll: () => {
     try {
-      const data = fs.readFileSync(productsPath, 'utf8');
-      const products = JSON.parse(data);
+      const products = readEncrypted(PRODUCTS_FILE);
       console.log(`📦 Retrieved ${products.length} products from database`);
       return products;
     } catch (error) {
@@ -100,8 +100,7 @@ const Product = {
   // Get product by ID
   getById: (id) => {
     try {
-      const data = fs.readFileSync(productsPath, 'utf8');
-      const products = JSON.parse(data);
+      const products = readEncrypted(PRODUCTS_FILE);
       const product = products.find(product => product.id === id) || null;
       console.log(`🔍 Retrieved product by ID ${id}:`, product ? 'Found' : 'Not found');
       return product;
@@ -114,12 +113,11 @@ const Product = {
   // Search products by description
   search: (query) => {
     try {
-      const data = fs.readFileSync(productsPath, 'utf8');
-      const products = JSON.parse(data);
+      const products = readEncrypted(PRODUCTS_FILE);
       if (!query || query.length < 3) return [];
       
       const results = products.filter(product => 
-        product.description.toLowerCase().includes(query.toLowerCase())
+        product.description && product.description.toLowerCase().includes(query.toLowerCase())
       );
       
       console.log(`🔍 Search query "${query}" returned ${results.length} results`);
@@ -135,8 +133,7 @@ const Product = {
     try {
       console.log('📝 Creating new product:', productData);
       
-      const data = fs.readFileSync(productsPath, 'utf8');
-      const products = JSON.parse(data);
+      const products = readEncrypted(PRODUCTS_FILE);
       
       // Récupérer les codes existants pour éviter les doublons
       const existingCodes = products.filter(p => p.code).map(p => p.code);
@@ -154,8 +151,8 @@ const Product = {
       // Add to products array
       products.push(newProduct);
       
-      // Write back to file with proper formatting
-      fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
+      // Write encrypted
+      writeEncrypted(PRODUCTS_FILE, products);
       
       console.log('✅ Product created successfully with code:', newProduct.code, newProduct);
       console.log(`📊 Total products in database: ${products.length}`);
@@ -172,8 +169,7 @@ const Product = {
     try {
       console.log(`📝 Updating product ${id}:`, productData);
       
-      const data = fs.readFileSync(productsPath, 'utf8');
-      let products = JSON.parse(data);
+      let products = readEncrypted(PRODUCTS_FILE);
       
       // Find product index
       const productIndex = products.findIndex(product => product.id === id);
@@ -185,8 +181,8 @@ const Product = {
       // Update product data
       products[productIndex] = { ...products[productIndex], ...productData };
       
-      // Write back to file with proper formatting
-      fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
+      // Write encrypted
+      writeEncrypted(PRODUCTS_FILE, products);
       
       console.log('✅ Product updated successfully:', products[productIndex]);
       return products[productIndex];
@@ -201,8 +197,7 @@ const Product = {
     try {
       console.log(`🗑️ Deleting product ${id}`);
       
-      const data = fs.readFileSync(productsPath, 'utf8');
-      let products = JSON.parse(data);
+      let products = readEncrypted(PRODUCTS_FILE);
       
       // Find product index
       const productIndex = products.findIndex(product => product.id === id);
@@ -235,8 +230,8 @@ const Product = {
       // Remove product from array
       products.splice(productIndex, 1);
       
-      // Write back to file with proper formatting
-      fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
+      // Write encrypted
+      writeEncrypted(PRODUCTS_FILE, products);
       
       console.log('✅ Product deleted successfully:', deletedProduct.description);
       console.log(`📊 Remaining products in database: ${products.length}`);
@@ -253,8 +248,7 @@ const Product = {
     try {
       console.log(`📦 Updating quantity for product ${id} by ${quantityChange}`);
       
-      const data = fs.readFileSync(productsPath, 'utf8');
-      let products = JSON.parse(data);
+      let products = readEncrypted(PRODUCTS_FILE);
       
       // Find product index
       const productIndex = products.findIndex(product => product.id === id);
@@ -272,8 +266,8 @@ const Product = {
       // Update quantity
       products[productIndex].quantity += quantityChange;
       
-      // Write back to file with proper formatting
-      fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
+      // Write encrypted
+      writeEncrypted(PRODUCTS_FILE, products);
       
       console.log('✅ Product quantity updated successfully:', products[productIndex]);
       return products[productIndex];
@@ -288,8 +282,7 @@ const Product = {
     try {
       console.log('🔧 Generating codes for existing products without codes...');
       
-      const data = fs.readFileSync(productsPath, 'utf8');
-      let products = JSON.parse(data);
+      let products = readEncrypted(PRODUCTS_FILE);
       
       // Récupérer tous les codes existants
       const existingCodes = products.filter(p => p.code).map(p => p.code);
@@ -307,8 +300,8 @@ const Product = {
         return product;
       });
       
-      // Sauvegarder les modifications
-      fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
+      // Sauvegarder les modifications cryptées
+      writeEncrypted(PRODUCTS_FILE, products);
       
       console.log(`✅ Generated codes for ${updatedCount} products`);
       return { success: true, updatedCount, products };
