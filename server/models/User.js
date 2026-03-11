@@ -72,7 +72,7 @@ const User = {
   // Update user
   update: (id, userData) => {
     try {
-      let users = readEncrypted(USERS_FILE);
+      let users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
       
       const userIndex = users.findIndex(user => user.id === id);
       if (userIndex === -1) {
@@ -85,7 +85,7 @@ const User = {
       }
       
       users[userIndex] = { ...users[userIndex], ...userData };
-      writeEncrypted(USERS_FILE, users);
+      fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
       
       const { password, ...userWithoutPassword } = users[userIndex];
       return userWithoutPassword;
