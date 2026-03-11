@@ -31,6 +31,12 @@ const {
   suspiciousActivityLogger
 } = require('./middleware/security');
 
+// Middleware de cryptage des réponses
+const { encryptResponseMiddleware, decryptRequestMiddleware } = require('./middleware/encryptResponse');
+
+// Service de migration de la base de données cryptée
+const { migrateAllDatabases } = require('./services/encryptedDb.service');
+
 // Load environment variables
 dotenv.config();
 
