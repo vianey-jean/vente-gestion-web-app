@@ -42,7 +42,7 @@ const User = {
   // Create new user
   create: (userData) => {
     try {
-      const users = readEncrypted(USERS_FILE);
+      const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
       
       const emailExists = users.some(user => user.email && user.email.toLowerCase() === userData.email.toLowerCase());
       if (emailExists) {
@@ -59,7 +59,7 @@ const User = {
       };
       
       users.push(newUser);
-      writeEncrypted(USERS_FILE, users);
+      fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
       
       const { password, ...userWithoutPassword } = newUser;
       return userWithoutPassword;
