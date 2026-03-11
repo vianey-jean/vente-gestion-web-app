@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 
 const productsPath = path.join(__dirname, '../db/products.json');
-const PRODUCTS_FILE = 'products.json';
 
 // ============================================
 // FONCTION DE GÉNÉRATION DE CODE UNIQUE
