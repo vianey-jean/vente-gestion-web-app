@@ -43,32 +43,25 @@ const User = {
   // Create new user
   create: (userData) => {
     try {
-      const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
+      const users = readEncrypted(USERS_FILE);
       
-      // Check if email already exists
-      const emailExists = users.some(user => user.email.toLowerCase() === userData.email.toLowerCase());
+      const emailExists = users.some(user => user.email && user.email.toLowerCase() === userData.email.toLowerCase());
       if (emailExists) {
         return null;
       }
       
-      // Hash the password with bcrypt
       const salt = bcrypt.genSaltSync(10);
       const hashedPassword = bcrypt.hashSync(userData.password, salt);
       
-      // Create new user object with hashed password
       const newUser = {
         id: Date.now().toString(),
         ...userData,
         password: hashedPassword
       };
       
-      // Add to users array
       users.push(newUser);
+      writeEncrypted(USERS_FILE, users);
       
-      // Write back to file
-      fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
-      
-      // Return the user without password
       const { password, ...userWithoutPassword } = newUser;
       return userWithoutPassword;
     } catch (error) {
