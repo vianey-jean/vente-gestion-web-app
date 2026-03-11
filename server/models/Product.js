@@ -279,7 +279,8 @@ const Product = {
     try {
       console.log('🔧 Generating codes for existing products without codes...');
       
-      let products = readEncrypted(PRODUCTS_FILE);
+      const data = fs.readFileSync(productsPath, 'utf8');
+      let products = JSON.parse(data);
       
       // Récupérer tous les codes existants
       const existingCodes = products.filter(p => p.code).map(p => p.code);
