@@ -87,7 +87,8 @@ const Product = {
   // Get all products
   getAll: () => {
     try {
-      const products = readEncrypted(PRODUCTS_FILE);
+      const data = fs.readFileSync(productsPath, 'utf8');
+      const products = JSON.parse(data);
       console.log(`📦 Retrieved ${products.length} products from database`);
       return products;
     } catch (error) {
