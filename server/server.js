@@ -14,6 +14,10 @@
  * @version 4.2.0
  */
 
+// ⚠️ CRITIQUE: Charger le patch de cryptage AVANT tout autre module
+// Ce patch intercepte fs.readFileSync/writeFileSync pour crypter/décrypter automatiquement
+require('./services/dbEncryptionPatch');
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
