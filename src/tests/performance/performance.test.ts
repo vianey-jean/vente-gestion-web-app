@@ -140,7 +140,7 @@ describe('Tests de Performance', () => {
         json: async () => ({ data: 'test' })
       });
       
-      global.fetch = mockFetch;
+      (globalThis as any).fetch = mockFetch;
       
       // Simulate API calls
       await fetch('/api/test');
