@@ -31,7 +31,7 @@ const User = {
   // Get user by ID
   getById: (id) => {
     try {
-      const users = readEncrypted(USERS_FILE);
+      const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
       return users.find(user => user.id === id) || null;
     } catch (error) {
       console.error("Error finding user by id:", error);
