@@ -21,8 +21,8 @@ const User = {
   // Get user by email
   getByEmail: (email) => {
     try {
-      const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
-      return users.find(user => user.email.toLowerCase() === email.toLowerCase()) || null;
+      const users = readEncrypted(USERS_FILE);
+      return users.find(user => user.email && user.email.toLowerCase() === email.toLowerCase()) || null;
     } catch (error) {
       console.error("Error finding user by email:", error);
       return null;
