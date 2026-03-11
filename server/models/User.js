@@ -73,27 +73,21 @@ const User = {
   // Update user
   update: (id, userData) => {
     try {
-      let users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
+      let users = readEncrypted(USERS_FILE);
       
-      // Find user index
       const userIndex = users.findIndex(user => user.id === id);
       if (userIndex === -1) {
         return null;
       }
       
-      // If password is being updated, hash it
       if (userData.password) {
         const salt = bcrypt.genSaltSync(10);
         userData.password = bcrypt.hashSync(userData.password, salt);
       }
       
-      // Update user data
       users[userIndex] = { ...users[userIndex], ...userData };
+      writeEncrypted(USERS_FILE, users);
       
-      // Write back to file
-      fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
-      
-      // Return the updated user without password
       const { password, ...userWithoutPassword } = users[userIndex];
       return userWithoutPassword;
     } catch (error) {
