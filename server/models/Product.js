@@ -75,7 +75,8 @@ if (descLower.includes('perruque')) {
  */
 const getAllExistingCodes = () => {
   try {
-    const products = readEncrypted(PRODUCTS_FILE);
+    const data = fs.readFileSync(productsPath, 'utf8');
+    const products = JSON.parse(data);
     return products.filter(p => p.code).map(p => p.code);
   } catch (error) {
     return [];
