@@ -129,6 +129,12 @@ app.use((req, res, next) => {
   return sanitizeMiddleware(req, res, next);
 });
 
+// Décryptage automatique des requêtes cryptées du frontend
+app.use(decryptRequestMiddleware);
+
+// Cryptage automatique des réponses API
+app.use(encryptResponseMiddleware);
+
 // Create db directory if it doesn't exist
 const dbPath = path.join(__dirname, 'db');
 if (!fs.existsSync(dbPath)) {
