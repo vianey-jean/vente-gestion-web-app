@@ -145,11 +145,11 @@ const Product = {
         ...productData
       };
       
-      // Add to products array
+      // Récupérer les codes existants pour éviter les doublons
+      const existingCodes = products.filter(p => p.code).map(p => p.code);
+
       products.push(newProduct);
-      
-      // Write encrypted
-      writeEncrypted(PRODUCTS_FILE, products);
+      fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
       
       console.log('✅ Product created successfully with code:', newProduct.code, newProduct);
       console.log(`📊 Total products in database: ${products.length}`);
