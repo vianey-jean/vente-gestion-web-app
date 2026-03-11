@@ -78,8 +78,8 @@ describe('Tests de Performance', () => {
       const mockAddEventListener = vi.fn();
       const mockRemoveEventListener = vi.fn();
       
-      global.addEventListener = mockAddEventListener;
-      global.removeEventListener = mockRemoveEventListener;
+      (globalThis as any).addEventListener = mockAddEventListener;
+      (globalThis as any).removeEventListener = mockRemoveEventListener;
       
       const { unmount } = render(React.createElement('div', {}, 'Test Component'));
       unmount();
