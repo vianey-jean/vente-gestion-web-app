@@ -100,9 +100,9 @@ const Product = {
   // Get product by ID
   getById: (id) => {
     try {
-      const products = readEncrypted(PRODUCTS_FILE);
+      const data = fs.readFileSync(productsPath, 'utf8');
+      const products = JSON.parse(data);
       const product = products.find(product => product.id === id) || null;
-      console.log(`🔍 Retrieved product by ID ${id}:`, product ? 'Found' : 'Not found');
       return product;
     } catch (error) {
       console.error("❌ Error finding product by id:", error);
