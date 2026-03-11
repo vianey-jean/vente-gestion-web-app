@@ -298,8 +298,7 @@ const Product = {
         return product;
       });
       
-      // Sauvegarder les modifications cryptées
-      writeEncrypted(PRODUCTS_FILE, products);
+      fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
       
       console.log(`✅ Generated codes for ${updatedCount} products`);
       return { success: true, updatedCount, products };
