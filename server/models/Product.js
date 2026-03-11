@@ -194,7 +194,8 @@ const Product = {
     try {
       console.log(`🗑️ Deleting product ${id}`);
       
-      let products = readEncrypted(PRODUCTS_FILE);
+      const data = fs.readFileSync(productsPath, 'utf8');
+      let products = JSON.parse(data);
       
       // Find product index
       const productIndex = products.findIndex(product => product.id === id);
