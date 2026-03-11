@@ -179,8 +179,7 @@ const Product = {
       // Update product data
       products[productIndex] = { ...products[productIndex], ...productData };
       
-      // Write encrypted
-      writeEncrypted(PRODUCTS_FILE, products);
+      fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
       
       console.log('✅ Product updated successfully:', products[productIndex]);
       return products[productIndex];
