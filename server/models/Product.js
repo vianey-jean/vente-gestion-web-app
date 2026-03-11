@@ -103,7 +103,6 @@ const Product = {
       const data = fs.readFileSync(productsPath, 'utf8');
       const products = JSON.parse(data);
       const product = products.find(product => product.id === id) || null;
-      console.log(`🔍 Retrieved product by ID ${id}:`, product ? 'Found' : 'Not found');
       return product;
     } catch (error) {
       console.error("❌ Error finding product by id:", error);
@@ -117,12 +116,9 @@ const Product = {
       const data = fs.readFileSync(productsPath, 'utf8');
       const products = JSON.parse(data);
       if (!query || query.length < 3) return [];
-      
       const results = products.filter(product => 
-        product.description.toLowerCase().includes(query.toLowerCase())
+        product.description && product.description.toLowerCase().includes(query.toLowerCase())
       );
-      
-      console.log(`🔍 Search query "${query}" returned ${results.length} results`);
       return results;
     } catch (error) {
       console.error("❌ Error searching products:", error);
@@ -137,8 +133,6 @@ const Product = {
       
       const data = fs.readFileSync(productsPath, 'utf8');
       const products = JSON.parse(data);
-      
-      // Récupérer les codes existants pour éviter les doublons
       const existingCodes = products.filter(p => p.code).map(p => p.code);
       
       // Générer un code unique pour le nouveau produit
@@ -151,10 +145,10 @@ const Product = {
         ...productData
       };
       
-      // Add to products array
+      // Récupérer les codes existants pour éviter les doublons
+      const existingCodes = products.filter(p => p.code).map(p => p.code);
+
       products.push(newProduct);
-      
-      // Write back to file with proper formatting
       fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
       
       console.log('✅ Product created successfully with code:', newProduct.code, newProduct);
@@ -185,7 +179,6 @@ const Product = {
       // Update product data
       products[productIndex] = { ...products[productIndex], ...productData };
       
-      // Write back to file with proper formatting
       fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
       
       console.log('✅ Product updated successfully:', products[productIndex]);
@@ -235,7 +228,6 @@ const Product = {
       // Remove product from array
       products.splice(productIndex, 1);
       
-      // Write back to file with proper formatting
       fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
       
       console.log('✅ Product deleted successfully:', deletedProduct.description);
@@ -272,7 +264,6 @@ const Product = {
       // Update quantity
       products[productIndex].quantity += quantityChange;
       
-      // Write back to file with proper formatting
       fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
       
       console.log('✅ Product quantity updated successfully:', products[productIndex]);
@@ -307,7 +298,6 @@ const Product = {
         return product;
       });
       
-      // Sauvegarder les modifications
       fs.writeFileSync(productsPath, JSON.stringify(products, null, 2));
       
       console.log(`✅ Generated codes for ${updatedCount} products`);

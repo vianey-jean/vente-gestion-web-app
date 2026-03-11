@@ -14,6 +14,10 @@
  * @version 4.2.0
  */
 
+// ⚠️ CRITIQUE: Charger le patch de cryptage AVANT tout autre module
+// Ce patch intercepte fs.readFileSync/writeFileSync pour crypter/décrypter automatiquement
+require('./services/dbEncryptionPatch');
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -30,6 +34,12 @@ const {
   securityHeadersMiddleware,
   suspiciousActivityLogger
 } = require('./middleware/security');
+
+// Middleware de cryptage des réponses
+const { encryptResponseMiddleware, decryptRequestMiddleware } = require('./middleware/encryptResponse');
+
+// Service de migration de la base de données cryptée
+const { migrateAllDatabases } = require('./services/encryptedDb.service');
 
 // Load environment variables
 dotenv.config();
@@ -122,6 +132,12 @@ app.use((req, res, next) => {
   }
   return sanitizeMiddleware(req, res, next);
 });
+
+// Décryptage automatique des requêtes cryptées du frontend
+app.use(decryptRequestMiddleware);
+
+// Cryptage automatique des réponses API
+app.use(encryptResponseMiddleware);
 
 // Create db directory if it doesn't exist
 const dbPath = path.join(__dirname, 'db');
@@ -343,9 +359,13 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Promesse rejetée non gérée:', reason);
 });
 
+// Migrer toutes les bases de données vers le format crypté au démarrage
+migrateAllDatabases();
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🔒 Security middleware enabled`);
+  console.log(`🔐 AES-256-GCM encryption enabled for all data`);
   console.log(`📡 Sync events available at /api/sync/events`);
 });
