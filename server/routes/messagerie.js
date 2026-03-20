@@ -57,17 +57,22 @@ function broadcastToAdmins(event, data) {
 // =====================
 // SSE Endpoint
 // =====================
+router.options('/events', (req, res) => {
+  res.sendStatus(204);
+});
+
 router.get('/events', (req, res) => {
-  const origin = req.get('Origin') || '*';
-  
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache, no-store, must-revalidate',
-    'Connection': 'keep-alive',
-    'X-Accel-Buffering': 'no',
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Credentials': 'true'
-  });
+  // Laisser le middleware CORS global gérer les headers CORS
+  // et définir ici uniquement les headers SSE.
+  res.status(200);
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+
+  req.socket?.setKeepAlive?.(true, 15000);
+  req.socket?.setNoDelay?.(true);
 
   const clientId = `livechat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const visitorId = req.query.visitorId || null;
@@ -115,23 +120,37 @@ function broadcastAdminStatus() {
 }
 
 router.get('/admin-status', (req, res) => {
-  // Check if any admin user is connected (has role administrateur in users.json)
+  // Check if any admin/admin principal is online via "live" field in users.json
   const usersPath = path.join(__dirname, '../db/users.json');
   try {
     const users = JSON.parse(fs.readFileSync(usersPath, 'utf-8'));
-    const admins = users.filter(u => u.role === 'administrateur');
-    const adminIds = admins.map(a => a.id);
+    const admins = users.filter(u => 
+      (u.role === 'administrateur' || u.role === 'administrateur principale') && u.live === 'true'
+    );
+    const online = admins.length > 0;
     
-    let online = false;
-    for (const [, client] of sseClients) {
-      if (client.adminId && adminIds.includes(client.adminId)) {
-        online = true;
-        break;
+    // Determine which admin should receive messages (priority logic)
+    let targetAdminId = null;
+    if (online) {
+      // Priority 1: Admin principal online
+      const principalOnline = admins.find(u => u.role === 'administrateur principale');
+      if (principalOnline) {
+        targetAdminId = principalOnline.id;
+      } else {
+        // Priority 2: Admin with specification "live"
+        const specLive = admins.find(u => u.specification === 'live');
+        if (specLive) {
+          targetAdminId = specLive.id;
+        } else {
+          // Priority 3: Any online admin
+          targetAdminId = admins[0].id;
+        }
       }
     }
-    res.json({ online });
+    
+    res.json({ online, targetAdminId });
   } catch {
-    res.json({ online: false });
+    res.json({ online: false, targetAdminId: null });
   }
 });
 

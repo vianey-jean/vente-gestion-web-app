@@ -1,13 +1,8 @@
-/**
- * Configuration de base pour l'API avec décryptage automatique
- * Toutes les réponses du backend sont cryptées en AES-256-GCM
- * et décryptées automatiquement ici avant utilisation
- */
+// Configuration de base pour l'API
 import axios, { AxiosInstance } from 'axios';
 import axiosRetry from 'axios-retry';
-import { decryptApiResponse, encryptForTransport } from '@/services/crypto/cryptoService';
 
-// Configuration de l'URL de base
+// Configuration de l'URL de base - sans préfixe /api pour éviter le doublement
 const getBaseURL = () => {
   return import.meta.env.VITE_API_BASE_URL || 'https://server-gestion-ventes.onrender.com';
 };
@@ -33,48 +28,21 @@ const createApiInstance = (): AxiosInstance => {
     },
   });
 
-  // Request interceptor to add auth token + encrypt body
+  // Request interceptor to add auth token
   instance.interceptors.request.use(
-    async (config) => {
+    (config) => {
       const token = localStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
-      
-      // Crypter le body des requêtes POST/PUT/PATCH (sauf FormData/uploads)
-      if (
-        config.data &&
-        typeof config.data === 'object' &&
-        !(config.data instanceof FormData) &&
-        !config.data.encrypted &&
-        ['post', 'put', 'patch'].includes(config.method?.toLowerCase() || '')
-      ) {
-        try {
-          config.data = await encryptForTransport(config.data);
-        } catch (e) {
-          // En cas d'erreur de cryptage, envoyer les données non cryptées
-          console.warn('Encryption failed, sending unencrypted:', e);
-        }
-      }
-      
       return config;
     },
     (error) => Promise.reject(error)
   );
 
-  // Response interceptor: décrypter automatiquement les réponses cryptées
+  // Response interceptor for error handling
   instance.interceptors.response.use(
-    async (response) => {
-      // Décrypter la réponse si elle est cryptée
-      if (response.data && response.data.encrypted === true) {
-        try {
-          response.data = await decryptApiResponse(response.data);
-        } catch (e) {
-          console.error('Decryption failed:', e);
-        }
-      }
-      return response;
-    },
+    (response) => response,
     (error) => {
       if (error.response?.status === 401) {
         localStorage.removeItem('token');

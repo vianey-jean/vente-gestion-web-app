@@ -32,7 +32,7 @@ class OptimizedRealtimeService {
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
   private connectionTimeout: ReturnType<typeof setTimeout> | null = null;
-  private heartbeatInterval: ReturnType<typeof setTimeout> | null = null;
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
   private performanceMetrics: PerformanceMetrics;
   private retryDelays = [1000, 2000, 4000, 8000, 16000];
 

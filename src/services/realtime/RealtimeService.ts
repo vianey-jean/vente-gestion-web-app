@@ -30,7 +30,7 @@ class RealtimeService {
     );
   }
 
-  private fallbackInterval: ReturnType<typeof setTimeout> | null = null;
+  private fallbackInterval: ReturnType<typeof setInterval> | null = null;
 
   private handleConnectionChange(connected: boolean) {
     this.isConnected = connected;

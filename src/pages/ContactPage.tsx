@@ -26,7 +26,7 @@ const ContactPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [adminOnline, setAdminOnline] = useState(false);
-  const [showLiveChat, setShowLiveChat] = useState(false);
+  const [targetAdminId, setTargetAdminId] = useState<string>('1');
   const [submittedName, setSubmittedName] = useState(localStorage.getItem('livechat_pseudo') || '');
 
   const { toast } = useToast();
@@ -41,6 +41,8 @@ const ContactPage: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const [showLiveChat, setShowLiveChat] = useState(false);
+
   // Check admin online status
   useEffect(() => {
     const checkAdmin = async () => {
@@ -49,6 +51,7 @@ const ContactPage: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           setAdminOnline(data.online);
+          if (data.targetAdminId) setTargetAdminId(data.targetAdminId);
         }
       } catch { setAdminOnline(false); }
     };
@@ -142,7 +145,7 @@ const ContactPage: React.FC = () => {
             {showLiveChat && adminOnline && (
               <LiveChatVisitor
                 visitorNom={submittedName || 'Visiteur'}
-                adminId="1"
+                adminId={targetAdminId}
                 onClose={() => setShowLiveChat(false)}
               />
             )}

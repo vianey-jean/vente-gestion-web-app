@@ -8,15 +8,11 @@
  * - Base de données JSON (fichiers dans server/db/)
  * - Synchronisation temps réel via SSE (/api/sync/events)
  * - Sécurité : rate limiting, sanitization, headers sécurisés
- * - CORS configuré pour Vercel, Lovable et localhost
+ * - CORS configuré pour Vercel et localhost
  * 
  * @module server
  * @version 4.2.0
  */
-
-// ⚠️ CRITIQUE: Charger le patch de cryptage AVANT tout autre module
-// Ce patch intercepte fs.readFileSync/writeFileSync pour crypter/décrypter automatiquement
-require('./services/dbEncryptionPatch');
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -35,12 +31,6 @@ const {
   suspiciousActivityLogger
 } = require('./middleware/security');
 
-// Middleware de cryptage des réponses
-const { encryptResponseMiddleware, decryptRequestMiddleware } = require('./middleware/encryptResponse');
-
-// Service de migration de la base de données cryptée
-const { migrateAllDatabases } = require('./services/encryptedDb.service');
-
 // Load environment variables
 dotenv.config();
 
@@ -53,7 +43,14 @@ const PORT = process.env.PORT || 10000;
 // ===================
 
 // Compression pour performance
-app.use(compression());
+app.use(compression({
+  filter: (req, res) => {
+    if (req.path === '/api/sync/events' || req.path === '/api/messagerie/events' || req.path === '/api/livechat/events') {
+      return false;
+    }
+    return compression.filter(req, res);
+  }
+}));
 
 // Security headers
 app.use(securityHeadersMiddleware);
@@ -112,7 +109,7 @@ app.use(cors(corsOptions));
 
 // Ne pas bloquer SSE (connexion longue) avec le rate-limit global
 app.use((req, res, next) => {
-  if (req.path === '/api/sync/events' || req.path === '/api/messagerie/events') {
+  if (req.path === '/api/sync/events' || req.path === '/api/messagerie/events' || req.path === '/api/livechat/events') {
     return next();
   }
   return rateLimitMiddleware('general')(req, res, next);
@@ -125,19 +122,14 @@ app.use(suspiciousActivityLogger);
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
-// Sanitization de tous les inputs (skip for drawing uploads - base64 data)
+// Sanitization de tous les inputs
+// Skip pour payloads volumineux/chiffrés qui seraient tronqués par la sanitization
 app.use((req, res, next) => {
-  if (req.path === '/api/notes/upload-drawing') {
+  if (req.path === '/api/notes/upload-drawing' || req.path === '/api/settings/restore') {
     return next();
   }
   return sanitizeMiddleware(req, res, next);
 });
-
-// Décryptage automatique des requêtes cryptées du frontend
-app.use(decryptRequestMiddleware);
-
-// Cryptage automatique des réponses API
-app.use(encryptResponseMiddleware);
 
 // Create db directory if it doesn't exist
 const dbPath = path.join(__dirname, 'db');
@@ -288,9 +280,16 @@ const pointageRoutes = require('./routes/pointage');
 const travailleurRoutes = require('./routes/travailleur');
 const tacheRoutes = require('./routes/tache');
 const notesRoutes = require('./routes/notes');
+const notesShareRoutes = require('./routes/notesShare');
+const shareLinksRoutes = require('./routes/shareLinks');
 const avanceRoutes = require('./routes/avance');
 const profileRoutes = require('./routes/profile');
 const messagerieRoutes = require('./routes/messagerie');
+const settingsRoutes = require('./routes/settings');
+const indisponibleRoutes = require('./routes/indisponible');
+const moduleSettingsRoutes = require('./routes/moduleSettings');
+const parametresRoutes = require('./routes/parametres');
+const livechatRoutes = require('./routes/livechat');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -317,9 +316,16 @@ app.use('/api/pointages', pointageRoutes);
 app.use('/api/travailleurs', travailleurRoutes);
 app.use('/api/taches', tacheRoutes);
 app.use('/api/notes', notesRoutes);
+app.use('/api/notes-share', notesShareRoutes);
+app.use('/api/share-links', shareLinksRoutes);
 app.use('/api/avances', avanceRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/messagerie', messagerieRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/indisponible', indisponibleRoutes);
+app.use('/api/module-settings', moduleSettingsRoutes);
+app.use('/api/parametres', parametresRoutes);
+app.use('/api/livechat', livechatRoutes);
 
 // Static file serving for uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -359,13 +365,9 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Promesse rejetée non gérée:', reason);
 });
 
-// Migrer toutes les bases de données vers le format crypté au démarrage
-migrateAllDatabases();
-
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🔒 Security middleware enabled`);
-  console.log(`🔐 AES-256-GCM encryption enabled for all data`);
   console.log(`📡 Sync events available at /api/sync/events`);
 });
