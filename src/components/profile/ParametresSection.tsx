@@ -73,7 +73,13 @@ const ParametresSection: React.FC<ParametresSectionProps> = ({ userRole }) => {
   const [roleChangeUser, setRoleChangeUser] = useState<any>(null);
   const [roleChangeTarget, setRoleChangeTarget] = useState('');
   const [changingRole, setChangingRole] = useState(false);
+
+  // Specification management state
+  const [showSpecDialog, setShowSpecDialog] = useState(false);
+  const [specChangeUser, setSpecChangeUser] = useState<any>(null);
+  const [specChangeTarget, setSpecChangeTarget] = useState('');
   const [changingSpec, setChangingSpec] = useState(false);
+
   useEffect(() => {
     fetchSettings();
     if (isAdminPrincipal) {
@@ -124,22 +130,7 @@ const ParametresSection: React.FC<ParametresSectionProps> = ({ userRole }) => {
     }
   };
 
-  const handleSetSpecification = async (userId: string, specification: string) => {
-    try {
-      setChangingSpec(true);
-      const response = await api.put('/api/settings/user-specification', { userId, specification });
-      if (response.data.success) {
-        setAllUsers(response.data.users);
-        toast({ title: '✅ Spécification mise à jour', description: specification === 'live' ? 'Admin Live défini avec succès' : 'Spécification retirée' });
-      }
-    } catch (e: any) {
-      toast({ title: 'Erreur', description: e.response?.data?.message || 'Erreur lors de la mise à jour', variant: 'destructive' });
-    } finally {
-      setChangingSpec(false);
-    }
-  };
-
-  
+  const updateSetting = async (path: string, value: any) => {
     if (!settings) return;
     const keys = path.split('.');
     const updated = { ...settings } as any;
@@ -211,6 +202,27 @@ const ParametresSection: React.FC<ParametresSectionProps> = ({ userRole }) => {
     }
   };
 
+  // ========== SPECIFICATION CHANGE ==========
+  const handleSpecChange = async () => {
+    if (!specChangeUser) return;
+    try {
+      setChangingSpec(true);
+      const response = await api.put('/api/settings/user-specification', {
+        userId: specChangeUser.id,
+        specification: specChangeTarget
+      });
+      if (response.data.success) {
+        toast({ title: '✅ Spécification modifiée', description: `La spécification de ${specChangeUser.firstName} a été mise à jour`, className: 'bg-green-600 text-white border-green-600' });
+        setShowSpecDialog(false);
+        fetchUsers();
+      }
+    } catch (e: any) {
+      toast({ title: 'Erreur', description: e?.response?.data?.message || 'Erreur lors du changement de spécification', variant: 'destructive' });
+    } finally {
+      setChangingSpec(false);
+    }
+  };
+
   // ========== BACKUP ==========
   const handleBackup = async () => {
     try {
@@ -263,7 +275,19 @@ const ParametresSection: React.FC<ParametresSectionProps> = ({ userRole }) => {
       setRestoring(true);
       const result = await settingsApi.restoreData(restoreFile, restoreCode);
       if (result.success) {
-        toast({ title: '✅ Restauration réussie', description: result.message, className: 'bg-green-600 text-white border-green-600' });
+        if (result.status === 'unchanged') {
+          toast({
+            title: '⚠️ Aucune nouvelle donnée',
+            description: result.message,
+            className: 'bg-yellow-500 text-black border-yellow-500'
+          });
+        } else {
+          toast({
+            title: '✅ Restauration réussie',
+            description: result.message,
+            className: 'bg-green-600 text-white border-green-600'
+          });
+        }
         setShowRestoreDialog(false);
         setRestoreCode('');
         setRestoreFile(null);
@@ -398,70 +422,6 @@ const ParametresSection: React.FC<ParametresSectionProps> = ({ userRole }) => {
             </motion.div>
           )}
 
-          {/* SPECIFICATION MANAGEMENT - Only for administrateur principale */}
-          {isAdminPrincipal && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.25 }}
-              className="mt-8 pt-6 border-t border-border/50"
-            >
-              <div className="flex items-center gap-2 mb-4">
-                <Radio className="w-4 h-4 text-emerald-500" />
-                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Gestion spécification</span>
-              </div>
-              <p className="text-xs text-muted-foreground mb-3">
-                Sélectionnez un administrateur pour recevoir les messages live des visiteurs en priorité (quand l'admin principal est hors ligne).
-              </p>
-
-              {loadingUsers ? (
-                <div className="flex items-center justify-center py-6">
-                  <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full" />
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {allUsers.filter(u => u.role === 'administrateur').map(u => (
-                    <div key={u.id} className="flex items-center justify-between rounded-xl bg-gradient-to-br from-slate-50 to-white dark:from-white/5 dark:to-white/[0.02] border border-border/50 p-3">
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">{u.firstName} {u.lastName}</p>
-                        <p className="text-xs text-muted-foreground">{u.email}</p>
-                        {u.specification === 'live' && (
-                          <span className="inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                            🟢 Spécification: Live
-                          </span>
-                        )}
-                      </div>
-                      <div>
-                        {u.specification === 'live' ? (
-                          <Button
-                            size="sm"
-                            disabled={changingSpec}
-                            onClick={() => handleSetSpecification(u.id, '')}
-                            className="rounded-xl bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-300/30 text-orange-600 dark:text-orange-400 text-xs hover:from-orange-500/20 hover:to-red-500/20"
-                          >
-                            Retirer Live
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            disabled={changingSpec}
-                            onClick={() => handleSetSpecification(u.id, 'live')}
-                            className="rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-300/30 text-emerald-600 dark:text-emerald-400 text-xs hover:from-emerald-500/20 hover:to-teal-500/20"
-                          >
-                            <Radio className="w-3 h-3 mr-1" /> Définir Live
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {allUsers.filter(u => u.role === 'administrateur').length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">Aucun administrateur disponible</p>
-                  )}
-                </div>
-              )}
-            </motion.div>
-          )}
-
           {/* ROLE MANAGEMENT - Only for administrateur principale */}
           {isAdminPrincipal && (
             <motion.div
@@ -517,6 +477,67 @@ const ParametresSection: React.FC<ParametresSectionProps> = ({ userRole }) => {
                   ))}
                   {allUsers.filter(u => u.role !== 'administrateur principale').length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">Aucun autre utilisateur</p>
+                  )}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* SPECIFICATION MANAGEMENT - Only for administrateur principale */}
+          {isAdminPrincipal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.35 }}
+              className="mt-8 pt-6 border-t border-border/50"
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Radio className="w-4 h-4 text-emerald-500" />
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Gestion spécification</span>
+              </div>
+
+              {loadingUsers ? (
+                <div className="flex items-center justify-center py-6">
+                  <div className="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full" />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {allUsers.filter(u => u.role === 'administrateur').map(u => (
+                    <div key={u.id} className="flex items-center justify-between rounded-xl bg-gradient-to-br from-slate-50 to-white dark:from-white/5 dark:to-white/[0.02] border border-border/50 p-3">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{u.firstName} {u.lastName}</p>
+                        <p className="text-xs text-muted-foreground">{u.email}</p>
+                        <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-bold ${
+                          u.specification === 'live'
+                            ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                            : 'bg-slate-500/10 text-slate-600 border border-slate-500/20'
+                        }`}>
+                          {u.specification === 'live' ? '🟢 Live' : 'Aucune spécification'}
+                        </span>
+                      </div>
+                      <div>
+                        {u.specification === 'live' ? (
+                          <Button
+                            size="sm"
+                            onClick={() => { setSpecChangeUser(u); setSpecChangeTarget(''); setShowSpecDialog(true); }}
+                            className="rounded-xl bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-300/30 text-orange-600 dark:text-orange-400 text-xs hover:from-orange-500/20 hover:to-red-500/20"
+                          >
+                            Retirer Live
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() => { setSpecChangeUser(u); setSpecChangeTarget('live'); setShowSpecDialog(true); }}
+                            className="rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-300/30 text-emerald-600 dark:text-emerald-400 text-xs hover:from-emerald-500/20 hover:to-teal-500/20"
+                          >
+                            <Radio className="w-3 h-3 mr-1" /> Ajouter Live
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {allUsers.filter(u => u.role === 'administrateur').length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">Aucun administrateur à configurer</p>
                   )}
                 </div>
               )}
@@ -627,6 +648,43 @@ const ParametresSection: React.FC<ParametresSectionProps> = ({ userRole }) => {
               }`}
             >
               {changingRole ? 'Modification...' : 'Confirmer'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ========== SPECIFICATION CHANGE DIALOG ========== */}
+      <AlertDialog open={showSpecDialog} onOpenChange={v => { setShowSpecDialog(v); if (!v) { setSpecChangeUser(null); } }}>
+        <AlertDialogContent className="rounded-3xl backdrop-blur-2xl bg-white/95 dark:bg-[#0a0020]/95 border border-emerald-200/30 max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-emerald-600">
+              <Radio className="w-5 h-5" /> Modifier la spécification
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {specChangeUser && (
+                <>
+                  <span className="font-semibold">{specChangeUser.firstName} {specChangeUser.lastName}</span>
+                  <br />
+                  {specChangeTarget === 'live'
+                    ? 'Ajouter la spécification Live ? Cet admin pourra recevoir les messages du chat en direct.'
+                    : 'Retirer la spécification Live ? Cet admin ne recevra plus les messages du chat en direct.'
+                  }
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Annuler</AlertDialogCancel>
+            <Button
+              onClick={handleSpecChange}
+              disabled={changingSpec}
+              className={`rounded-xl text-white ${
+                specChangeTarget === 'live'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                  : 'bg-gradient-to-r from-orange-500 to-red-500'
+              }`}
+            >
+              {changingSpec ? 'Modification...' : 'Confirmer'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
